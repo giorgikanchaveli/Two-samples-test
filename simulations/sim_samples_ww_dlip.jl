@@ -45,17 +45,17 @@ end
 # dp_1 = DP(1.0, p_1, -1.0, 1.0)
 # dp_2 = DP(1.0, p_2, -1.0, 1.0)
 p_a, p_b = 2.5, 4.0
-q_a, q_b = 2.5, 3.0
+q_a, q_b = 2.5, 4.0
 beta_p, beta_q = Beta(p_a, p_b), Beta(q_a, q_b)
 p_1 = ()->rand(beta_p)
 p_2 = ()->rand(beta_q)
-dp_1 = DP(3.0, p_1, -1.0, 1.0)
+dp_1 = DP(2.0, p_1, -1.0, 1.0)
 dp_2 = DP(1.0, p_1, -1.0, 1.0)
-n_top, n_bottom = 100, 5000
+n_top, n_bottom = 30, 2
 
 # compute distances using direct samples
 seed = 4567
-s = 500
+s = 300
 t = time()
 
 
@@ -77,7 +77,7 @@ h_ww_perm, h_lip_perm = plot_hist(t_ww_perm, t_lip_perm)
 p_direct = plot(h_ww_direct, h_lip_direct, layout=(2,1), link = :x)
 p_perm = plot(h_ww_perm, h_lip_perm, layout=(2,1), link = :x)
 
-filepath = joinpath(pwd(),"plots/meeting 4 feb/n = $(n_top), m = $(n_bottom)")
+filepath = joinpath(pwd(),"plots/n = $(n_top), m = $(n_bottom)")
 savefig(p_direct, joinpath(filepath, "hist_direct_ww_lip_$(n_top)_$(n_bottom)"))
 savefig(p_perm, joinpath(filepath, "hist_perm_ww_lip_$(n_top)_$(n_bottom)"))
 
@@ -114,16 +114,24 @@ rej_ww = [mean(t_ww_direct .> t) for t in thresholds_ww]
 rej_lip = [mean(t_lip_direct .> t) for t in thresholds_lip]
 
 thresholds_pl = plot_quantiles([thresholds_ww, thresholds_lip, thresholds_ww_direct, thresholds_lip_direct],
-             ["ww_threshold", "dlip_threshold", "ww_direct", "dlip_direct"])
-thresholds_pl_exp = plot_quantiles_exp([thresholds_ww, thresholds_lip, thresholds_ww_direct, thresholds_lip_direct],
-             ["ww_threshold", "dlip_threshold", "ww_direct", "dlip_direct"])
-plot!(thresholds_pl, θ, rej_ww, label = "rej_ww")
-plot!(thresholds_pl, θ, rej_lip, label = "rej_lip")
+             ["ww_threshold", "dlip_threshold", "ww_quantiles", "dlip_quantiles"])
+annotate!(thresholds_pl, θ[50], thresholds_ww[50], text("thresholds_ww", :black, :left, 8))
+annotate!(thresholds_pl, θ[50], thresholds_lip[50], text("thresholds_lip", :black, :left, 8))
+annotate!(thresholds_pl, θ[50], thresholds_ww_direct[50], text("ww_quant", :black, :left, 8))
+annotate!(thresholds_pl, θ[50], thresholds_lip_direct[50], text("lip_quant", :black, :left, 8))
+
+thresholds_pl_with_rej = deepcopy(thresholds_pl)
+
+
+plot!(thresholds_pl_with_rej, θ, rej_ww, label = "rej_ww")
+plot!(thresholds_pl_with_rej, θ, rej_lip, label = "rej_lip")
+annotate!(thresholds_pl_with_rej, θ[6], rej_ww[6], text("rej_ww", :black, :left, 8))
+annotate!(thresholds_pl_with_rej, θ[60], rej_lip[60], text("rej_lip", :black, :left, 8))
 
 # plot!(thresholds_pl_exp, θ, rej_ww, label = "rej_ww")
 # plot!(thresholds_pl_exp, θ, rej_lip, label = "rej_lip")
 savefig(thresholds_pl, joinpath(filepath, "thresholds_$(n_top)_$(n_bottom)"))
-savefig(thresholds_pl_exp, joinpath(filepath, "thresholds_exp_$(n_top)_$(n_bottom)"))
+savefig(thresholds_pl_with_rej, joinpath(filepath, "thresholds_with_rej$(n_top)_$(n_bottom)"))
 # x_max = maximum([maximum(t_ww_direct), maximum(t_lip_direct)]) # sets the limit of the x-axis 
     
 # h_ww_direct = histogram(t_ww_direct, label="ww", xlabel="distance", ylabel="frequency",
