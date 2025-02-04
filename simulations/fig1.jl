@@ -62,6 +62,9 @@ for i in 1:length(n_tops)
     n_top = n_tops[i]
     println("n_top: ", n_top)
     for j in 1:s
+        if j % 10 == 0
+            println("j: ", j)
+        end
         emp_p, emp_q = generate_emp(dp_1, n_top, n_bottom), generate_emp(dp_2, n_top, n_bottom)
         d_ww[i] += ww(emp_p, emp_q)
         d_lip[i] += dlip(emp_p, emp_q)
