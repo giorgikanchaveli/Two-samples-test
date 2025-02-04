@@ -4,16 +4,16 @@ include("../distances/distance_Wasserstein.jl")
 include("../distances/new_distance.jl")
 include("../distances/w_distance.jl")
 
-function plot_hist(t_ww, t_lip)
+function plot_hist(t_ww, t_lip, str)
     x_max = maximum([maximum(t_ww), maximum(t_lip)]) # sets the limit of the x-axis 
     
     h_ww = histogram(t_ww, label="ww", xlabel="distance", ylabel="frequency",
-                    title="Histogram of distances between empirical measures",
+                    title="Histogram of distances between $(str[1]) measures",
                     xticks=0.0:0.2:3.0, xlims = (0, x_max),bins = 30)
     vline!(h_ww, [mean(t_ww)], label="mean", color="red")
 
     h_lip = histogram(t_lip, label="lip", xlabel="distance", ylabel="frequency",
-                    title="Histogram of distances between permuted empirical measures",
+                    title="Histogram of distances between $(str[2]) empirical measures",
                     xticks=0.0:0.2:3.0, xlims = (0, x_max), bins = 30)
         
     vline!(h_lip, [mean(t_lip)], label="mean", color="red")
@@ -51,11 +51,11 @@ p_1 = ()->rand(beta_p)
 p_2 = ()->rand(beta_q)
 dp_1 = DP(2.0, p_1, -1.0, 1.0)
 dp_2 = DP(1.0, p_1, -1.0, 1.0)
-n_top, n_bottom = 30, 2
+n_top, n_bottom = 100, 5000
 
 # compute distances using direct samples
 seed = 4567
-s = 300
+s = 200
 t = time()
 
 
@@ -70,8 +70,8 @@ t_ww_perm = sqrt(n_top/2)*sample_distances(ww, p_emp, q_emp, param_perm(s), seed
 t_lip_perm = sqrt(n_top/2)*sample_distances(dlip, p_emp, q_emp, param_perm(s), seed)
 
 
-h_ww_direct, h_lip_direct = plot_hist(t_ww_direct, t_lip_direct)
-h_ww_perm, h_lip_perm = plot_hist(t_ww_perm, t_lip_perm)
+h_ww_direct, h_lip_direct = plot_hist(t_ww_direct, t_lip_direct, ["direct", "direct"])
+h_ww_perm, h_lip_perm = plot_hist(t_ww_perm, t_lip_perm, ["permuted", "permuted"])
 
 
 p_direct = plot(h_ww_direct, h_lip_direct, layout=(2,1), link = :x)

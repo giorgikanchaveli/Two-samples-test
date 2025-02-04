@@ -3,18 +3,31 @@ include("../approaches/permutation_approach.jl")
 include("../distances/distance_Wasserstein.jl")
 include("../distances/new_distance.jl")
 include("../distances/w_distance.jl")
+using QuadGK
 
 
 
 # generate measures -> compute 2 distances
 
-function mc_wass_beta(p_a, p_b, q_a, q_b)
+function int_wass_beta(p_a, p_b, q_a, q_b)
     # this function computes the Wasserstein distance between two Beta distributions
-    # with parameters p and q
+    # with parameters p and q using numerical integration
     p = Beta(p_a, p_b)
     q = Beta(q_a, q_b)
-    s = 2000
-    n = 50000
+    cdf_p = x -> cdf(p, x)
+    cdf_q = x -> cdf(q, x)
+    f = x -> abs(cdf_p(x) - cdf_q(x))
+    return quadgk(f, 0, 1)[1]
+    return wass(p, q)
+end
+
+
+function mc_wass_beta(p_a, p_b, q_a, q_b, n, s)
+    # it is slow and not very precise
+    # this function computes the Wasserstein distance between two Beta distributions
+    # with parameters p and q using monte carlo 
+    p = Beta(p_a, p_b)
+    q = Beta(q_a, q_b)
     d = zeros(s)
     for i in 1:s
         d[i] = wass(rand(p, n), rand(q, n))
@@ -49,21 +62,22 @@ end
 # p_2 = ()->probability("splitting")
 # dp_1 = DP(1.0, p_1, -1.0, 1.0)
 # dp_2 = DP(1.0, p_2, -1.0, 1.0)
-p_a, p_b = 2.5, 4.0
-q_a, q_b = 2.5, 4.0
+p_a, p_b = 2.5, 4.5
+q_a, q_b = 2.5, 4.5
 beta_p, beta_q = Beta(p_a, p_b), Beta(q_a, q_b)
 p_1 = ()->rand(beta_p)
 p_2 = ()->rand(beta_q)
-dp_1 = DP(2.0, p_1, -1.0, 1.0)
+dp_1 = DP(1.0, p_1, -1.0, 1.0)
 dp_2 = DP(1.0, p_1, -1.0, 1.0)
-n_top, n_bottom = 10, 2
+n_top, n_bottom = 100, 5000
 
 
 # compute distances using direct samples
-s = 30
+s = 20
 d_ww, d_lip = get_distance(dp_1, dp_2, n_top, n_bottom, s)
-d_mc = mc_wass_beta(p_a, p_b, q_a, q_b)
-t_mc = round(sqrt(n_top/2)*d_mc, digits = 3)
+#d_mc = mc_wass_beta(p_a, p_b, q_a, q_b, 1000000,100)
+d_int = int_wass_beta(p_a, p_b, q_a, q_b)
+t_int = round(sqrt(n_top/2)*d_int, digits = 3)
 t_ww = sqrt(n_top/2)*d_ww
 t_lip = sqrt(n_top/2)*d_lip
 
@@ -73,19 +87,21 @@ scatter!(sc, t_ww, label = "ww", color = "red")
 scatter!(sc, t_lip, label = "dlip", color = "blue")
 hline!(sc, [mean(t_ww)], label="mean ww", color="red")
 hline!(sc, [mean(t_lip)], label="mean dlip", color="blue")
-hline!(sc, [t_mc], label="mc estimate", color="green")
+hline!(sc, [t_int], label="mc estimate", color="green")
 var_ww = round(var(t_ww), digits=3)
 var_lip = round(var(t_lip), digits=3)
 scatter!(summary, [], [], label="Var_ww = $(var_ww)")  # insert text variance for ww
 scatter!(summary, [], [], label="Var_dlip = $(var_lip)")  # insert text variance for dlip
-scatter!(summary, [], [], label="t_mc = $(t_mc)")  # insert text for mc estimate of distance*sqrt(n/2)
+scatter!(summary, [], [], label="t_int = $(t_int)")  # insert text for mc estimate of distance*sqrt(n/2)
 
-bias_ww = round(mean(t_ww) - t_mc, digits=3)
-bias_lip = round(mean(t_lip) - t_mc, digits=3)
+bias_ww = round(mean(t_ww) - t_int, digits=3)
+bias_lip = round(mean(t_lip) - t_int, digits=3)
 scatter!(summary, [], [], label="Bias_ww = $(bias_ww)")  # insert text bias for ww
 scatter!(summary, [], [], label="Bias_dlip = $(bias_lip)")  # insert text bias for dlip
 
 
-filepath = joinpath(pwd(),"plots/n = $(n_top), m = $(n_bottom)")
-savefig(sc, joinpath(filepath, "estimation_ww_lip_$(n_top)_$(n_bottom)"))
-savefig(summary, joinpath(filepath, "summary_ww_lip_$(n_top)_$(n_bottom)"))
+# save figures
+
+# filepath = joinpath(pwd(),"plots/n = $(n_top), m = $(n_bottom)")
+# savefig(sc, joinpath(filepath, "estimation_ww_lip_$(n_top)_$(n_bottom)"))
+# savefig(summary, joinpath(filepath, "summary_ww_lip_$(n_top)_$(n_bottom)"))
