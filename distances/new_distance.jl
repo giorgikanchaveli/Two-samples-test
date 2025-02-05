@@ -296,15 +296,7 @@ function dlip(measure1, measure2, a,b, nGrid = 250, nSteps=1000,nRerun = 5,tol =
 end 
 
 
-
-
-
-
-
-
-
-
-function dlip(q_1::emp_ppm, q_2::emp_ppm, nGrid = 200, nSteps=1000,nRerun = 5,tol = 1e-4)
+function dlip(q_1::emp_ppm, q_2::emp_ppm, nGrid = 150, nSteps=1000,nRerun = 5,tol = 1e-4)
     a, b = q_1.a, q_1.b
     
     measure1 = zeros(q_1.n, q_1.m, 2)
@@ -313,4 +305,15 @@ function dlip(q_1::emp_ppm, q_2::emp_ppm, nGrid = 200, nSteps=1000,nRerun = 5,to
     measure1[:, :, 2], measure2[:,:,2] = fill(1/q_1.m, (q_1.n, q_1.m)),
                                          fill(1/q_2.m, (q_2.n, q_2.m))
     return dlip(measure1, measure2, a, b, nGrid, nSteps, nRerun, tol)
+end
+
+function lower_bound(q_1::emp_ppm, q_2::emp_ppm)
+    a, b = q_1.a, q_1.b
+    
+    measure1 = zeros(q_1.n, q_1.m, 2)
+    measure2 = zeros(q_2.n, q_2.m, 2)
+    measure1[:, :, 1], measure2[:,:,1] = q_1.atoms, q_2.atoms
+    measure1[:, :, 2], measure2[:,:,2] = fill(1/q_1.m, (q_1.n, q_1.m)),
+                                         fill(1/q_2.m, (q_2.n, q_2.m))
+    return lowerBound(measure1, measure2)
 end
