@@ -62,22 +62,22 @@ end
 # p_2 = ()->probability("splitting")
 # dp_1 = DP(1.0, p_1, -1.0, 1.0)
 # dp_2 = DP(1.0, p_2, -1.0, 1.0)
-p_a, p_b = 2.5, 4.5
-q_a, q_b = 2.5, 4.5
+p_a, p_b = 1.2, 0.3
+q_a, q_b = 1.1, 3.4
 beta_p, beta_q = Beta(p_a, p_b), Beta(q_a, q_b)
 p_1 = ()->rand(beta_p)
 p_2 = ()->rand(beta_q)
-dp_1 = DP(1.0, p_1, -1.0, 1.0)
-dp_2 = DP(1.0, p_1, -1.0, 1.0)
-n_top, n_bottom = 30, 2
+α = 1.0
+dp_1 = DP(α, p_1, 0.0, 1.0)
+dp_2 = DP(α, p_2, 0.0, 1.0)
+n_top, n_bottom = 50, 10
 
-
+Random.seed!(1234)
 # compute distances using direct samples
-s = 50
+s = 24
 d_ww, d_lip = get_distance(dp_1, dp_2, n_top, n_bottom, s)
 #d_mc = mc_wass_beta(p_a, p_b, q_a, q_b, 1000000,100)
-d_int = int_wass_beta(p_a, p_b, q_a, q_b)
-
+d_int = round(int_wass_beta(p_a, p_b, q_a, q_b), digits = 6)
 
 
 summary = plot(title = "summary")
@@ -86,12 +86,12 @@ scatter!(sc, d_ww, label = "ww", color = "red")
 scatter!(sc, d_lip, label = "dlip", color = "blue")
 hline!(sc, [mean(d_ww)], label="mean ww", color="red")
 hline!(sc, [mean(d_lip)], label="mean dlip", color="blue")
-hline!(sc, [d_int], label="mc estimate", color="green")
+hline!(sc, [d_int], label="int_estimate", color="green")
 var_ww = round(var(d_ww), digits=6)
 var_lip = round(var(d_lip), digits=6)
 scatter!(summary, [], [], label="Var_ww = $(var_ww)")  # insert text variance for ww
 scatter!(summary, [], [], label="Var_dlip = $(var_lip)")  # insert text variance for dlip
-scatter!(summary, [], [], label="d_int = $(d_int)")  # insert text for mc estimate of distance*sqrt(n/2)
+scatter!(summary, [], [], label="d_int = $(d_int)")  # insert text for int_estimate of distance*sqrt(n/2)
 
 bias_ww = round(mean(d_ww) - d_int, digits=6)
 bias_lip = round(mean(d_lip) - d_int, digits=6)
