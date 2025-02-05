@@ -44,30 +44,30 @@ end
 # p_2 = ()->probability("splitting")
 # dp_1 = DP(1.0, p_1, -1.0, 1.0)
 # dp_2 = DP(1.0, p_2, -1.0, 1.0)
-p_a, p_b = 2.5, 4.0
-q_a, q_b = 2.5, 4.0
+#p_a, p_b, q_a, q_b = 1.2, 0.3, 1.1, 3.4
+p_a, p_b, q_a, q_b = 1.2, 1.2, 1.1, 1.25
 beta_p, beta_q = Beta(p_a, p_b), Beta(q_a, q_b)
 p_1 = ()->rand(beta_p)
 p_2 = ()->rand(beta_q)
-dp_1 = DP(2.0, p_1, -1.0, 1.0)
-dp_2 = DP(1.0, p_1, -1.0, 1.0)
-n_top, n_bottom = 100, 5000
+dp_1 = DP(1.0, p_1, -1.0, 1.0)
+dp_2 = DP(1.0, p_2, -1.0, 1.0)
+n_top, n_bottom = 16, 2
 
 # compute distances using direct samples
 seed = 4567
-s = 200
+s = 25
 t = time()
 
 
-t_ww_direct = sqrt(n_top/2)*sample_distances(ww, dp_1, dp_2, n_top, n_bottom, s)
-t_lip_direct = sqrt(n_top/2)*sample_distances(dlip, dp_1, dp_2, n_top, n_bottom, s)
+t_ww_direct = sqrt(n_top/2)*sample_distances(ww, dp_1, dp_2, n_top, n_bottom, s, seed)
+t_lip_direct = sqrt(n_top/2)*sample_distances(dlip, dp_1, dp_2, n_top, n_bottom, s, seed)
 
 # compute distances using permutation
-p_emp, q_emp = generate_emp(dp_1, n_top, n_bottom), generate_emp(dp_2, n_top, n_bottom)
+p_emp, q_emp = generate_emp(dp_1, n_top, n_bottom), generate_emp(dp_2, n_top, n_bottom, seed)
 
 
-t_ww_perm = sqrt(n_top/2)*sample_distances(ww, p_emp, q_emp, param_perm(s), seed)
-t_lip_perm = sqrt(n_top/2)*sample_distances(dlip, p_emp, q_emp, param_perm(s), seed)
+t_ww_perm = sqrt(n_top/2)*sample_distances(ww, p_emp, q_emp, param_perm(100), seed)
+t_lip_perm = sqrt(n_top/2)*sample_distances(dlip, p_emp, q_emp, param_perm(100), seed)
 
 
 h_ww_direct, h_lip_direct = plot_hist(t_ww_direct, t_lip_direct, ["direct", "direct"])
@@ -78,8 +78,8 @@ p_direct = plot(h_ww_direct, h_lip_direct, layout=(2,1), link = :x)
 p_perm = plot(h_ww_perm, h_lip_perm, layout=(2,1), link = :x)
 
 filepath = joinpath(pwd(),"plots/n = $(n_top), m = $(n_bottom)")
-savefig(p_direct, joinpath(filepath, "hist_direct_ww_lip_$(n_top)_$(n_bottom)"))
-savefig(p_perm, joinpath(filepath, "hist_perm_ww_lip_$(n_top)_$(n_bottom)"))
+# savefig(p_direct, joinpath(filepath, "hist_direct_ww_lip_$(n_top)_$(n_bottom)"))
+# savefig(p_perm, joinpath(filepath, "hist_perm_ww_lip_$(n_top)_$(n_bottom)"))
 
 
 
@@ -98,8 +98,8 @@ quant_perm = plot(title = "Quantiles of permuted samples", xlabel = "probability
 plot!(quant_perm, θ, quant_perm_ww, label = "ww", color = "red")
 plot!(quant_perm, θ, quant_perm_lip, label = "lip", color = "blue")
 
-savefig(quant_dir, joinpath(filepath, "quantiles_direct_$(n_top)_$(n_bottom)"))
-savefig(quant_perm, joinpath(filepath, "quantiles_perm_$(n_top)_$(n_bottom)"))
+# savefig(quant_dir, joinpath(filepath, "quantiles_direct_$(n_top)_$(n_bottom)"))
+# savefig(quant_perm, joinpath(filepath, "quantiles_perm_$(n_top)_$(n_bottom)"))
 
 
 
@@ -130,8 +130,8 @@ annotate!(thresholds_pl_with_rej, θ[60], rej_lip[60], text("rej_lip", :black, :
 
 # plot!(thresholds_pl_exp, θ, rej_ww, label = "rej_ww")
 # plot!(thresholds_pl_exp, θ, rej_lip, label = "rej_lip")
-savefig(thresholds_pl, joinpath(filepath, "thresholds_$(n_top)_$(n_bottom)"))
-savefig(thresholds_pl_with_rej, joinpath(filepath, "thresholds_with_rej$(n_top)_$(n_bottom)"))
+#savefig(thresholds_pl, joinpath(filepath, "thresholds_$(n_top)_$(n_bottom)"))
+#savefig(thresholds_pl_with_rej, joinpath(filepath, "thresholds_with_rej$(n_top)_$(n_bottom)"))
 # x_max = maximum([maximum(t_ww_direct), maximum(t_lip_direct)]) # sets the limit of the x-axis 
     
 # h_ww_direct = histogram(t_ww_direct, label="ww", xlabel="distance", ylabel="frequency",

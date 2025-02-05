@@ -110,8 +110,9 @@ function savefig_roc_ww_dlip(n, m, save = false)
     # p_2 = ()->probability("splitting")
     # dp_1 = DP(1.0, p_1, -1.0, 1.0)
     # dp_2 = DP(1.0, p_2, -1.0, 1.0)
-    p_a, p_b = 1.2, 0.3
-    q_a, q_b = 1.1, 3.4
+    p_a, p_b, q_a, q_b = 1.2, 1.2, 1.1, 1.25
+   # p_a, p_b = 1.2, 0.3
+   # q_a, q_b = 1.1, 3.4
     # p_a, p_b = 2.5, 4.0
     # q_a, q_b = 2.5, 3.0
     beta_p, beta_q = Beta(p_a, p_b), Beta(q_a, q_b)
@@ -128,7 +129,7 @@ function savefig_roc_ww_dlip(n, m, save = false)
 
     # simulation and algorithm parameter
     s = 100
-    par_perm = param_perm(s)
+    par_perm = param_perm(100)
     iter = s
 
     seed = 4567
@@ -219,7 +220,7 @@ save = false
 #savefig_roc_iid_ww_dlip(100, 1, save)
 
 #savefig_roc_ww_dlip(10, 2, save)
-α, β, str = savefig_roc_ww_dlip(30, 2, save)
+α, β, str = savefig_roc_ww_dlip(256, 2, save)
 α_dlip, α_ww = α[1], α[2]
 β_dlip, β_ww = β[1], β[2]
 #savefig_roc_ww_dlip(150, 2, save)
