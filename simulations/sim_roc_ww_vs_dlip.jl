@@ -110,13 +110,15 @@ function savefig_roc_ww_dlip(n, m, save = false)
     # p_2 = ()->probability("splitting")
     # dp_1 = DP(1.0, p_1, -1.0, 1.0)
     # dp_2 = DP(1.0, p_2, -1.0, 1.0)
-    p_a, p_b = 2.5, 4.0
-    q_a, q_b = 2.5, 3.0
+    p_a, p_b = 1.2, 0.3
+    q_a, q_b = 1.1, 3.4
+    # p_a, p_b = 2.5, 4.0
+    # q_a, q_b = 2.5, 3.0
     beta_p, beta_q = Beta(p_a, p_b), Beta(q_a, q_b)
     p_1 = ()->rand(beta_p)
     p_2 = ()->rand(beta_q)
-    dp_1 = DP(3.0, p_1, -1.0, 1.0)
-    dp_2 = DP(1.0, p_1, -1.0, 1.0)
+    dp_1 = DP(1.0, p_1, -1.0, 1.0)
+    dp_2 = DP(1.0, p_2, -1.0, 1.0)
     n_top, n_bottom = n, m
 
     fp_problem_ppm = param_problem_ppm(dp_1, dp_1, n_top, n_bottom) # false positive problem for exchangeable
@@ -217,7 +219,7 @@ save = false
 #savefig_roc_iid_ww_dlip(100, 1, save)
 
 #savefig_roc_ww_dlip(10, 2, save)
-α, β, str = savefig_roc_ww_dlip(20, 5000, save)
+α, β, str = savefig_roc_ww_dlip(30, 2, save)
 α_dlip, α_ww = α[1], α[2]
 β_dlip, β_ww = β[1], β[2]
 #savefig_roc_ww_dlip(150, 2, save)
