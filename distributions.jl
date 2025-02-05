@@ -9,13 +9,37 @@ using Random
 function probability(baseMeasure::String)
     # function to generate observation either from uniform(-1,1) or from splitting measure
     if baseMeasure == "same" # Uniform(-1,1)
-        return 2* rand() - 1
+        return rand() - 0.5
     elseif baseMeasure == "splitting"  # sample either close to -1 or close to 1
         atom = rand()
         mixture = rand((0,1))
         return mixture * ( -1. + 0.25 * atom ) + (1 - mixture) * (0.75 + 0.25 * atom)
     end
 
+end
+
+function cdf_same(x)
+    if x < -1/2
+        return 0
+    elseif x < 1/2
+        return (x + 1/2)
+    else
+        return 1
+    end
+end
+
+function cdf_splitting(x)
+    if x < -1
+        return 0
+    elseif x < -3/4
+        return 2*(x+1)
+    elseif x < 3/4
+        return 1/2
+    elseif x < 1
+        return 1/2 + + 2*(x - 3/4)
+    else
+        return 1
+    end
 end
 
 
