@@ -12,7 +12,7 @@ function p_2()
     # with probability 1/2 return a sample from Uniform(-1,3/4) and 
     # with probability 1/2 return a sample from Uniform(3/4,1)
     if rand() < 1/2
-        return rand(Uniform(-1,3/4))
+        return rand(Uniform(-1,-3/4))
     else
         return rand(Uniform(3/4,1))
     end
@@ -53,7 +53,7 @@ d_true = quadgk(x -> abs(cdf_1(x) - cdf_2(x)), -1, 1)[1]
 dp_1, dp_2 = DP(α, p_1, -1.0, 1.0), DP(α, p_2, -1.0, 1.0)
 
 n_bottom = 5000
-n_tops = collect(10:50:500)
+n_tops = collect(10:20:500)
 s = 24
 
 d_ww, d_lip = zeros(length(n_tops)), zeros(length(n_tops))
@@ -72,8 +72,14 @@ for i in 1:length(n_tops)
     d_ww[i] /= s
     d_lip[i] /= s
 end
-
+d_trues = [d_true for i in 1:length(n_tops)]
 pl = plot(xlabel = "n", ylabel = "distance")
-plot!(pl, n_tops, d_ww, label = "ww")
-plot!(pl, n_tops, d_lip, label = "dlip")
-plot!(pl, n_tops, d_true, label = "true value")
+scatter!(pl, n_tops, d_ww, label = "ww")
+scatter!(pl, n_tops, d_lip, label = "dlip")
+scatter!(pl, n_tops, d_trues, label = "true value")
+
+
+
+
+filepath = joinpath(pwd(),"plots")
+savefig(pl, joinpath(filepath, "fig_1_$(n_top)_$(n_bottom)"))
