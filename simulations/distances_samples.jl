@@ -18,9 +18,9 @@ function int_wass_beta(p_a, p_b, q_a, q_b)
 end
 
 # methods for sampling
-function direct_sampling(p::PPM, q::PPM, n_top::Int, n_bottom::Int, nReps::Int, seed = 1123234)
+function direct_sampling(p::PPM, q::PPM, n_top::Int, n_bottom::Int, nReps::Int)
     # Given two laws of RPM we simulate the distances between empirical measures 
-    Random.seed!(seed)
+  
 
     d_ww, d_lip = zeros(nReps), zeros(nReps)
     for i in 1:nReps
@@ -34,8 +34,8 @@ function direct_sampling(p::PPM, q::PPM, n_top::Int, n_bottom::Int, nReps::Int, 
     return d_ww, d_lip
 end
 
-function permuted_sampling(p_emp::emp_ppm, q_emp::emp_ppm, nReps::Int, seed = 92234)
-    Random.seed!(seed)
+function permuted_sampling(p_emp::emp_ppm, q_emp::emp_ppm, nReps::Int)
+    
     # Given two empirical measures we permute them and compute distances
     d_ww, d_lip = zeros(nReps), zeros(nReps)
     total_atoms = vcat(p_emp.atoms, q_emp.atoms)
@@ -102,17 +102,17 @@ function figures(measures::String, n_top::Int, n_bottom::Int, nReps::Int)
     if measures == "samesplitting"
         p_1 = ()->probability("same") # uniform(-1/2, 1/2)
         p_2 = ()->probability("splitting") # 1/2 uniform(-1, -3/4) + 1/2 uniform(3/4, 1)
-        d_true = quadgk(x -> abs(cdf_same(x) - cdf_splitting(x)), -1, 1)[1]
+        #d_true = quadgk(x -> abs(cdf_same(x) - cdf_splitting(x)), -1, 1)[1]
     elseif measures == "betafaraway"
         p_a, p_b, q_a, q_b = 1.2, 0.3, 1.1, 3.4
         p_1 = ()->rand(Beta(p_a, p_b))
         p_2 = ()->rand(Beta(q_a, q_b))
-        d_true = round(int_wass_beta(p_a, p_b, q_a, q_b), digits = 6)
+        #d_true = round(int_wass_beta(p_a, p_b, q_a, q_b), digits = 6)
     else
         p_a, p_b, q_a, q_b = 1.2, 1.2, 1.2, 1.25
         p_1 = ()->rand(Beta(p_a, p_b))
         p_2 = ()->rand(Beta(q_a, q_b))
-        d_true = round(int_wass_beta(p_a, p_b, q_a, q_b), digits = 6)
+        #d_true = round(int_wass_beta(p_a, p_b, q_a, q_b), digits = 6)
     end
 
     # define the measures
@@ -128,8 +128,9 @@ function figures(measures::String, n_top::Int, n_bottom::Int, nReps::Int)
     q_plot = plot_quantiles(d_ww, d_lip, "direct, $(measures)", ["ww", "lip"])
 
     # get thresholds and data quantiles
+    perm_par = 24
     θs = collect(0.0:0.01:1.0)
-    d_ww_perm, d_lip_perm = permuted_sampling(generate_emp(dp_1, n_top, n_bottom), generate_emp(dp_2, n_top, n_bottom), nReps)
+    d_ww_perm, d_lip_perm = permuted_sampling(generate_emp(dp_1, n_top, n_bottom), generate_emp(dp_2, n_top, n_bottom), perm_par)
     thresh_ww = quantile(d_ww_perm, 1 .- θs)
     thresh_lip = quantile(d_lip_perm, 1 .- θs)
     d_ww_quantiles = quantile(d_ww, 1 .- θs)
@@ -156,7 +157,9 @@ end
 
 function save_figures(n_top::Int, n_bottom::Int, nReps::Int)
     save_figures("samesplitting", n_top, n_bottom, nReps)
+    println("finished samesplitting")
     save_figures("betafaraway", n_top, n_bottom, nReps)
+    println("finished betafaraway")
     save_figures("betaclose", n_top, n_bottom, nReps)
 end
 
@@ -164,8 +167,9 @@ end
 
 #h, q_plot, thresh_quant_plots, thresh_rej_plots = figures("betaclose", 16, 5000, 24)
 t = time()
-save_figures(16, 5000, 2)
-save_figures(128, 5000, 2)
+save_figures(16, 5000, 24)
+println("finished n = 16")
+save_figures(128, 5000, 24)
 t = time() - t
 # Define measures
 
@@ -184,7 +188,9 @@ t = time() - t
 # q_plot = plot_quantiles(d_ww, d_lip, "direct, samesplitting", ["ww", "lip"])
 
 # θs = collect(0.0:0.01:1.0)
-# d_ww_perm, d_lip_perm = permuted_sampling(generate_emp(dp_1, n_top, n_bottom), generate_emp(dp_2, n_top, n_bottom), nReps)
+# t = time()
+# d_ww_perm, d_lip_perm = permuted_sampling(generate_emp(dp_1, n_top, n_bottom), generate_emp(dp_2, n_top, n_bottom), 100)
+# t = time() - t
 # thresh_ww = quantile(d_ww_perm, 1 .- θs)
 # thresh_lip = quantile(d_lip_perm, 1 .- θs)
 
