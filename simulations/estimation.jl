@@ -169,12 +169,12 @@ end
 
 # save figures
 
-
+nReps = 24
 
 # everything for n = 16, m = 5000
 println("n = 16, m = 5000, Beta, same")
 filepath = joinpath(pwd(),"plots/estimation")
-sc, summary = estimation_plot("Beta", true, 16, 5000, 24)
+sc, summary = estimation_plot("Beta", true, 16, 5000, nReps)
 filepath = joinpath(filepath, "beta/n = 16, m = 5000")
 savefig(sc, joinpath(filepath, "estimation_beta_same_ww_lip_16_5000"))
 savefig(summary, joinpath(filepath, "summary_beta_same_ww_lip_16_5000"))
@@ -182,21 +182,21 @@ savefig(summary, joinpath(filepath, "summary_beta_same_ww_lip_16_5000"))
 
 println("n = 16, m = 5000, Beta, different")
 filepath = joinpath(pwd(),"plots/estimation")
-sc, summary = estimation_plot("Beta", false, 16, 5000, 24)
+sc, summary = estimation_plot("Beta", false, 16, 5000, nReps)
 filepath = joinpath(filepath, "beta/n = 16, m = 5000")
 savefig(sc, joinpath(filepath, "estimation_beta_diff_ww_lip_16_5000"))
 savefig(summary, joinpath(filepath, "summary_beta_diff_ww_lip_16_5000"))
 
 println("n = 16, m = 5000, samesplitting, same")
 filepath = joinpath(pwd(),"plots/estimation")
-sc, summary = estimation_plot("samesplitting", true, 16, 5000, 24)
+sc, summary = estimation_plot("samesplitting", true, 16, 5000, nReps)
 filepath = joinpath(filepath, "samesplitting/n = 16, m = 5000")
 savefig(sc, joinpath(filepath, "estimation_smspl_same_ww_lip_16_5000"))
 savefig(summary, joinpath(filepath, "summary_smspl_same_ww_lip_16_5000"))
 
 println("n = 16, m = 5000, samesplitting, different")
 filepath = joinpath(pwd(),"plots/estimation")
-sc, summary = estimation_plot("samesplitting", false, 16, 5000, 24)
+sc, summary = estimation_plot("samesplitting", false, 16, 5000, nReps)
 filepath = joinpath(filepath, "samesplitting/n = 16, m = 5000")
 savefig(sc, joinpath(filepath, "estimation_smspl_diff_ww_lip_16_5000"))
 savefig(summary, joinpath(filepath, "summary_smspl_diff_ww_lip_16_5000"))
@@ -205,28 +205,28 @@ savefig(summary, joinpath(filepath, "summary_smspl_diff_ww_lip_16_5000"))
 
 println("n = 128, m = 5000, Beta, same")
 filepath = joinpath(pwd(),"plots/estimation")
-sc, summary = estimation_plot("Beta", true, 128, 5000, 24)
+sc, summary = estimation_plot("Beta", true, 128, 5000, nReps)
 filepath = joinpath(filepath, "beta/n = 128, m = 5000")
 savefig(sc, joinpath(filepath, "estimation_beta_same_ww_lip_128_5000"))
 savefig(summary, joinpath(filepath, "summary_beta_same_ww_lip_128_5000"))
 
 println("n = 128, m = 5000, Beta, different")
 filepath = joinpath(pwd(),"plots/estimation")
-sc, summary = estimation_plot("Beta", false, 128, 5000, 24)
+sc, summary = estimation_plot("Beta", false, 128, 5000, nReps)
 filepath = joinpath(filepath, "beta/n = 128, m = 5000")
 savefig(sc, joinpath(filepath, "estimation_beta_diff_ww_lip_128_5000"))
 savefig(summary, joinpath(filepath, "summary_beta_diff_ww_lip_128_5000"))
 
 println("n = 128, m = 5000, samesplitting, same")
 filepath = joinpath(pwd(),"plots/estimation")
-sc, summary = estimation_plot("samesplitting", true, 128, 5000, 24)
+sc, summary = estimation_plot("samesplitting", true, 128, 5000, nReps)
 filepath = joinpath(filepath, "samesplitting/n = 128, m = 5000")
 savefig(sc, joinpath(filepath, "estimation_smspl_same_ww_lip_128_5000"))
 savefig(summary, joinpath(filepath, "summary_smspl_same_ww_lip_128_5000"))
 
 println("n = 128, m = 5000, samesplitting, different")
 filepath = joinpath(pwd(),"plots/estimation")
-sc, summary = estimation_plot("samesplitting", false, 128, 5000, 24)
+sc, summary = estimation_plot("samesplitting", false, 128, 5000, nReps)
 filepath = joinpath(filepath, "samesplitting/n = 128, m = 5000")
 savefig(sc, joinpath(filepath, "estimation_smspl_diff_ww_lip_128_5000"))
 savefig(summary, joinpath(filepath, "summary_smspl_diff_ww_lip_128_5000"))
