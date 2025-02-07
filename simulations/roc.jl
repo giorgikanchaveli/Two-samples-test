@@ -54,7 +54,7 @@ function rej_rates(p::PPM, q::PPM, n_top::Int, n_bottom::Int, nReps::Int)
     # p, q : PPMs
     # returns the rejection rate
     θs = collect(0.1:0.1:1)
-    perm_par = 24 
+    perm_par = 75
 
     # get thresholds
     d_ww_perm, d_lip_perm = permuted_sampling(generate_emp(p, n_top, n_bottom), generate_emp(q, n_top, n_bottom), perm_par)
@@ -157,9 +157,9 @@ function save_figures(n_top::Int, n_bottom::Int, nReps::Int, save)
 end
 
 t = time()
-save_figures(16, 5000, 24, true)
+save_figures(16, 5000, 100, true)
 println("finished n = 16")
-save_figures(128, 5000, 24, true)
+save_figures(128, 5000, 100, true)
 t = time() - t
 # p_same = ()->probability("same")
 # p_splitting = ()->probability("splitting")
