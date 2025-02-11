@@ -7,46 +7,10 @@ using QuadGK
 
 
 
-p_1 = () -> rand(Uniform(-1/2,1/2))
-function p_2()
-    # with probability 1/2 return a sample from Uniform(-1,3/4) and 
-    # with probability 1/2 return a sample from Uniform(3/4,1)
-    if rand() < 1/2
-        return rand(Uniform(-1,-3/4))
-    else
-        return rand(Uniform(3/4,1))
-    end
-end
 
-
-
-function cdf_1(x)
-    if x < -1/2
-        return 0
-    elseif x < 1/2
-        return (x + 1/2)
-    else
-        return 1
-    end
-end
-
-function cdf_2(x)
-    if x < -1
-        return 0
-    elseif x < -3/4
-        return 2*(x+1)
-    elseif x < 3/4
-        return 1/2
-    elseif x < 1
-        return 1/2 + + 2*(x - 3/4)
-    else
-        return 1
-    end
-end
-
-
-d_true = quadgk(x -> abs(cdf_1(x) - cdf_2(x)), -1, 1)[1]
-
+p_1 = ()->probability("same") # uniform(-1/2, 1/2)
+p_2 = ()->probability("splitting")
+d_true = quadgk(x -> abs(cdf_same(x) - cdf_splitting(x)), -1, 1)[1]
 
 n_bottom = 5000
 n_tops = [16,32,64,128,256]
@@ -82,23 +46,20 @@ function values_fig_1(n_tops, n_bottom, s, str)
 end
 
 
+# plot figures
+
+# pl_1 = plot(title = "same", xlabel = "n", ylabel = "distance")
+# plot!(pl_1, n_tops, d_ww, seriestype=:line, marker=:circle, label="ww", color = "red")
+# plot!(pl_1, n_tops, d_lip, seriestype=:line, marker=:circle, label="dlip", color = "blue")
+# plot!(pl_1, n_tops, d_trues, seriestype=:line, marker=:circle, label="true", color = "black")
+# plot!(pl_1, n_tops, lower_bounds, seriestype=:line, marker=:circle, label="lower bound", color = "green")
 
 
-d_trues = [d_true for i in 1:length(n_tops)]
-d_ww, d_lip, lower_bounds = values_fig_1(n_tops, n_bottom, s, "diff")
-pl_1 = plot(title = "same", xlabel = "n", ylabel = "distance")
-plot!(pl_1, n_tops, d_ww, seriestype=:line, marker=:circle, label="ww", color = "red")
-plot!(pl_1, n_tops, d_lip, seriestype=:line, marker=:circle, label="dlip", color = "blue")
-plot!(pl_1, n_tops, d_trues, seriestype=:line, marker=:circle, label="true", color = "black")
-plot!(pl_1, n_tops, lower_bounds, seriestype=:line, marker=:circle, label="lower bound", color = "green")
-
-
-d_ww, d_lip, lower_bounds = values_fig_1(n_tops, n_bottom, s, "same")
-pl_2 = plot(title = "different", xlabel = "n", ylabel = "distance")
-plot!(pl_2, n_tops, d_ww, seriestype=:line, marker=:circle, label="ww", color = "red")
-plot!(pl_2, n_tops, d_lip, seriestype=:line, marker=:circle, label="dlip", color = "blue")
-plot!(pl_2, n_tops, lower_bounds, seriestype=:line, marker=:circle, label="lower bound", color = "green")
-
+# d_ww, d_lip, lower_bounds = values_fig_1(n_tops, n_bottom, s, "same")
+# pl_2 = plot(title = "different", xlabel = "n", ylabel = "distance")
+# plot!(pl_2, n_tops, d_ww, seriestype=:line, marker=:circle, label="ww", color = "red")
+# plot!(pl_2, n_tops, d_lip, seriestype=:line, marker=:circle, label="dlip", color = "blue")
+# plot!(pl_2, n_tops, lower_bounds, seriestype=:line, marker=:circle, label="lower bound", color = "green")
 
 
 
@@ -106,6 +67,7 @@ plot!(pl_2, n_tops, lower_bounds, seriestype=:line, marker=:circle, label="lower
 
 
 
+# save figures
 
 # filepath = joinpath(pwd(),"plots")
 # savefig(pl_1, joinpath(filepath, "fig_1_left"))

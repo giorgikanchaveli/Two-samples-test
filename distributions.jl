@@ -7,8 +7,8 @@ using Random
 
 
 function probability(baseMeasure::String)
-    # function to generate observation either from uniform(-1,1) or from splitting measure
-    if baseMeasure == "same" # Uniform(-1,1)
+    # function to generate observation either from uniform(-1/2,1/2) or from splitting measure
+    if baseMeasure == "same" # Uniform(-1/2,1/2)
         return rand() - 0.5
     elseif baseMeasure == "splitting"  # sample either close to -1 or close to 1
         atom = rand()

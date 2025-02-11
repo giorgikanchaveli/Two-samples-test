@@ -54,7 +54,6 @@ function get_distance(p::PPM, q::PPM, n::Int, m::Int, s::Int)
     return d_ww, d_lip
 end
 
-
 function estimation_plot(rpm::String, same::Bool, n_top::Int, n_bottom::Int, s::Int)
     # this function computes the distances between the empirical measures
     # sampled directly from p and q and returns plots and summary statistics
@@ -69,8 +68,6 @@ function estimation_plot(rpm::String, same::Bool, n_top::Int, n_bottom::Int, s::
             p_1 = ()->probability("same") # uniform(-1/2, 1/2)
             p_2 = ()->probability("same") # uniform(-1/2, 1/2)
             d_true = 0.0
-           
-
         else
             p_1 = ()->probability("same") # uniform(-1/2, 1/2)
             p_2 = ()->probability("splitting") # 1/2 uniform(-1, -3/4) + 1/2 uniform(3/4, 1)
@@ -114,7 +111,10 @@ function estimation_plot(rpm::String, same::Bool, n_top::Int, n_bottom::Int, s::
     scatter!(summary, [], [], label="Var_ww = $(var_ww)")  # insert text variance for ww
     scatter!(summary, [], [], label="Var_dlip = $(var_lip)")  # insert text variance for dlip
     scatter!(summary, [], [], label="d_true = $(d_true)")  # insert text for int_estimate of distance*sqrt(n/2)
-    
+    scatter!(summary, [], [], label="mean_ww = $(mean(d_ww))")  # insert text for mean ww
+    scatter!(summary, [], [], label="mean_dlip = $(mean(d_lip))")  # insert text for mean dlip
+
+
     bias_ww = round(mean(d_ww) - d_true, digits=6)
     bias_lip = round(mean(d_lip) - d_true, digits=6)
     scatter!(summary, [], [], label="Bias_ww = $(bias_ww)")  # insert text bias for ww
@@ -173,67 +173,67 @@ end
 
 # save figures
 
-nReps = 24
+# nReps = 24
 
-# everything for n = 16, m = 5000
-println("n = 16, m = 5000, Beta, same")
-filepath = joinpath(pwd(),"plots/estimation")
-sc, summary = estimation_plot("Beta", true, 16, 5000, nReps)
-filepath = joinpath(filepath, "beta/n = 16, m = 5000")
-savefig(sc, joinpath(filepath, "estimation_beta_same_ww_lip_16_5000"))
-savefig(summary, joinpath(filepath, "summary_beta_same_ww_lip_16_5000"))
+# # everything for n = 16, m = 5000
+# println("n = 16, m = 5000, Beta, same")
+# filepath = joinpath(pwd(),"plots/estimation")
+# sc, summary = estimation_plot("Beta", true, 16, 5000, nReps)
+# filepath = joinpath(filepath, "beta/n = 16, m = 5000")
+# savefig(sc, joinpath(filepath, "estimation_beta_same_ww_lip_16_5000"))
+# savefig(summary, joinpath(filepath, "summary_beta_same_ww_lip_16_5000"))
 
 
-println("n = 16, m = 5000, Beta, different")
-filepath = joinpath(pwd(),"plots/estimation")
-sc, summary = estimation_plot("Beta", false, 16, 5000, nReps)
-filepath = joinpath(filepath, "beta/n = 16, m = 5000")
-savefig(sc, joinpath(filepath, "estimation_beta_diff_ww_lip_16_5000"))
-savefig(summary, joinpath(filepath, "summary_beta_diff_ww_lip_16_5000"))
+# println("n = 16, m = 5000, Beta, different")
+# filepath = joinpath(pwd(),"plots/estimation")
+# sc, summary = estimation_plot("Beta", false, 16, 5000, nReps)
+# filepath = joinpath(filepath, "beta/n = 16, m = 5000")
+# savefig(sc, joinpath(filepath, "estimation_beta_diff_ww_lip_16_5000"))
+# savefig(summary, joinpath(filepath, "summary_beta_diff_ww_lip_16_5000"))
 
-println("n = 16, m = 5000, samesplitting, same")
-filepath = joinpath(pwd(),"plots/estimation")
-sc, summary = estimation_plot("samesplitting", true, 16, 5000, nReps)
-filepath = joinpath(filepath, "samesplitting/n = 16, m = 5000")
-savefig(sc, joinpath(filepath, "estimation_smspl_same_ww_lip_16_5000"))
-savefig(summary, joinpath(filepath, "summary_smspl_same_ww_lip_16_5000"))
+# println("n = 16, m = 5000, samesplitting, same")
+# filepath = joinpath(pwd(),"plots/estimation")
+# sc, summary = estimation_plot("samesplitting", true, 16, 5000, nReps)
+# filepath = joinpath(filepath, "samesplitting/n = 16, m = 5000")
+# savefig(sc, joinpath(filepath, "estimation_smspl_same_ww_lip_16_5000"))
+# savefig(summary, joinpath(filepath, "summary_smspl_same_ww_lip_16_5000"))
 
-println("n = 16, m = 5000, samesplitting, different")
-filepath = joinpath(pwd(),"plots/estimation")
-sc, summary = estimation_plot("samesplitting", false, 16, 5000, nReps)
-filepath = joinpath(filepath, "samesplitting/n = 16, m = 5000")
-savefig(sc, joinpath(filepath, "estimation_smspl_diff_ww_lip_16_5000"))
-savefig(summary, joinpath(filepath, "summary_smspl_diff_ww_lip_16_5000"))
+# println("n = 16, m = 5000, samesplitting, different")
+# filepath = joinpath(pwd(),"plots/estimation")
+# sc, summary = estimation_plot("samesplitting", false, 16, 5000, nReps)
+# filepath = joinpath(filepath, "samesplitting/n = 16, m = 5000")
+# savefig(sc, joinpath(filepath, "estimation_smspl_diff_ww_lip_16_5000"))
+# savefig(summary, joinpath(filepath, "summary_smspl_diff_ww_lip_16_5000"))
 
-# everything for n = 128, m = 5000
+# # everything for n = 128, m = 5000
 
-println("n = 128, m = 5000, Beta, same")
-filepath = joinpath(pwd(),"plots/estimation")
-sc, summary = estimation_plot("Beta", true, 128, 5000, nReps)
-filepath = joinpath(filepath, "beta/n = 128, m = 5000")
-savefig(sc, joinpath(filepath, "estimation_beta_same_ww_lip_128_5000"))
-savefig(summary, joinpath(filepath, "summary_beta_same_ww_lip_128_5000"))
+# println("n = 128, m = 5000, Beta, same")
+# filepath = joinpath(pwd(),"plots/estimation")
+# sc, summary = estimation_plot("Beta", true, 128, 5000, nReps)
+# filepath = joinpath(filepath, "beta/n = 128, m = 5000")
+# savefig(sc, joinpath(filepath, "estimation_beta_same_ww_lip_128_5000"))
+# savefig(summary, joinpath(filepath, "summary_beta_same_ww_lip_128_5000"))
 
-println("n = 128, m = 5000, Beta, different")
-filepath = joinpath(pwd(),"plots/estimation")
-sc, summary = estimation_plot("Beta", false, 128, 5000, nReps)
-filepath = joinpath(filepath, "beta/n = 128, m = 5000")
-savefig(sc, joinpath(filepath, "estimation_beta_diff_ww_lip_128_5000"))
-savefig(summary, joinpath(filepath, "summary_beta_diff_ww_lip_128_5000"))
+# println("n = 128, m = 5000, Beta, different")
+# filepath = joinpath(pwd(),"plots/estimation")
+# sc, summary = estimation_plot("Beta", false, 128, 5000, nReps)
+# filepath = joinpath(filepath, "beta/n = 128, m = 5000")
+# savefig(sc, joinpath(filepath, "estimation_beta_diff_ww_lip_128_5000"))
+# savefig(summary, joinpath(filepath, "summary_beta_diff_ww_lip_128_5000"))
 
-println("n = 128, m = 5000, samesplitting, same")
-filepath = joinpath(pwd(),"plots/estimation")
-sc, summary = estimation_plot("samesplitting", true, 128, 5000, nReps)
-filepath = joinpath(filepath, "samesplitting/n = 128, m = 5000")
-savefig(sc, joinpath(filepath, "estimation_smspl_same_ww_lip_128_5000"))
-savefig(summary, joinpath(filepath, "summary_smspl_same_ww_lip_128_5000"))
+# println("n = 128, m = 5000, samesplitting, same")
+# filepath = joinpath(pwd(),"plots/estimation")
+# sc, summary = estimation_plot("samesplitting", true, 128, 5000, nReps)
+# filepath = joinpath(filepath, "samesplitting/n = 128, m = 5000")
+# savefig(sc, joinpath(filepath, "estimation_smspl_same_ww_lip_128_5000"))
+# savefig(summary, joinpath(filepath, "summary_smspl_same_ww_lip_128_5000"))
 
-println("n = 128, m = 5000, samesplitting, different")
-filepath = joinpath(pwd(),"plots/estimation")
-sc, summary = estimation_plot("samesplitting", false, 128, 5000, nReps)
-filepath = joinpath(filepath, "samesplitting/n = 128, m = 5000")
-savefig(sc, joinpath(filepath, "estimation_smspl_diff_ww_lip_128_5000"))
-savefig(summary, joinpath(filepath, "summary_smspl_diff_ww_lip_128_5000"))
+# println("n = 128, m = 5000, samesplitting, different")
+# filepath = joinpath(pwd(),"plots/estimation")
+# sc, summary = estimation_plot("samesplitting", false, 128, 5000, nReps)
+# filepath = joinpath(filepath, "samesplitting/n = 128, m = 5000")
+# savefig(sc, joinpath(filepath, "estimation_smspl_diff_ww_lip_128_5000"))
+# savefig(summary, joinpath(filepath, "summary_smspl_diff_ww_lip_128_5000"))
 
 
 
@@ -247,6 +247,5 @@ savefig(summary, joinpath(filepath, "summary_smspl_diff_ww_lip_128_5000"))
 # filepath = joinpath(pwd(),"plots/samesplitting/n = $(n_top), m = $(n_bottom)")
 # savefig(sc, joinpath(filepath, "estimation_splsm_ww_lip_$(n_top)_$(n_bottom)"))
 # savefig(summary, joinpath(filepath, "summary_splsm_ww_lip_$(n_top)_$(n_bottom)"))
-
 
 

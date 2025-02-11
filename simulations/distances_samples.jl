@@ -99,7 +99,7 @@ function plot_vectors(v::Vector{Vector{Float64}}, title, labels)
 end
 
 function figures(measures::String, n_top::Int, n_bottom::Int, nReps::Int)
-    ℵ = 1.0
+    α = 1.0
     if measures == "samesplitting"
         p_1 = ()->probability("same") # uniform(-1/2, 1/2)
         p_2 = ()->probability("splitting") # 1/2 uniform(-1, -3/4) + 1/2 uniform(3/4, 1)
@@ -210,3 +210,5 @@ end
 # thresh_quant_plots = plot_vectors([thresh_ww, thresh_lip, d_ww_quantiles, d_lip_quantiles],
 #                      "thresholds and quantiles, samesplitting", ["ww", "lip", "ww quantiles", "lip quantiles"])
 # # using above functions generate the plots of intereset
+
+
