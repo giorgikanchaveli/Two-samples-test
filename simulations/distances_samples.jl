@@ -210,5 +210,3 @@ end
 # thresh_quant_plots = plot_vectors([thresh_ww, thresh_lip, d_ww_quantiles, d_lip_quantiles],
 #                      "thresholds and quantiles, samesplitting", ["ww", "lip", "ww quantiles", "lip quantiles"])
 # # using above functions generate the plots of intereset
-
-

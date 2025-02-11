@@ -53,16 +53,16 @@ function rej_rates(p::PPM, q::PPM, n_top::Int, n_bottom::Int, nReps::Int)
     # n_top, n_bottom : number of top and bottom samples
     # p, q : PPMs
     # returns the rejection rate
-    θs = collect(0.1:0.1:1)
-    perm_par = 75
+    θs = collect(0.0:0.01:1)
+    perm_par = 50
+
+    # get distances
+    d_ww, d_lip = direct_sampling(p, q, n_top, n_bottom, nReps)
 
     # get thresholds
     d_ww_perm, d_lip_perm = permuted_sampling(generate_emp(p, n_top, n_bottom), generate_emp(q, n_top, n_bottom), perm_par)
     thresh_ww = quantile(d_ww_perm, 1 .- θs)
     thresh_lip = quantile(d_lip_perm, 1 .- θs)
-
-    # get distances
-    d_ww, d_lip = direct_sampling(p, q, n_top, n_bottom, nReps)
     
     # get rates
     rej_ww = [mean(d_ww .> t) for t in thresh_ww]
@@ -75,7 +75,7 @@ function plot_rej(r_ww::Vector{Float64}, r_lip::Vector{Float64}, title::String, 
     # this function plots the rejection rates for the two distances
     # r_ww, r_lip : rejection rates
     # labels : labels for the two distances
-    θs = collect(0.1:0.1:1)
+    θs = collect(0.0:0.01:1)
     pl = plot(title = title, xlabel = "probability", ylabel = "rejection rate", ratio = 1.0,xlims = (0,1), ylims = (0,1))
     plot!(pl, θs, r_ww, label = labels[1])
     plot!(pl, θs, r_lip, label = labels[2])
@@ -91,7 +91,6 @@ function plot_roc(fp_rates::Vector{Vector{Float64}}, tp_rates::Vector{Vector{Flo
     plot!(pl, fp_rates[2], tp_rates[2], label = labels[2])
     return pl
 end
-
 
 
 
@@ -133,6 +132,7 @@ function save_figures(measures::String, n_top::Int, n_bottom::Int, nReps::Int, s
         pl_roc = plot_roc([fp_ww, fp_lip],[tp_ww, tp_lip], "ROC, betafaraway", ["ww", "lip"])
 
     else
+
         fp_ww, fp_lip = rej_rates(dp_beta_1, dp_beta_1, n_top, n_bottom, nReps)
         tp_ww, tp_lip = rej_rates(dp_beta_1, dp_betaclose, n_top, n_bottom, nReps)
         pl_fp = plot_rej(fp_ww, fp_lip, "FP, betaclose", ["ww", "lip"])
@@ -156,11 +156,15 @@ function save_figures(n_top::Int, n_bottom::Int, nReps::Int, save)
     save_figures("betaclose", n_top, n_bottom, nReps, save)
 end
 
-t = time()
-save_figures(16, 5000, 100, true)
-println("finished n = 16")
-save_figures(128, 5000, 100, true)
-t = time() - t
+
+
+
+
+# t = time()
+# save_figures(16, 5000, 100, true)
+# println("finished n = 16")
+# save_figures(128, 5000, 100, true)
+# t = time() - t
 # p_same = ()->probability("same")
 # p_splitting = ()->probability("splitting")
 # dp_same = DP(1.0, p_same, -1.0, 1.0)
@@ -200,7 +204,6 @@ t = time() - t
 # savefig(pl_fp, joinpath(filepath, "fp_$(measures)_$(n_top)_$(n_bottom).png"))
 # savefig(pl_tp, joinpath(filepath, "tp_$(measures)_$(n_top)_$(n_bottom).png"))
 # savefig(pl_roc, joinpath(filepath, "roc_$(measures)_$(n_top)_$(n_bottom).png"))
-
 
 
 
