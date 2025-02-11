@@ -63,17 +63,22 @@ function estimation_plot(rpm::String, same::Bool, n_top::Int, n_bottom::Int, s::
     # same: Boolean varable to denote if the measures are the same or not
     # s : number of samples
     # n,m : n_top, n_bottom
+    α = 1.0
     if rpm == "samesplitting"
         if same
             p_1 = ()->probability("same") # uniform(-1/2, 1/2)
             p_2 = ()->probability("same") # uniform(-1/2, 1/2)
             d_true = 0.0
+           
+
         else
             p_1 = ()->probability("same") # uniform(-1/2, 1/2)
             p_2 = ()->probability("splitting") # 1/2 uniform(-1, -3/4) + 1/2 uniform(3/4, 1)
             d_true = quadgk(x -> abs(cdf_same(x) - cdf_splitting(x)), -1, 1)[1]
 
         end
+        dp_1 = DP(α, p_1, -1.0, 1.0)
+        dp_2 = DP(α, p_2, -1.0, 1.0)
         
     else
         p_a, p_b, q_a, q_b = 1.2, 0.3, 1.1, 3.4
@@ -86,10 +91,9 @@ function estimation_plot(rpm::String, same::Bool, n_top::Int, n_bottom::Int, s::
             p_2 = ()->rand(Beta(q_a, q_b))
             d_true = round(int_wass_beta(p_a, p_b, q_a, q_b), digits = 6)
         end
+        dp_1 = DP(α, p_1, 0.0, 1.0)
+        dp_2 = DP(α, p_2, 0.0, 1.0)
     end
-    α = 1.0
-    dp_1 = DP(α, p_1, -1.0, 1.0)
-    dp_2 = DP(α, p_2, -1.0, 1.0)
 
     @assert n_top == 16 || n_top == 128 "n_top must be or 16 or  128"
     @assert n_bottom == 5000 "n_bottom must be 5000"
