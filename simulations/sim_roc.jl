@@ -7,7 +7,7 @@ Random.seed!(1234)
 distances = collect(0.01:0.2:0.71)
 n_top = 75
 n_bottom = 2
-nPerms = 50
+nPerms = 75
 nReps = 75
 d_found,tp = tp_per_d(distances, n_top, n_bottom, nPerms, nReps)
 fp = fp_rate(n_top, n_bottom, nPerms, nReps)
