@@ -1,6 +1,9 @@
 include("../distances/distance_Wasserstein.jl")
 include("../distances/new_distance.jl")
 include("../distances/w_distance.jl")
+include("../distributions.jl")
+using ExtractMacro
+using Plots
 using QuadGK
 
 
@@ -79,9 +82,47 @@ function permuted_sampling(p_emp::emp_ppm, q_emp::emp_ppm, nReps::Int)
 end
 
 
+function pooled_measure_sampling(p::PPM, q::PPM, n_top::Int, n_bottom::Int, nReps::Int)
+    # Given two laws of RPM we simulate the distances between empirical measures 
+    # from pooled measure (p+q)/2. Samples will be used to get the thresholds
+
+    # sampling from pooled measure: with prob 1/2 sample empirical measure from p, otherwise from q
+    # but we can't sample from p and q directly, instead we generate exchangeable random sequences
+
+    
+    d_ww, d_lip = zeros(nReps), zeros(nReps)
+    for i in 1:nReps
+        if i % 10 == 0
+            println("iteration (pooled): $i")
+        end
+        atoms_p, atoms_q = zeros(n_top, n_bottom), zeros(n_top, n_bottom)
+        for j in 1:n_top
+            if rand() < 0.5
+                atoms_p[j,:] = dirichlet_process_without_weight(n_bottom, p.α, p.p_0)   
+            else
+                atoms_p[j,:] = dirichlet_process_without_weight(n_bottom, q.α, q.p_0)
+            end
+            if rand() < 0.5
+                atoms_q[j,:] = dirichlet_process_without_weight(n_bottom, p.α, p.p_0)
+            else
+                atoms_q[j,:] = dirichlet_process_without_weight(n_bottom, q.α, q.p_0)
+            end
+        end
+
+        p_emp = emp_ppm(atoms_p, n_top, n_bottom, p.a, p.b)
+        q_emp = emp_ppm(atoms_q, n_top, n_bottom, q.a, q.b)
+       
+        d_ww[i] = ww(p_emp, q_emp)
+        d_lip[i] = dlip(p_emp, q_emp)
+    end
+    return d_ww, d_lip
+end
 
 
 
+
+
+# Functions to get rejection rates
 
 function rej_rates(p::PPM, q::PPM, n_top::Int, n_bottom::Int, nPerms::Int, nReps::Int)
     # this function computes the rejection rate of the permutation test
@@ -143,5 +184,37 @@ function tp_per_d(distances::Vector{Float64}, n_top::Int, n_bottom::Int, nPerms:
         end
     end
     return d_found,r
+end
+
+
+
+# methods for plotting histograms and quantiles
+
+function plot_hist(d_ww, d_lip, title)
+    x_max = maximum([maximum(d_ww), maximum(d_lip)]) # sets the limit of the x-axis 
+    #x_min = minimum([minimum(d_ww), minimum(d_lip)])
+    
+    h_ww = histogram(d_ww, label="ww", xlabel="distance", ylabel="frequency",
+                    title=title,
+                    xticks=0.0:0.1:1.3, xlims = (0, x_max),bins = 30)
+    vline!(h_ww, [mean(d_ww)], label="mean = $(round(mean(d_ww),digits = 5))", color="red")
+
+    h_lip = histogram(d_lip, label="lip", xlabel="distance", ylabel="frequency",
+                    title=title,
+                    xticks=0.0:0.1:1.3, xlims = (0, x_max), bins = 30)
+        
+    vline!(h_lip, [mean(d_lip)], label="mean = $(round(mean(d_lip), digits = 5))", color="red")
+    return h_ww, h_lip
+end
+
+
+function plot_vectors(v::Vector{Vector{Float64}}, title, labels)
+    # plot the vectors
+    θs = collect(0.0:0.01:1.0)
+    p = plot(title = title, xlabel = "probability", ylabel = "values", ratio = 1.0,xlims = (0,1), ylims = (0,1))
+    for i in 1:length(v)
+        plot!(p, θs, v[i], label = labels[i])
+    end
+    return p
 end
 

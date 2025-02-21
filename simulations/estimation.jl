@@ -11,50 +11,7 @@ using QuadGK
 
 # generate measures -> compute 2 distances
 
-function int_wass_beta(p_a, p_b, q_a, q_b)
-    # this function computes the Wasserstein distance between two Beta distributions
-    # with parameters p and q using numerical integration
-    p = Beta(p_a, p_b)
-    q = Beta(q_a, q_b)
-    cdf_p = x -> cdf(p, x)
-    cdf_q = x -> cdf(q, x)
-    f = x -> abs(cdf_p(x) - cdf_q(x))
-    return quadgk(f, 0, 1)[1]
-end
 
-
-function mc_wass_beta(p_a, p_b, q_a, q_b, n, s)
-    # it is slow and not very precise
-    # this function computes the Wasserstein distance between two Beta distributions
-    # with parameters p and q using monte carlo 
-    p = Beta(p_a, p_b)
-    q = Beta(q_a, q_b)
-    d = zeros(s)
-    for i in 1:s
-        d[i] = wass(rand(p, n), rand(q, n))
-    end
-    return mean(d)
-end
-
-function get_distance(p::PPM, q::PPM, n::Int, m::Int, s::Int)
-    # this function computes the distances between the empirical measures
-    # sampled directly from p and q
-
-    # s : number of samples
-    # n,m : n_top, n_bottom
-
-    d_ww, d_lip = zeros(s), zeros(s)
-
-    for i in 1:s
-        if i % 10 == 0
-            println("sample: ", i)
-        end
-        p_emp, q_emp = generate_emp(p, n, m), generate_emp(q, n, m)
-        d_ww[i] = ww(p_emp, q_emp)
-        d_lip[i] = dlip(p_emp, q_emp)
-    end
-    return d_ww, d_lip
-end
 
 function estimation_plot(rpm::String, same::Bool, n_top::Int, n_bottom::Int, s::Int)
     # this function computes the distances between the empirical measures
@@ -96,7 +53,7 @@ function estimation_plot(rpm::String, same::Bool, n_top::Int, n_bottom::Int, s::
 
     @assert n_top == 16 || n_top == 128 "n_top must be or 16 or  128"
     @assert n_bottom == 5000 "n_bottom must be 5000"
-    d_ww, d_lip = get_distance(dp_1, dp_2, n_top, n_bottom, s)
+    d_ww, d_lip = direct_sampling(dp_1, dp_2, n_top, n_bottom, s)
 
     summary = plot(title = "summary")
     
@@ -146,7 +103,7 @@ end
 # Random.seed!(1234)
 # compute distances using direct samples
 #s = 24
-# d_ww, d_lip = get_distance(dp_1, dp_2, n_top, n_bottom, s)
+# d_ww, d_lip = direct_sampling(dp_1, dp_2, n_top, n_bottom, s)
 #d_mc = mc_wass_beta(p_a, p_b, q_a, q_b, 1000000,100)
 #d_true = round(int_wass_beta(p_a, p_b, q_a, q_b), digits = 6)
 #d_true = quadgk(x -> abs(cdf_same(x) - cdf_splitting(x)), -1, 1)[1]

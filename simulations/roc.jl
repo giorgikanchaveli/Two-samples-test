@@ -4,13 +4,16 @@ include("methods_roc.jl")
 
 
 Random.seed!(1234)
-distances = collect(0.01:0.2:0.71)
-n_top = 75
-n_bottom = 2
-nPerms = 75
-nReps = 75
+distances = collect(0.01:0.1:0.71)
+n_top = 16
+n_bottom = 5000
+nPerms = 24
+nReps = 50
 d_found,tp = tp_per_d(distances, n_top, n_bottom, nPerms, nReps)
+
+t = time()
 fp = fp_rate(n_top, n_bottom, nPerms, nReps)
+t = time() - t
 
 
 # plot of TP only for ww
@@ -76,4 +79,6 @@ scatter!(pl_roc,[],[], label = "dash:HIMP")
 
 
 
-        
+# filepath = joinpath(pwd(), "simulations/axaliplotebi")
+# savefig(pl_fp, joinpath(filepath, "fp_$(n_top)_$(n_bottom).png"))
+# savefig(pl_roc, joinpath(filepath, "roc_$(n_top)_$(n_bottom).png"))

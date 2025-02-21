@@ -1,5 +1,5 @@
 include("structures.jl")
-
+using Distributions, Random
 ### Dirichlet Process
 
 
