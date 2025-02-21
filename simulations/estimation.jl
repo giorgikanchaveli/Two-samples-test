@@ -5,7 +5,9 @@ include("../distances/new_distance.jl")
 include("../distances/w_distance.jl")
 using QuadGK
 
-
+# In this file, we study the estimation of the distance between two RPMs 
+# from samples of their empirical measures. We compare the Wasserstein over wasserstein 
+# to HIPM.
 
 # generate measures -> compute 2 distances
 

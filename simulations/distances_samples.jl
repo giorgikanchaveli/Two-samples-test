@@ -64,7 +64,7 @@ end
 
 function plot_hist(d_ww, d_lip, title)
     x_max = maximum([maximum(d_ww), maximum(d_lip)]) # sets the limit of the x-axis 
-    x_min = minimum([minimum(d_ww), minimum(d_lip)])
+    #x_min = minimum([minimum(d_ww), minimum(d_lip)])
     
     h_ww = histogram(d_ww, label="ww", xlabel="distance", ylabel="frequency",
                     title=title,
@@ -79,14 +79,6 @@ function plot_hist(d_ww, d_lip, title)
     return h_ww, h_lip
 end
 
-function plot_quantiles(d_ww, d_lip, title, labels)
-    # plot quantiles of the distances from ww and lip
-    θs = collect(0.0:0.01:1.0)
-    q_plot = plot(title=title)
-    plot!(q_plot, θs, quantile(d_ww, θs), xlabel="probability", ylabel="quantiles", label = labels[1])
-    plot!(q_plot, θs, quantile(d_lip, θs), xlabel="probability", ylabel="quantiles", label = labels[2])
-    return q_plot
-end
 
 function plot_vectors(v::Vector{Vector{Float64}}, title, labels)
     # plot the vectors
@@ -129,7 +121,9 @@ function figures(measures::String, n_top::Int, n_bottom::Int, nReps::Int)
     # plot histograms, quantiles
     h_ww, h_lip = plot_hist(d_ww, d_lip, "direct, $(measures)")
     h = plot(h_ww, h_lip, layout=(2,1), link = :x)
-    q_plot = plot_quantiles(d_ww, d_lip, "direct, $(measures)", ["ww", "lip"])
+    d_ww_quantiles = quantile(d_ww, 1 .- θs)
+    d_lip_quantiles = quantile(d_lip, 1 .- θs)
+    q_plot = plot_vectors([d_ww_quantiles, d_lip_quantiles],"direct, $(measures)", ["ww", "lip"])
 
     # get thresholds and data quantiles
     perm_par = 24
@@ -189,7 +183,9 @@ end
 
 # h_ww, h_lip = plot_hist(d_ww, d_lip, "direct, samesplitting")
 # h = plot(h_ww, h_lip, layout=(2,1), link = :x)
-# q_plot = plot_quantiles(d_ww, d_lip, "direct, samesplitting", ["ww", "lip"])
+# d_ww_quantiles = quantile(d_ww, θs)
+# d_lip_quantiles = quantile(d_lip, θs)
+# q_plot = plot_vectors([d_ww_quantiles,d_lip_quantiles], "direct, samesplitting", ["ww", "lip"])
 
 # θs = collect(0.0:0.01:1.0)
 # t = time()
