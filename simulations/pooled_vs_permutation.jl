@@ -13,10 +13,10 @@ function produce_plots(d::Float64, n_top::Int64, n_bottom::Int64)
     dp_2 = DP(α, p_2, 0.0, 1.0)
 
     # compute distances using direct samples
-    nReps = 100 
+    nReps = 100
     d_ww, d_lip = direct_sampling(dp_1, dp_2, n_top, n_bottom, nReps)
     # get thresholds
-    nPerms = 75 
+    nPerms = 75
     d_ww_pooled, d_lip_pooled = pooled_measure_sampling(dp_1, dp_2, n_top, n_bottom, nPerms)
     d_ww_perm, d_lip_perm = permuted_sampling(generate_emp(dp_1, n_top, n_bottom), 
                                     generate_emp(dp_2, n_top, n_bottom), nPerms)
@@ -60,7 +60,7 @@ function produce_plots(d::Float64, n_top::Int64, n_bottom::Int64)
             pl_obs_thresh_pooled, pl_obs_thresh_perm, pl_thresh_rej_pooled, pl_thresh_rej_perm, pl_rejections_ww, pl_rejections_lip]
 end
 
-function savingfigures(figure, d::Float64)
+function savefigures(figure, d::Float64)
     filepath = joinpath(pwd(), "plots/pooled_vs_permutation")
     savefig(figure[2], joinpath(filepath, "thresholds_ww_$(d).png"))
     savefig(figure[3], joinpath(filepath, "thresholds_lip_$(d).png"))
@@ -68,19 +68,23 @@ function savingfigures(figure, d::Float64)
     savefig(figure[9], joinpath(filepath, "rejections_lip_$(d).png"))
 end
 
+# save figures
 
 
 figures_1 = produce_plots(0.01, 80, 5000)
-figures_2 = produce_plots(0.1, 80, 5000)
-figures_3 = produce_plots(0.3, 80, 5000)
-figures_4 = produce_plots(0.5, 80, 5000)
-
-# save figures
-
 savefigures(figures_1, 0.01)
+println("finished 0.01")
+figures_2 = produce_plots(0.1, 80, 5000)
 savefigures(figures_2, 0.1)
+println("finished 0.1")
+figures_3 = produce_plots(0.3, 80, 5000)
 savefigures(figures_3, 0.3)
+println("finished 0.3")
+figures_4 = produce_plots(0.5, 80, 5000)
+println("finished 0.5")
 savefigures(figures_4, 0.5)
+
+
 
 
 
