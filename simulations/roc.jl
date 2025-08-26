@@ -4,11 +4,12 @@ include("methods_roc.jl")
 
 
 Random.seed!(1234)
-distances = collect(0.01:0.1:0.71)
-n_top = 16
-n_bottom = 5000
-nPerms = 24
-nReps = 50
+#distances = collect(0.01:0.1:0.71)
+distances = [0.2]
+n_top = 65
+n_bottom = 2
+nPerms = 50
+nReps = 120
 d_found,tp = tp_per_d(distances, n_top, n_bottom, nPerms, nReps)
 
 t = time()
@@ -64,16 +65,17 @@ plot!(pl_fp, θs, fp[2], linestyle = :dash,  linewidth=1, label = "HIPM")
 
 
 # Plot of ROC for both
-pl_roc = plot(title = "ROC for Ww and HIPM", xlabel = "False positive rate", ylabel = "True positive rate",
+#pl_roc = plot(title = "ROC for Ww and HIPM", xlabel = "False positive rate", ylabel = "True positive rate",
+#          ratio = 1.0, xlims = (0,1), ylims = (0,1))
+pl_roc = plot(title = "ROC for HIPM", xlabel = "False positive rate", ylabel = "True positive rate",
           ratio = 1.0, xlims = (0,1), ylims = (0,1))
-
 for i in 1:length(d_found)
     # Get the default color used for `i`th plot
     c = palette(:auto)[i]
     # Plot the solid line for WW
-    plot!(pl_roc, fp[1], tp[i][1], label = "d = $(d_found[i])", color = c)
+    plot!(pl_roc, fp[2], tp[i][2], label = "d = $(d_found[i])", color = c)
     # Plot the dashed line with the same color for HIPM
-    plot!(pl_roc, fp[2], tp[i][2], linestyle = :dash,  linewidth=1,color = c, label=false)
+    #plot!(pl_roc, fp[2], tp[i][2], linestyle = :dash,  linewidth=1,color = c, label=false)
 end
 scatter!(pl_roc,[],[], label = "dash:HIMP")
 

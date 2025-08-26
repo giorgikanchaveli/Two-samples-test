@@ -162,7 +162,25 @@ end
 
 
 # Exchangeable
+struct discrrpm<:PPM
+    # discrete random probability measure
+    # sample space is [a,b]
+    atoms::Matrix{Float64} # n_top x n_bottom matrix of atoms
+    weights::Vector{Float64} # vector of weights for each probability measure
+    n_top::Int # number of probability measures from which observations are generated
+    n_bottom::Int # number of observations from each probability measure
+    a::Float64 # interval [a,b] from which atoms are drawn
+    b::Float64 # interval [a,b] from which atoms are drawn
 
+    function discrrpm(n_top::Int, n_bottom::Int, a::Float64, b::Float64)
+        # given n_top and n_bottom constructs discrete random probability measure with atoms in [a,b] and weights
+        atoms = rand(Uniform(a,b),n_top,n_bottom)
+        weights = rand(n_top)
+        weights = weights ./ sum(weights)
+        new(atoms,weights,n_top,n_bottom,a,b)
+    end
+
+end
 
 struct DP<:PPM # Dirichlet process
     α::Float64
@@ -209,7 +227,18 @@ function generate_emp(ppm::DP, n_top::Int, n_bottom::Int)
     return emp_ppm(atoms, n_top, n_bottom, ppm.a, ppm.b)
 end
 
-
-
-
+function generate_emp(ppm::discrrpm, n_top::Int, n_bottom::Int)
+    # given discrete random probability measure, generates empirical measure struct
+    # n is the number of random probability measures we want to sample
+    # m is the number of atoms from each random probability measure
+    a,b = ppm.a, ppm.b
+    atoms = zeros(n_top,n_bottom)
+    
+    r = Categorical(ppm.weights) # used to sample from random probability measure
+    for i in 1:n_top
+        prob = rand(r) # probability measure sampled from discrete rpm
+        atoms[i,:] = rand(ppm.atoms[prob,:], n_bottom) 
+    end
+    return emp_ppm(atoms, n_top, n_bottom, a, b)
+end
 
