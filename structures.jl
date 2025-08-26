@@ -12,7 +12,7 @@ struct emp_ppm
     n::Int # number of probability measures from which observations are generated
     m::Int # number of observations from each probability measure
     a::Float64 # interval [a,b] from which atoms are drawn
-    b::Float64
+    b::Float64 # interval [a,b] from which atoms are drawn
 end
 
 abstract type PM end # type for probability measure over space of observations
