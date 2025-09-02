@@ -49,6 +49,17 @@ struct discr_normal<:PPM
 end
 
 
+struct normal_normal<:PPM
+    # random probability measure is truncated gaussian distributions on [a,b] with mean generated from normal(μ, σ)
+    # sample space is [a,b]
+
+    μ::Float64 # mean of normal distribution from which we generate mean of inner normal distribution
+    σ::Float64 # standard deviation of normal distribution from which we generate mean of inner normal distribution
+    a::Float64 # interval [a,b] from which atoms are drawn
+    b::Float64 # interval [a,b] from which atoms are drawn
+end
+
+
 
 
 
@@ -123,6 +134,22 @@ function generate_emp(ppm::discr_normal, n_top::Int, n_bottom::Int)
     for i in 1:n_top
         r = rand(1:ppm.n_1) # indexes the probability measure from which we sample i.i.d observations
         truncated_normal = truncated(Normal(ppm.μ[r], ppm.σ[r]), a, b)
+        atoms[i,:] = rand(truncated_normal, n_bottom)
+    end
+    return emp_ppm(atoms, n_top, n_bottom, a, b)
+end
+
+function generate_emp(ppm::normal_normal, n_top::Int, n_bottom::Int)
+    # given random probability measure which takes values as normal distributions where mean is random variable from normal(μ,σ), we generate hieraarchical measure
+    # which is used for estimating law of rpm.
+
+    # n is the number of random probability measures we want to sample
+    # m is the number of atoms from each random probability measure
+    a,b = ppm.a, ppm.b
+    atoms = zeros(n_top,n_bottom)
+    for i in 1:n_top
+        μ_inner = rand(Normal(ppm.μ, ppm.σ))
+        truncated_normal = truncated(Normal(μ_inner, ppm.σ), a, b)
         atoms[i,:] = rand(truncated_normal, n_bottom)
     end
     return emp_ppm(atoms, n_top, n_bottom, a, b)
