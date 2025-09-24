@@ -298,6 +298,8 @@ end
 
 function dlip(q_1::emp_ppm, q_2::emp_ppm, nGrid = 150, nSteps=1000,nRerun = 5,tol = 1e-4)
     a, b = q_1.a, q_1.b
+    @assert a == q_2.a "a's of q_1 and q_2 must be same "
+    @assert b == q_2.b "b's of q_1 and q_2 must be same "
     
     measure1 = zeros(q_1.n, q_1.m, 2)
     measure2 = zeros(q_2.n, q_2.m, 2)

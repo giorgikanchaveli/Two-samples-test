@@ -1,5 +1,5 @@
 
-struct emp_ppm
+mutable struct emp_ppm
     # structure to store data for exchangeable case
     atoms::Matrix{Float64}
     n::Int # number of probability measures from which observations are generated

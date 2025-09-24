@@ -184,3 +184,11 @@ function generate_prob_measures(ppm::tnormal_normal, n_top::Int)
     end    
     return pms
 end
+
+
+function generate_emp(ppm::tnormal_normal, n_top::Int, n_bottom::Int)
+    # given law of random probability measure which is truncated normal, generate
+    # hierarchical sample
+    pms = generate_prob_measures(ppm, n_top)
+    return generate_emp(pms, n_top, n_bottom)
+end
