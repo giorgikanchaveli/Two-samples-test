@@ -60,6 +60,11 @@ struct normal_normal<:PPM
 end
 
 
+struct tnormal_normal<:PPM
+    # random probability measure is gaussian distributions on R with mean generated from truncated normal(μ, 0.5) on [-1,1]
+    # sample space is R
+    δ::Float64 # mean of normal distribution from which we generate mean of inner normal distribution
+end
 
 
 
@@ -153,4 +158,29 @@ function generate_emp(ppm::normal_normal, n_top::Int, n_bottom::Int)
         atoms[i,:] = rand(truncated_normal, n_bottom)
     end
     return emp_ppm(atoms, n_top, n_bottom, a, b)
+end
+
+function generate_emp(pms::Vector{Normal}, n_top::Int, n_bottom::Int)
+    # given vector of n_top probability measures. From each of them generate the n_bottom
+    # length sequence of observations. 
+    @assert length(pms) == n_top "n and length of vector of probability measures are not equal"
+    atoms = zeros(n_top,n_bottom)
+    for i in 1:n_top
+        atoms[i,:] = rand(pms[i], n_bottom)
+    end
+    a = minimum(atoms) # left end of an interaval where observations take values
+    b = maximum(atoms) # right end of an interaval where observations take values
+    return emp_ppm(atoms, n_top, n_bottom, a, b)
+end
+
+function generate_prob_measures(ppm::tnormal_normal, n_top::Int)
+    # given law of random probability measure which is truncated normal, generate
+    # n_top normal distributions and save it into a vector.
+    pms = Vector{Normal}(undef, n_top)
+    for i in 1:n_top
+        t = truncated(Normal(ppm.δ, 0.5), -10.0, 10.0) # I think it should be sqrt(0.5)
+        μ = rand(t)
+        pms[i] = Normal(μ, 1.0) # i-th probability measure
+    end    
+    return pms
 end
