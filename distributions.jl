@@ -76,6 +76,25 @@ struct DP<:PPM # Dirichlet process
     # [a,b] is the observation space
 end
 
+struct new_normal_normal<:PPM # previous normal normal should be changed to normal_tnormal
+    # random probability measure is truncated gaussian distributions on [a,b] with mean generated from normal(μ, σ)
+    # sample space is [a,b]
+
+    δ::Float64 # mean of normal distribution from which we generate mean of inner normal distribution
+    σ::Float64 # standard deviation of normal distribution from which we generate mean of inner normal distribution
+end
+
+
+
+struct normal_uniform<:PPM # previous normal normal should be changed to normal_tnormal
+    # random probability measure is with mean generated from uniform(a,b)
+    # sample space is [a,b]
+
+    a::Float64 
+    b::Float64 
+end
+
+
 
 
 
@@ -178,7 +197,32 @@ function generate_prob_measures(ppm::tnormal_normal, n_top::Int)
     # n_top normal distributions and save it into a vector.
     pms = Vector{Normal}(undef, n_top)
     for i in 1:n_top
-        t = truncated(Normal(ppm.δ, 0.5), -10.0, 10.0) # I think it should be sqrt(0.5)
+        t = truncated(Normal(ppm.δ, 0.5), -1.0, 1.0) # I think it should be sqrt(0.5)
+        μ = rand(t)
+        pms[i] = Normal(μ, 1.0) # i-th probability measure
+    end    
+    return pms
+end
+
+function generate_prob_measures(ppm::new_normal_normal, n_top::Int)
+    # given law of random probability measure which is truncated normal, generate
+    # n_top normal distributions and save it into a vector.
+    pms = Vector{Normal}(undef, n_top)
+    for i in 1:n_top
+        t = Normal(ppm.δ, ppm.σ) 
+        μ = rand(t)
+        pms[i] = Normal(μ, 1.0) # i-th probability measure
+    end    
+    return pms
+end
+
+
+function generate_prob_measures(ppm::normal_uniform, n_top::Int)
+    # given law of random probability measure which is uniform on [-1,1], generate
+    # n_top normal distributions and save it into a vector.
+    pms = Vector{Normal}(undef, n_top)
+    for i in 1:n_top
+        t = Uniform(ppm.a, ppm.b)
         μ = rand(t)
         pms[i] = Normal(μ, 1.0) # i-th probability measure
     end    
@@ -188,6 +232,20 @@ end
 
 function generate_emp(ppm::tnormal_normal, n_top::Int, n_bottom::Int)
     # given law of random probability measure which is truncated normal, generate
+    # hierarchical sample
+    pms = generate_prob_measures(ppm, n_top)
+    return generate_emp(pms, n_top, n_bottom)
+end
+
+function generate_emp(ppm::new_normal_normal, n_top::Int, n_bottom::Int)
+    # given law of random probability measure which is normal, generate
+    # hierarchical sample
+    pms = generate_prob_measures(ppm, n_top)
+    return generate_emp(pms, n_top, n_bottom)
+end
+
+function generate_emp(ppm::normal_uniform, n_top::Int, n_bottom::Int)
+    # given law of random probability measure which is uniform on [-1,1], generate
     # hierarchical sample
     pms = generate_prob_measures(ppm, n_top)
     return generate_emp(pms, n_top, n_bottom)
