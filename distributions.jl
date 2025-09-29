@@ -273,31 +273,8 @@ end
 
 
 
-
-
-
-function generate_emp(ppm::tnormal_normal, n_top::Int, n_bottom::Int)
+function generate_emp(ppm::PPM, n_top::Int, n_bottom::Int)
     # given law of random probability measure which is truncated normal, generate
-    # hierarchical sample
-    pms = generate_prob_measures(ppm, n_top)
-    return generate_emp(pms, n_top, n_bottom)
-end
-
-function generate_emp(ppm::normal_normal, n_top::Int, n_bottom::Int)
-    # given law of random probability measure which is normal, generate
-    # hierarchical sample
-    pms = generate_prob_measures(ppm, n_top)
-    return generate_emp(pms, n_top, n_bottom)
-end
-
-function generate_emp(ppm::uniform_normal, n_top::Int, n_bottom::Int)
-    # given law of random probability measure which is uniform on [-1,1], generate
-    # hierarchical sample
-    pms = generate_prob_measures(ppm, n_top)
-    return generate_emp(pms, n_top, n_bottom)
-end
-function generate_emp(ppm::mixture_ppm, n_top::Int, n_bottom::Int)
-    # given law of random probability measure which is uniform on [-1,1], generate
     # hierarchical sample
     pms = generate_prob_measures(ppm, n_top)
     return generate_emp(pms, n_top, n_bottom)
