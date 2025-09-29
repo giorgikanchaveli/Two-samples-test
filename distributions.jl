@@ -49,7 +49,7 @@ struct discr_normal<:PPM
 end
 
 
-struct normal_normal<:PPM
+struct normal_tnormal<:PPM
     # random probability measure is truncated gaussian distributions on [a,b] with mean generated from normal(μ, σ)
     # sample space is [a,b]
 
@@ -61,9 +61,13 @@ end
 
 
 struct tnormal_normal<:PPM
-    # random probability measure is gaussian distributions on R with mean generated from truncated normal(μ, 0.5) on [-1,1]
+    # random probability measure is gaussian distributions on R with mean generated from truncated normal(μ, σ) on [a,b]
+    # and variance is 1.
     # sample space is R
-    δ::Float64 # mean of normal distribution from which we generate mean of inner normal distribution
+    μ::Float64 # mean of normal distribution from which we generate mean of inner normal distribution
+    σ::Float64 # standard deviation of truncated normal distribution from which we generate mean of inner normal distribution
+    a::Float64 # left end of truncation interval
+    b::Float64 # right end of truncation interval
 end
 
 
@@ -73,25 +77,31 @@ struct DP<:PPM # Dirichlet process
     p_0::Function # function generating observations from p_0
     a::Float64 
     b::Float64
-    # [a,b] is the observation space
+    # R is the observation space
 end
 
-struct new_normal_normal<:PPM # previous normal normal should be changed to normal_tnormal
-    # random probability measure is truncated gaussian distributions on [a,b] with mean generated from normal(μ, σ)
-    # sample space is [a,b]
+struct normal_normal<:PPM 
+    # random probability measure is gaussian distributions with mean generated from normal(μ, σ)
+    # sample space is [R
 
-    δ::Float64 # mean of normal distribution from which we generate mean of inner normal distribution
+    μ::Float64 # mean of normal distribution from which we generate mean of inner normal distribution
     σ::Float64 # standard deviation of normal distribution from which we generate mean of inner normal distribution
 end
 
 
 
-struct normal_uniform<:PPM # previous normal normal should be changed to normal_tnormal
-    # random probability measure is with mean generated from uniform(a,b)
-    # sample space is [a,b]
-
+struct uniform_normal<:PPM
+    # random probability measure is normal distribution with variance 1 and with mean generated from uniform(a,b)
+    # sample space is R
     a::Float64 
     b::Float64 
+end
+
+struct mixture_ppm<:PPM
+    # mixture of two random probability measures with mixing parameter λ
+    ppm1::PPM
+    ppm2::PPM
+    λ::Float64 # mixing parameter
 end
 
 
@@ -163,8 +173,9 @@ function generate_emp(ppm::discr_normal, n_top::Int, n_bottom::Int)
     return emp_ppm(atoms, n_top, n_bottom, a, b)
 end
 
-function generate_emp(ppm::normal_normal, n_top::Int, n_bottom::Int)
-    # given random probability measure which takes values as normal distributions where mean is random variable from normal(μ,σ), we generate hieraarchical measure
+function generate_emp(ppm::normal_tnormal, n_top::Int, n_bottom::Int)
+    # given random probability measure which takes values as trunacted normal distributions where mean is random variable from normal(μ,σ), 
+    # we generate hieraarchical measure
     # which is used for estimating law of rpm.
 
     # n is the number of random probability measures we want to sample
@@ -192,24 +203,39 @@ function generate_emp(pms::Vector{Normal}, n_top::Int, n_bottom::Int)
     return emp_ppm(atoms, n_top, n_bottom, a, b)
 end
 
+
+function generate_emp(pms::Vector{Any}, n_top::Int, n_bottom::Int)
+    # given vector of n_top probability measures. From each of them generate the n_bottom
+    # length sequence of observations. 
+    @assert length(pms) == n_top "n and length of vector of probability measures are not equal"
+    atoms = zeros(n_top,n_bottom)
+    for i in 1:n_top
+        atoms[i,:] = rand(pms[i], n_bottom)
+    end
+    a = minimum(atoms) # left end of an interaval where observations take values
+    b = maximum(atoms) # right end of an interaval where observations take values
+    return emp_ppm(atoms, n_top, n_bottom, a, b)
+end
+
+
 function generate_prob_measures(ppm::tnormal_normal, n_top::Int)
     # given law of random probability measure which is truncated normal, generate
-    # n_top normal distributions and save it into a vector.
+    # n_top normal distributions which is Normal(μ,1) and save it into a vector.
     pms = Vector{Normal}(undef, n_top)
     for i in 1:n_top
-        t = truncated(Normal(ppm.δ, 0.5), -1.0, 1.0) # I think it should be sqrt(0.5)
+        t = truncated(Normal(ppm.μ, ppm.σ), ppm.a, ppm.b)
         μ = rand(t)
         pms[i] = Normal(μ, 1.0) # i-th probability measure
     end    
     return pms
 end
 
-function generate_prob_measures(ppm::new_normal_normal, n_top::Int)
-    # given law of random probability measure which is truncated normal, generate
-    # n_top normal distributions and save it into a vector.
+function generate_prob_measures(ppm::normal_normal, n_top::Int)
+    # given law of random probability measure which is normal, generate
+    # n_top normal distributions with variance 1 and save it into a vector.
     pms = Vector{Normal}(undef, n_top)
     for i in 1:n_top
-        t = Normal(ppm.δ, ppm.σ) 
+        t = Normal(ppm.μ, ppm.σ)
         μ = rand(t)
         pms[i] = Normal(μ, 1.0) # i-th probability measure
     end    
@@ -217,9 +243,9 @@ function generate_prob_measures(ppm::new_normal_normal, n_top::Int)
 end
 
 
-function generate_prob_measures(ppm::normal_uniform, n_top::Int)
+function generate_prob_measures(ppm::uniform_normal, n_top::Int)
     # given law of random probability measure which is uniform on [-1,1], generate
-    # n_top normal distributions and save it into a vector.
+    # n_top normal distributions with variance 1.0 and save it into a vector.
     pms = Vector{Normal}(undef, n_top)
     for i in 1:n_top
         t = Uniform(ppm.a, ppm.b)
@@ -229,6 +255,26 @@ function generate_prob_measures(ppm::normal_uniform, n_top::Int)
     return pms
 end
 
+function generate_prob_measures(ppm::mixture_ppm, n_top::Int)
+    # given law of random probability measure which mixture of two distributions, generate
+    # n_top probability measures from it
+    pms_1 = generate_prob_measures(ppm.ppm1, n_top)
+    pms_2 = generate_prob_measures(ppm.ppm2, n_top)
+    pms = Vector{Normal}(undef, n_top) 
+    for i in 1:n_top
+        if rand() <= ppm.λ
+            pms[i] = pms_1[i]
+        else
+            pms[i] = pms_2[i]
+        end
+    end
+    return pms
+end
+
+
+
+
+
 
 function generate_emp(ppm::tnormal_normal, n_top::Int, n_bottom::Int)
     # given law of random probability measure which is truncated normal, generate
@@ -237,14 +283,20 @@ function generate_emp(ppm::tnormal_normal, n_top::Int, n_bottom::Int)
     return generate_emp(pms, n_top, n_bottom)
 end
 
-function generate_emp(ppm::new_normal_normal, n_top::Int, n_bottom::Int)
+function generate_emp(ppm::normal_normal, n_top::Int, n_bottom::Int)
     # given law of random probability measure which is normal, generate
     # hierarchical sample
     pms = generate_prob_measures(ppm, n_top)
     return generate_emp(pms, n_top, n_bottom)
 end
 
-function generate_emp(ppm::normal_uniform, n_top::Int, n_bottom::Int)
+function generate_emp(ppm::uniform_normal, n_top::Int, n_bottom::Int)
+    # given law of random probability measure which is uniform on [-1,1], generate
+    # hierarchical sample
+    pms = generate_prob_measures(ppm, n_top)
+    return generate_emp(pms, n_top, n_bottom)
+end
+function generate_emp(ppm::mixture_ppm, n_top::Int, n_bottom::Int)
     # given law of random probability measure which is uniform on [-1,1], generate
     # hierarchical sample
     pms = generate_prob_measures(ppm, n_top)
