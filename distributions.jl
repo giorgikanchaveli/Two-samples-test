@@ -299,9 +299,10 @@ function generate_prob_measures(ppm::Rademacher_2, n_top::Int)
     # n_top normal distributions with variance 1.0 and save it into a vector.
     pms = Vector{Normal}(undef, n_top)
     for i in 1:n_top
-        if rand() <= 1 / 8
+        r = rand()
+        if r <= 1 / 8
             μ = -2
-        elseif rand() <= 7 / 8
+        elseif r <= 7 / 8
             μ = 0.0
         else
             μ = 2.0
