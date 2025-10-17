@@ -104,12 +104,12 @@ struct mixture_ppm<:PPM
     λ::Float64 # mixing parameter
 end
 
-struct Rademacher_1<:PPM
-    # random probability measure is normal distribution with variance 1 and with mean generated from Rademacher distribution
+struct simple_discr_1<:PPM
+    # RPM which equals N(-1, 1) with probability 1/2 and N(1,1) with probability 1/2
     # sample space is R
 end
-struct Rademacher_2<:PPM
-    # random probability measure is normal distribution with variance 1 and with mean generated from Rademacher distribution
+struct simple_discr_2<:PPM
+    # RPM which equals N(-2, 1) with probability 1/8, N(0,1) with probability 3/4 and N(2,1) with probability 1/8
     # sample space is R
 end
 
@@ -280,8 +280,8 @@ function generate_prob_measures(ppm::mixture_ppm, n_top::Int)
     return pms
 end
 
-function generate_prob_measures(ppm::Rademacher_1, n_top::Int)
-    # given law of random probability measure which is Rademacher_1, generate
+function generate_prob_measures(ppm::simple_discr_1, n_top::Int)
+    # given law of random probability measure which is simple_discr_1, generate
     # n_top normal distributions with variance 1.0 and save it into a vector.
     pms = Vector{Normal}(undef, n_top)
     for i in 1:n_top
@@ -294,8 +294,8 @@ function generate_prob_measures(ppm::Rademacher_1, n_top::Int)
     end    
     return pms
 end
-function generate_prob_measures(ppm::Rademacher_2, n_top::Int)
-    # given law of random probability measure which is Rademacher_2, generate
+function generate_prob_measures(ppm::simple_discr_2, n_top::Int)
+    # given law of random probability measure which is simple_discr_2, generate
     # n_top normal distributions with variance 1.0 and save it into a vector.
     pms = Vector{Normal}(undef, n_top)
     for i in 1:n_top
