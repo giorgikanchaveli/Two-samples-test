@@ -377,5 +377,172 @@ end
 
 
 
+# Methods for saving computatino times 
+function save_times(n_tops::Vector{Int}, n_bottoms::Vector{Int}, n_comps::Int)
+    # This functions stores in a csv file the number of seconds we need to compute distances (HIPM, WoW) per each pair of (n_top, n_bottom) values.
+
+    # Input:
+        # n_tops: vector of number of probability measures
+        # n_bottoms: vector of number of random variables from probability measures
+        # n_comps: number of times we compute distance for each (n_top, n_bottom) pair. We will average the times over n_comps runs.
+    
+    
+    
+    # Firstly we define two Dirichlet Processes with different concentration parameters and the same base distribution.
+
+
+    α_1, α_2 = 1.0, 2.0
+    P_0_1 = ()->probability("same")
+    P_0_2 = ()->probability("splitting")
+
+    a, b = -1.0, 1.0
+
+    q_1 = DP(α_1, P_0_2, a, b)
+    q_2 = DP(α_2, P_0_2, a, b)
+
+
+    times_hipm = zeros(length(n_tops), length(n_bottoms)) # matrix to store average times for HIPM
+    times_wow = zeros(length(n_tops), length(n_bottoms)) # matrix to store average times for WoW
+
+    for (i, n_top) in enumerate(n_tops)
+        for (j, n_bottom) in enumerate(n_bottoms)
+            #println("n_top = $(n_top), n_bottom = $(n_bottom)")
+            for s in 1:n_comps
+                hier_sample_1 = generate_emp(q_1, n_top, n_bottom)
+                hier_sample_2 = generate_emp(q_2, n_top, n_bottom)
+
+                t_hipm = @elapsed dlip(hier_sample_1, hier_sample_2) # time HIPM
+                t_wow = @elapsed ww(hier_sample_1, hier_sample_2) # time WoW
+
+                times_hipm[i,j] += t_hipm
+                times_wow[i,j] += t_wow
+            end
+            times_hipm[i,j] /= n_comps
+            times_wow[i,j] /= n_comps
+        end
+    end
+    # Round times to 1 decimal places for better readability
+    # times_wow = Integer.(times_wow)
+    # times_hipm = Integer.(times_hipm)
+    times_wow = round.(times_wow, digits = 1)
+    times_hipm = round.(times_hipm, digits = 1)
+
+
+    # Build the DataFrame
+    #df_hipm = DataFrame(times_hipm, Symbol.(string.("m = ", n_bottoms)))
+    df_hipm = DataFrame(times_hipm, Symbol.(string.("", n_bottoms)))
+    df_hipm.n_tops = n_tops                  # add n_tops as a column
+    rename!(df_hipm, :n_tops => :n)
+    select!(df_hipm, :n, :)             # move n_tops to the first column
+
+    #df_wow = DataFrame(times_wow, Symbol.(string.("m = ", n_bottoms)))
+    df_wow = DataFrame(times_wow, Symbol.(string.("", n_bottoms)))
+    df_wow.n_tops = n_tops                  # add n_tops as a column
+    rename!(df_wow, :n_tops => :n)
+    select!(df_wow, :n, :)             # move n_tops to the first column
+
+    filepath = joinpath(pwd(), "time_wow_hipm/")
+    CSV.write(filepath*"times_hipm.csv", df_hipm)
+    CSV.write(filepath*"times_wow.csv", df_wow)    
+
+
+    return times_hipm, times_wow
+end
+
+# Methods for comparing powers for each pair 
+
+
+
+
+
+function rejection_rate_hipm_wow(q_1::PPM, q_2::PPM, S::Int, n_top::Int, n_bottom::Int, n_boostrap::Int, θ::Float64, boostrap::Bool=true)
+    # This function computes the rejection rates for given two laws of RPM, q_1 and q_2, for 2 testing schemes:
+    # HIPM, WoW
+
+    # Input: 
+        # q_1, q_2 : laws of two RPMs
+        # S : number of times we simulate two samples from given laws of RPM
+        # n_top : number of probability measures we simulate from each q
+        # n_bottom : number of random variables we simulate from each of the probability measure from q
+        # n_boostrap : number of times we repeat bootstrap procedure to estimate the quantile of the test statistic. Note that this can
+        #              be number of permutations, depending whether boostrap variable is true or false but only for HIPM and WoW. 
+        # θ : significance level, default value is 0.05
+        # boostrap : if true, then thresholds for HIPM and WoW are obtained via boostrap approach, otherwise via permutation approach.
+
+    # Output:
+        # rej_rate_hipm : rejection rate for HIPM test
+        # rej_rate_wow : rejection rate for WoW test
+     
+
+  
+    rej_rate_hipm, rej_rate_wow = 0.0, 0.0
+    #time_perm = time()
+
+    # Instead of getting the threshold for HIPM and WoW based on hierarchical sample everytime, for fixed q_1 and q_2, we obtain
+    # threshold once from some generated hierarchical samples and then use it for other hierarchical samples.
+    if boostrap
+        threshold_hipm, threshold_wow = get_thresholds_boostrap_hipm_wow(q_1, q_2, n_top, n_bottom, n_boostrap, θ) 
+    else
+        threshold_hipm, threshold_wow = get_thresholds_permutation_hipm_wow(q_1, q_2, n_top, n_bottom, n_boostrap, θ) 
+    end
+    #println("time taken to get thresholds is $(time() - time_perm) seconds")
+    
+    #time_S = time()
+    for s in 1:S
+
+        hier_sample_1, hier_sample_2 = generate_emp(q_1, n_top, n_bottom), generate_emp(q_2, n_top, n_bottom) 
+       
+
+        # record if testing schemes reject
+        rej_rate_hipm += 1*(dlip(hier_sample_1, hier_sample_2) > threshold_hipm)
+        rej_rate_wow += 1*(ww(hier_sample_1, hier_sample_2) > threshold_wow)
+    end
+    #println("time taken for S=$(S) is $(time() - time_S) seconds")
+    rej_rate_hipm /= S
+    rej_rate_wow /= S
+    return rej_rate_hipm, rej_rate_wow
+end
+
+
+function savefig_for_rejections_hipm_wow(q_1::PPM, q_2::PPM, n_tops::Vector{Int}, n_bottoms::Vector{Int}, S::Int, n_permutations::Int, θ::Float64, boostrap::Bool=true, name::String="dirichlet")
+    # This function computes rejection rates per each pair (n, m) for laws of RPM q_1 and q_2. It stores rejection rates in csv filemode
+
+    # Inputs:
+        # q_1
+    
+    rejections_hipm, rejections_wow = zeros(length(n_tops), length(n_bottoms)), zeros(length(n_tops), length(n_bottoms))
+
+    for (i,n_top) in enumerate(n_tops)
+        for (j,n_bottom) in enumerate(n_bottoms)
+            println("n_top = $(n_top), n_bottom = $(n_bottom)")
+            rej_rate_hipm, rej_rate_wow = rejection_rate_hipm_wow(q_1, q_2, S, n_top, n_bottom, n_permutations, θ, boostrap)
+            rejections_hipm[i,j] = rej_rate_hipm
+            rejections_wow[i,j] = rej_rate_wow
+        end
+    end
+
+    rejections_wow = round.(rejections_wow, digits = 2)
+    rejections_hipm = round.(rejections_hipm, digits = 2)
+
+
+    # Build the DataFrame
+    df_rejections_hipm = DataFrame(rejections_hipm, Symbol.(string.("", n_bottoms)))
+    df_rejections_hipm.n_tops = n_tops                  # add n_tops as a column
+    rename!(df_rejections_hipm, :n_tops => :n)
+    select!(df_rejections_hipm, :n, :)             # move n_tops to the first column
+
+    df_rejections_wow = DataFrame(rejections_wow, Symbol.(string.("", n_bottoms)))
+    df_rejections_wow.n_tops = n_tops                  # add n_tops as a column
+    rename!(df_rejections_wow, :n_tops => :n)
+    select!(df_rejections_wow, :n, :)             # move n_tops to the first column
+
+
+    filepath = joinpath(pwd(), "rejections_n_vs_m_wow_hipm/")
+    CSV.write(filepath*"df_rejections_wow_$(name).csv", df_rejections_wow)
+    CSV.write(filepath*"df_rejections_hipm_$(name).csv", df_rejections_hipm)
+
+
+    return df_rejections_hipm, df_rejections_wow
+end
 
 
