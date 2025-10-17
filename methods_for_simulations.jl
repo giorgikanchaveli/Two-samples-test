@@ -314,8 +314,11 @@ function rejection_rate(q_1::PPM, q_2::PPM, S::Int, n_top::Int, n_bottom::Int, n
     # threshold once from some generated hierarchical samples and then use it for other hierarchical samples.
     if boostrap
         threshold_hipm, threshold_wow = get_thresholds_boostrap_hipm_wow(q_1, q_2, n_top, n_bottom, n_boostrap, θ) 
+        #println("time taken to get thresholds is $(time() - time_perm) seconds")
     else
         threshold_hipm, threshold_wow = get_thresholds_permutation_hipm_wow(q_1, q_2, n_top, n_bottom, n_boostrap, θ) 
+        #println("time taken to get thresholds is $(time() - time_perm) seconds")
+
     end
     #println("time taken to get thresholds is $(time() - time_perm) seconds")
     
