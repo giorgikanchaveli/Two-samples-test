@@ -95,7 +95,7 @@ end
 
 
 function decide_denanova_from_r(mu_1::Vector{Float64}, mu_2::Vector{Float64};
-                           sd::Float64 = 1.0, nq::Int = 51, qmin=0.01, qmax=0.99,
+                           sd::Float64 = 1.0, nq::Int = 100, qmin=0.01, qmax=0.99,
                            n_boostrap::Int = 1000, seed = 1234, θ::Float64 = 0.05)
 
     # This function implements the two-sample test according Dubey & Muller using the function to DenANOVA from R package "frechet".
