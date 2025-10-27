@@ -10,6 +10,12 @@ mutable struct emp_ppm
     m::Int # number of observations from each probability measure
     a::Float64 # interval [a,b] from which atoms are drawn
     b::Float64 # interval [a,b] from which atoms are drawn
+
+    function emp_ppm(atoms::Matrix{Float64}, n::Int, m::Int, a::Float64, b::Float64)
+        @assert size(atoms, 1) == n "n must equal the number of rows in atoms"
+        @assert size(atoms, 2) == m "m must equal the number of columns in atoms"
+        new(atoms, n, m, a, b)
+    end
 end
 
 
