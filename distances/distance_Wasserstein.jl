@@ -29,12 +29,64 @@ function wasserstein1DUniform(atoms1, atoms2,p)
     end 
 end
 
+
+function ww(measure1::Matrix{Float64}, measure2::Matrix{Float64}, p = 1)
+    s1 = size(measure1)
+    s2 = size(measure2)
+
+    if s1[2] != s2[2]
+
+        println("PROBLEM OF DIMENSION: each lower measure should have the same dimension")
+        return -1. 
+    
+    else
+        
+        # timer = TimerOutput()
+
+        # Extract dimensions
+        m1 = s1[1]
+        m2 = s2[1]
+        n = s1[2]
+
+        # Compute matrix of pairwise distances which will be a cost function 
+
+        # @timeit timer "Compute pairwise transports" begin
+        
+        C = zeros(m1,m2)
+        for i=1:m1
+            for j =1:m2 
+                C[i,j] = wasserstein1DUniform(measure1[i,:],measure2[j,:],p)^p 
+            end
+        end 
+
+        # End timer 
+        # end
+
+        # Build the weights: uniform 
+        weight1 = fill(1 / m1, m1)
+        weight2 = fill(1 / m2, m2)
+
+        # Solving the optimal transport problem 
+        # @timeit timer "Solve outer OT problem" 
+        gamma = ExactOptimalTransport.emd(weight1, weight2, C, Tulip.Optimizer() )
+        # @timeit timer "compute transport cost" 
+        output = sum( gamma .* C )
+        
+        # display(timer)
+
+        return output^(1/p) 
+
+    end
+
+end
+
+
+
 function ww(q_1::emp_ppm, q_2::emp_ppm, p = 1)
     # Assuming that the number of atoms at the lower level is the same in each measure 
     
     measure1, measure2 = q_1.atoms[:,:], q_2.atoms[:,:]
     
-
     s1 = size(measure1)
     s2 = size(measure2)
 
