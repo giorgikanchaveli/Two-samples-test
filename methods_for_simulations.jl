@@ -595,13 +595,17 @@ function savefig_for_rejections_hipm_wow(q_1::PPM, q_2::PPM, n_tops::Vector{Int}
         for j in 1:(length(n_bottoms) - 1)
             if rejections_wow[i, j + 1] > rejections_wow[i + 1, j]
                 directions_wow[i, j] = 1 # it is better to increase m/n_bottom 2 times.
-            else
+            elseif rejections_wow[i, j + 1] < rejections_wow[i + 1, j]
                 directions_wow[i, j] = 0
+            else
+                directions_wow[i, j] = 5
             end
             if rejections_hipm[i, j + 1] > rejections_hipm[i + 1, j]
                 directions_hipm[i, j] = 1 # it is better to increase m/n_bottom 2 times.
-            else
+            elseif rejections_hipm[i, j + 1] < rejections_hipm[i + 1, j]
                 directions_hipm[i, j] = 0
+            else
+                directions_hipm[i, j] = 5
             end
         end
     end
@@ -618,7 +622,7 @@ function savefig_for_rejections_hipm_wow(q_1::PPM, q_2::PPM, n_tops::Vector{Int}
     select!(df_directions_wow, :n, :)             # move n_tops to the first column
 
 
-    filepath = joinpath(pwd(), "directions_n_vs_m_wow_hipm/")
+    filepath = joinpath(pwd(), "rejections_n_vs_m_wow_hipm/")
     CSV.write(filepath*"wow/new/df_directions_wow_$(name).csv", df_directions_wow)
     CSV.write(filepath*"hipm/new/df_directions_hipm_$(name).csv", df_directions_hipm)
 
