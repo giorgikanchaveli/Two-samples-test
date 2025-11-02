@@ -8,6 +8,10 @@ include("distributions.jl")
 
 include("distances/new_distance.jl")
 include("distances/distance_Wasserstein.jl")
+using DataFrames
+using CSV
+
+
 
 
 
@@ -196,22 +200,20 @@ end
 
 # Methods for WoW and HIPM
 
-function get_thresholds_permutation_hipm_wow(q_1::PPM, q_2::PPM, n_top::Int, n_bottom::Int, n_permutations::Int, θ::Float64)
-    # This function gets the thresholds for HIPM and WoW distances using permutation approach. It obtains hierarchical samples 
-    # from two given RPMs and use them for permutation procedure.
+
+
+function get_thresholds_permutation_hipm_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, n_top::Int, n_bottom::Int, n_permutations::Int, θ::Float64)
+    # This function gets the thresholds for HIPM and WoW distances using permutation approach. It receives hierarchical samples.
 
     # Inputs:
-        # q_1, q_2 : laws of two RPMs
+        # hier_sample_1, hier_sample_2 : hierarchical samples
         # n_top : number of atoms in hierarchical samples generated from RPMs
         # n_bottom : number of observations generated from each atom in hierarchical samples
         # n_permutations : number of permutations to approximate the quantile of the distance
         # θ : significance level, default value is 0.05
     
- 
     permuted_samples_dlip = zeros(n_permutations) # store samples of distances
     permuted_samples_ww = zeros(n_permutations) # store samples of distances
-
-    hier_sample_1, hier_sample_2 = generate_emp(q_1, n_top, n_bottom), generate_emp(q_2, n_top, n_bottom) 
     a = minimum([hier_sample_1.a, hier_sample_2.a])
     b = maximum([hier_sample_1.b, hier_sample_2.b])
     for k in 1:n_permutations
@@ -234,18 +236,34 @@ function get_thresholds_permutation_hipm_wow(q_1::PPM, q_2::PPM, n_top::Int, n_b
 
     return threshold_hipm, threshold_wow
 end
+
+
+
+function get_thresholds_permutation_hipm_wow(q_1::PPM, q_2::PPM, n_top::Int, n_bottom::Int, n_permutations::Int, θ::Float64)
+    # This function gets the thresholds for HIPM and WoW distances using permutation approach. It obtains hierarchical samples 
+    # from two given RPMs and use them for permutation procedure.
+
+    # Inputs:
+        # q_1, q_2 : laws of two RPMs
+        # n_top : number of atoms in hierarchical samples generated from RPMs
+        # n_bottom : number of observations generated from each atom in hierarchical samples
+        # n_permutations : number of permutations to approximate the quantile of the distance
+        # θ : significance level, default value is 0.05
+
+    hier_sample_1, hier_sample_2 = generate_emp(q_1, n_top, n_bottom), generate_emp(q_2, n_top, n_bottom) 
+    return get_thresholds_permutation_hipm_wow(hier_sample_1, hier_sample_2, n_top, n_bottom, n_permutations, θ)
+end
     
 
 
 
 
 
-function get_thresholds_boostrap_hipm_wow(q_1::PPM, q_2::PPM, n_top::Int, n_bottom::Int, n_boostrap::Int, θ::Float64)
-    # This function gets the thresholds for HIPM and WoW distances using boostrap approach. It obtains hierarchical samples 
-    # from two given RPMs and use them for boostrap procedure.
+function get_thresholds_boostrap_hipm_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, n_top::Int, n_bottom::Int, n_boostrap::Int, θ::Float64)
+    # This function gets the thresholds for HIPM and WoW distances using boostrap approach. It receives hierarchical samples
 
     # Inputs:
-        # q_1, q_2 : laws of two RPMs
+        # hier_sample_1, hier_sample_2 : Hierarchical samples 
         # n_top : number of atoms in hierarchical samples generated from RPMs
         # n_bottom : number of observations generated from each atom in hierarchical samples
         # n_boostrap : number of boostrap samples to approximate the quantile of the distance
@@ -254,8 +272,6 @@ function get_thresholds_boostrap_hipm_wow(q_1::PPM, q_2::PPM, n_top::Int, n_bott
  
     boostrap_samples_dlip = zeros(n_boostrap) # store samples of distances
     boostrap_samples_ww = zeros(n_boostrap) # store samples of distances
-
-    hier_sample_1, hier_sample_2 = generate_emp(q_1, n_top, n_bottom), generate_emp(q_2, n_top, n_bottom)
     a = minimum([hier_sample_1.a, hier_sample_2.a])
     b = maximum([hier_sample_1.b, hier_sample_2.b])
     for k in 1:n_boostrap
@@ -280,6 +296,25 @@ function get_thresholds_boostrap_hipm_wow(q_1::PPM, q_2::PPM, n_top::Int, n_bott
     return threshold_hipm, threshold_wow
 end
     
+
+
+
+function get_thresholds_boostrap_hipm_wow(q_1::PPM, q_2::PPM, n_top::Int, n_bottom::Int, n_boostrap::Int, θ::Float64)
+    # This function gets the thresholds for HIPM and WoW distances using boostrap approach. It obtains hierarchical samples 
+    # from two given RPMs and use them for boostrap procedure.
+
+    # Inputs:
+        # q_1, q_2 : laws of two RPMs
+        # n_top : number of atoms in hierarchical samples generated from RPMs
+        # n_bottom : number of observations generated from each atom in hierarchical samples
+        # n_boostrap : number of boostrap samples to approximate the quantile of the distance
+        # θ : significance level, default value is 0.05
+    
+    hier_sample_1, hier_sample_2 = generate_emp(q_1, n_top, n_bottom), generate_emp(q_2, n_top, n_bottom)
+    return get_thresholds_boostrap_hipm_wow(hier_sample_1, hier_sample_2, n_top, n_bottom, n_boostrap, θ)
+end
+    
+
 
 
 # Rejection rates
@@ -395,13 +430,13 @@ function save_times(n_tops::Vector{Int}, n_bottoms::Vector{Int}, n_comps::Int)
 
 
     α_1, α_2 = 1.0, 2.0
-    P_0_1 = ()->probability("same")
-    P_0_2 = ()->probability("splitting")
+    P_0_1 = ()->rand(Beta(1,1))
+   
 
     a, b = -1.0, 1.0
 
-    q_1 = DP(α_1, P_0_2, a, b)
-    q_2 = DP(α_2, P_0_2, a, b)
+    q_1 = DP(α_1, P_0_1, a, b)
+    q_2 = DP(α_2, P_0_1, a, b)
 
 
     times_hipm = zeros(length(n_tops), length(n_bottoms)) # matrix to store average times for HIPM
@@ -427,26 +462,26 @@ function save_times(n_tops::Vector{Int}, n_bottoms::Vector{Int}, n_comps::Int)
     # Round times to 1 decimal places for better readability
     # times_wow = Integer.(times_wow)
     # times_hipm = Integer.(times_hipm)
-    times_wow = round.(times_wow, digits = 1)
-    times_hipm = round.(times_hipm, digits = 1)
+    times_wow = round.(times_wow, digits = 2)
+    times_hipm = round.(times_hipm, digits = 2)
 
 
     # Build the DataFrame
     #df_hipm = DataFrame(times_hipm, Symbol.(string.("m = ", n_bottoms)))
-    df_hipm = DataFrame(times_hipm, Symbol.(string.("", n_bottoms)))
+    df_hipm = DataFrame(times_hipm, Symbol.(string.("m = ", n_bottoms)))
     df_hipm.n_tops = n_tops                  # add n_tops as a column
     rename!(df_hipm, :n_tops => :n)
     select!(df_hipm, :n, :)             # move n_tops to the first column
 
     #df_wow = DataFrame(times_wow, Symbol.(string.("m = ", n_bottoms)))
-    df_wow = DataFrame(times_wow, Symbol.(string.("", n_bottoms)))
+    df_wow = DataFrame(times_wow, Symbol.(string.("m = ", n_bottoms)))
     df_wow.n_tops = n_tops                  # add n_tops as a column
     rename!(df_wow, :n_tops => :n)
     select!(df_wow, :n, :)             # move n_tops to the first column
 
     filepath = joinpath(pwd(), "time_wow_hipm/")
-    CSV.write(filepath*"times_hipm.csv", df_hipm)
-    CSV.write(filepath*"times_wow.csv", df_wow)    
+    CSV.write(filepath*"times_hipm_powers_of_two.csv", df_hipm)
+    CSV.write(filepath*"times_wow_powers_of_two.csv", df_wow)    
 
 
     return times_hipm, times_wow
@@ -494,7 +529,13 @@ function rejection_rate_hipm_wow(q_1::PPM, q_2::PPM, S::Int, n_top::Int, n_botto
     for s in 1:S
 
         hier_sample_1, hier_sample_2 = generate_emp(q_1, n_top, n_bottom), generate_emp(q_2, n_top, n_bottom) 
-       
+        if s % 5 == 0
+            if boostrap
+                threshold_hipm, threshold_wow = get_thresholds_boostrap_hipm_wow(hier_sample_1, hier_sample_2, n_top, n_bottom, n_boostrap, θ) 
+            else
+                threshold_hipm, threshold_wow = get_thresholds_permutation_hipm_wow(hier_sample_1, hier_sample_2, n_top, n_bottom, n_boostrap, θ) 
+            end
+        end
 
         # record if testing schemes reject
         rej_rate_hipm += 1*(dlip(hier_sample_1, hier_sample_2) > threshold_hipm)
@@ -524,28 +565,65 @@ function savefig_for_rejections_hipm_wow(q_1::PPM, q_2::PPM, n_tops::Vector{Int}
         end
     end
 
-    rejections_wow = round.(rejections_wow, digits = 2)
-    rejections_hipm = round.(rejections_hipm, digits = 2)
+    rejections_wow = round.(rejections_wow, digits = 3)
+    rejections_hipm = round.(rejections_hipm, digits = 3)
 
 
     # Build the DataFrame
-    df_rejections_hipm = DataFrame(rejections_hipm, Symbol.(string.("", n_bottoms)))
+    df_rejections_hipm = DataFrame(rejections_hipm, Symbol.(string.("m = ", n_bottoms)))
     df_rejections_hipm.n_tops = n_tops                  # add n_tops as a column
     rename!(df_rejections_hipm, :n_tops => :n)
     select!(df_rejections_hipm, :n, :)             # move n_tops to the first column
 
-    df_rejections_wow = DataFrame(rejections_wow, Symbol.(string.("", n_bottoms)))
+    df_rejections_wow = DataFrame(rejections_wow, Symbol.(string.("m = ", n_bottoms)))
     df_rejections_wow.n_tops = n_tops                  # add n_tops as a column
     rename!(df_rejections_wow, :n_tops => :n)
     select!(df_rejections_wow, :n, :)             # move n_tops to the first column
 
 
     filepath = joinpath(pwd(), "rejections_n_vs_m_wow_hipm/")
-    CSV.write(filepath*"df_rejections_wow_$(name).csv", df_rejections_wow)
-    CSV.write(filepath*"df_rejections_hipm_$(name).csv", df_rejections_hipm)
+    CSV.write(filepath*"wow/new/df_rejections_wow_$(name).csv", df_rejections_wow)
+    CSV.write(filepath*"hipm/new/df_rejections_hipm_$(name).csv", df_rejections_hipm)
 
 
-    return df_rejections_hipm, df_rejections_wow
+
+
+
+    directions_wow = -1 * ones(length(n_tops), length(n_bottoms))
+    directions_hipm = -1 * ones(length(n_tops), length(n_bottoms))
+    for i in 1:(length(n_tops) - 1)
+        for j in 1:(length(n_bottoms) - 1)
+            if rejections_wow[i, j + 1] > rejections_wow[i + 1, j]
+                directions_wow[i, j] = 1 # it is better to increase m/n_bottom 2 times.
+            else
+                directions_wow[i, j] = 0
+            end
+            if rejections_hipm[i, j + 1] > rejections_hipm[i + 1, j]
+                directions_hipm[i, j] = 1 # it is better to increase m/n_bottom 2 times.
+            else
+                directions_hipm[i, j] = 0
+            end
+        end
+    end
+
+    # Build the DataFrame
+    df_directions_hipm = DataFrame(directions_hipm, Symbol.(string.("m = ", n_bottoms)))
+    df_directions_hipm.n_tops = n_tops                  # add n_tops as a column
+    rename!(df_directions_hipm, :n_tops => :n)
+    select!(df_directions_hipm, :n, :)             # move n_tops to the first column
+
+    df_directions_wow = DataFrame(directions_wow, Symbol.(string.("m = ", n_bottoms)))
+    df_directions_wow.n_tops = n_tops                  # add n_tops as a column
+    rename!(df_directions_wow, :n_tops => :n)
+    select!(df_directions_wow, :n, :)             # move n_tops to the first column
+
+
+    filepath = joinpath(pwd(), "directions_n_vs_m_wow_hipm/")
+    CSV.write(filepath*"wow/new/df_directions_wow_$(name).csv", df_directions_wow)
+    CSV.write(filepath*"hipm/new/df_directions_hipm_$(name).csv", df_directions_hipm)
+
+
+    return rejections_wow, rejections_hipm
 end
 
 
