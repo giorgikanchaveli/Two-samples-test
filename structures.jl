@@ -1,8 +1,14 @@
+# Every law of a random probability measure should be of type PPM. Then we can define specific ways to generate 
+# hierarchical samples from these laws. 
+
+# Every hieraerchical sample should be of type emp_ppm, which contains the data and some parameters, including number of
+# probability measures and number of observations from each probability measure, end points of the interval from which atoms are drawn.
 
 
 
 
-mutable struct emp_ppm
+# why mutable?
+struct emp_ppm
     # structure to store data for exchangeable sequences case
 
     atoms::Matrix{Float64} # contains all observed random variables
