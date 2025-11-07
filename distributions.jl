@@ -1,18 +1,18 @@
 include("structures.jl")
+
 using Distributions, Random
 
 
-function probability(baseMeasure::String)
-    # function to generate observation either from uniform(-1/2,1/2) or from splitting measure
-    if baseMeasure == "same" # Uniform(-1/2,1/2)
-        return rand() - 0.5
-    elseif baseMeasure == "splitting"  # sample either close to -1 or close to 1
-        atom = rand()
-        mixture = rand((0,1))
-        return mixture * ( -1. + 0.25 * atom ) + (1 - mixture) * (0.75 + 0.25 * atom)
-    end
-
-end
+# function probability(baseMeasure::String)
+#     # function to generate observation either from uniform(-1/2,1/2) or from splitting measure
+#     if baseMeasure == "same" # Uniform(-1/2,1/2)
+#         return rand() - 0.5
+#     elseif baseMeasure == "splitting"  # sample either close to -1 or close to 1
+#         atom = rand()
+#         mixture = rand((0,1))
+#         return mixture * ( -1. + 0.25 * atom ) + (1 - mixture) * (0.75 + 0.25 * atom)
+#     end
+# end
 
 
 # structures for laws of RPMs.
@@ -20,37 +20,37 @@ end
 # These structures encapsulate all the parameters needed to generated hierarchical samples from given laws of RPM.
 
 
-struct discrrpm<:PPM
-    # discrete random probability measure
-    # sample space is [a,b]
-    atoms::Matrix{Float64} # n_top x n_bottom matrix of atoms
-    weights::Vector{Float64} # vector of weights for each probability measure
-    n_top::Int # number of probability measures from which observations are generated
-    n_bottom::Int # number of observations from each probability measure
-    a::Float64 # interval [a,b] from which atoms are drawn
-    b::Float64 # interval [a,b] from which atoms are drawn
+# struct discrrpm<:PPM
+#     # discrete random probability measure
+#     # sample space is [a,b]
+#     atoms::Matrix{Float64} # n_top x n_bottom matrix of atoms
+#     weights::Vector{Float64} # vector of weights for each probability measure
+#     n_top::Int # number of probability measures from which observations are generated
+#     n_bottom::Int # number of observations from each probability measure
+#     a::Float64 # interval [a,b] from which atoms are drawn
+#     b::Float64 # interval [a,b] from which atoms are drawn
 
-    function discrrpm(n_top::Int, n_bottom::Int, a::Float64, b::Float64)
-        # given n_top and n_bottom constructs discrete random probability measure with atoms in [a,b] and weights
-        atoms = rand(Uniform(a,b),n_top,n_bottom)
-        weights = rand(n_top)
-        weights = weights ./ sum(weights)
-        new(atoms,weights,n_top,n_bottom,a,b)
-    end
+#     function discrrpm(n_top::Int, n_bottom::Int, a::Float64, b::Float64)
+#         # given n_top and n_bottom constructs discrete random probability measure with atoms in [a,b] and weights
+#         atoms = rand(Uniform(a,b),n_top,n_bottom)
+#         weights = rand(n_top)
+#         weights = weights ./ sum(weights)
+#         new(atoms,weights,n_top,n_bottom,a,b)
+#     end
 
-end
+# end
 
 
-struct discr_tnormal<:PPM
-    # discrete measure over n_1 truncated gaussian distributions on [a,b]
-    # sample space is [a,b]
+# struct discr_tnormal<:PPM
+#     # discrete measure over n_1 truncated gaussian distributions on [a,b]
+#     # sample space is [a,b]
 
-    n_1::Int # number of normal distributions
-    μ::Vector{Float64} # mean of each normal distribution
-    σ::Vector{Float64} # standard deviation each of normal distribution
-    a::Float64 # interval [a,b] from which atoms are drawn
-    b::Float64 # interval [a,b] from which atoms are drawn
-end
+#     n_1::Int # number of normal distributions
+#     μ::Vector{Float64} # mean of each normal distribution
+#     σ::Vector{Float64} # standard deviation each of normal distribution
+#     a::Float64 # interval [a,b] from which atoms are drawn
+#     b::Float64 # interval [a,b] from which atoms are drawn
+# end
 
 
 struct normal_tnormal<:PPM
@@ -78,7 +78,7 @@ end
 
 struct DP<:PPM # Dirichlet process
     α::Float64
-    p_0::Function # function generating observations from p_0
+    p_0::Distribution # function generating observations from p_0
     a::Float64 
     b::Float64
     # R is the observation space
@@ -140,25 +140,30 @@ end
 
 
 
-function dirichlet_process_without_weight(n, α, p_0)
+ function dirichlet_process_without_weight_new(n, α, p_0::Distribution)
     # auxiliary function
     # Given function p_0 that returns sample from chosen probability measure P_0
     # we generate a n-sample from a Dirichlet process with parameter α and p_0
-    if n == 0
-        return []
-    elseif n == 1 # It's not needed in general but useful to have same seed for iid and exch. case
-        prev = dirichlet_process_without_weight(n-1,α,p_0)
-        return push!(prev, p_0())
-    else 
-        prev = dirichlet_process_without_weight(n-1,α,p_0)
-        if rand() <= α /(α +n-1) # sample from P_0
-            return push!(prev, p_0())
-        else # sample from the already given observations
-            index = rand(1:(n-1))
-            return push!(prev, prev[index])
+
+    @assert n > 0 "n must be positive integer"
+    samples = Vector{Float64}(undef, n)
+    samples[1] = rand(p_0)
+    for i in 2:n
+        if rand() <= α / (α + i - 1)
+            samples[i] = rand(p_0)
+        else
+            index = rand(1:(i-1))
+            samples[i] = samples[index]
         end
-    end  
+    end
+    return samples
 end
+
+    
+
+
+
+
 
 function generate_emp(ppm::DP, n_top::Int, n_bottom::Int)
     # given random probability measure from Dirichlet process, generates empirical measure struct
