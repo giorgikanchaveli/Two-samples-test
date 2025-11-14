@@ -177,36 +177,36 @@ function generate_emp(ppm::DP, n_top::Int, n_bottom::Int)
     return emp_ppm(atoms, n_top, n_bottom, ppm.a, ppm.b)
 end
 
-function generate_emp(ppm::discrrpm, n_top::Int, n_bottom::Int)
-    # given discrete random probability measure, generates empirical measure struct
-    # n is the number of random probability measures we want to sample
-    # m is the number of atoms from each random probability measure
-    a,b = ppm.a, ppm.b
-    atoms = zeros(n_top,n_bottom)
+# function generate_emp(ppm::discrrpm, n_top::Int, n_bottom::Int)
+#     # given discrete random probability measure, generates empirical measure struct
+#     # n is the number of random probability measures we want to sample
+#     # m is the number of atoms from each random probability measure
+#     a,b = ppm.a, ppm.b
+#     atoms = zeros(n_top,n_bottom)
     
-    r = Categorical(ppm.weights) # used to sample from random probability measure
-    for i in 1:n_top
-        prob = rand(r) # probability measure sampled from discrete rpm
-        atoms[i,:] = rand(ppm.atoms[prob,:], n_bottom) 
-    end
-    return emp_ppm(atoms, n_top, n_bottom, a, b)
-end
+#     r = Categorical(ppm.weights) # used to sample from random probability measure
+#     for i in 1:n_top
+#         prob = rand(r) # probability measure sampled from discrete rpm
+#         atoms[i,:] = rand(ppm.atoms[prob,:], n_bottom) 
+#     end
+#     return emp_ppm(atoms, n_top, n_bottom, a, b)
+# end
 
 
-function generate_emp(ppm::discr_tnormal, n_top::Int, n_bottom::Int)
-    # given discrete random probability measure over truncated normal distributions, generates empirical measure struct
-    # which is used for estimating law of rpm.
-    # n is the number of random probability measures we want to sample
-    # m is the number of atoms from each random probability measure
-    a,b = ppm.a, ppm.b
-    atoms = zeros(n_top,n_bottom)
-    for i in 1:n_top
-        r = rand(1:ppm.n_1) # indexes the probability measure from which we sample i.i.d observations
-        truncated_normal = truncated(Normal(ppm.μ[r], ppm.σ[r]), a, b)
-        atoms[i,:] = rand(truncated_normal, n_bottom)
-    end
-    return emp_ppm(atoms, n_top, n_bottom, a, b)
-end
+# function generate_emp(ppm::discr_tnormal, n_top::Int, n_bottom::Int)
+#     # given discrete random probability measure over truncated normal distributions, generates empirical measure struct
+#     # which is used for estimating law of rpm.
+#     # n is the number of random probability measures we want to sample
+#     # m is the number of atoms from each random probability measure
+#     a,b = ppm.a, ppm.b
+#     atoms = zeros(n_top,n_bottom)
+#     for i in 1:n_top
+#         r = rand(1:ppm.n_1) # indexes the probability measure from which we sample i.i.d observations
+#         truncated_normal = truncated(Normal(ppm.μ[r], ppm.σ[r]), a, b)
+#         atoms[i,:] = rand(truncated_normal, n_bottom)
+#     end
+#     return emp_ppm(atoms, n_top, n_bottom, a, b)
+# end
 
 function generate_emp(ppm::normal_tnormal, n_top::Int, n_bottom::Int)
     # given random probability measure which takes values as trunacted normal distributions where mean is random variable from normal(μ,σ), 
