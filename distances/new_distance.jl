@@ -295,27 +295,35 @@ function dlip(measure1, measure2, a,b, nGrid = 250, nSteps=1000,nRerun = 5,tol =
 
 end 
 
+function dlip(q_1::emp_ppm, q_2::emp_ppm; nGrid=150, nSteps=1000, nRerun=5, tol=1e-4)
+    @assert q_1.a == q_2.a "a's of q_1 and q_2 must be same"
+    @assert q_1.b == q_2.b "b's of q_1 and q_2 must be same"
 
-function dlip(q_1::emp_ppm, q_2::emp_ppm, nGrid = 150, nSteps=1000,nRerun = 5,tol = 1e-4)
-    a, b = q_1.a, q_1.b
-    @assert a == q_2.a "a's of q_1 and q_2 must be same "
-    @assert b == q_2.b "b's of q_1 and q_2 must be same "
-    
-    measure1 = zeros(q_1.n, q_1.m, 2)
-    measure2 = zeros(q_2.n, q_2.m, 2)
-    measure1[:, :, 1], measure2[:,:,1] = q_1.atoms, q_2.atoms
-    measure1[:, :, 2], measure2[:,:,2] = fill(1/q_1.m, (q_1.n, q_1.m)),
-                                         fill(1/q_2.m, (q_2.n, q_2.m))
-    return dlip(measure1, measure2, a, b, nGrid, nSteps, nRerun, tol)
+    measure1 = similar(q_1.atoms, eltype(q_1.atoms), q_1.n, q_1.m, 2)
+    measure2 = similar(q_2.atoms, eltype(q_2.atoms), q_2.n, q_2.m, 2)
+
+    @views begin
+        copyto!(measure1[:, :, 1], q_1.atoms)
+        copyto!(measure2[:, :, 1], q_2.atoms)
+        measure1[:, :, 2] .= one(eltype(q_1.atoms)) / q_1.m
+        measure2[:, :, 2] .= one(eltype(q_2.atoms)) / q_2.m
+    end
+
+    return dlip(measure1, measure2, q_1.a, q_1.b, nGrid, nSteps, nRerun, tol)
 end
+
 
 function lower_bound(q_1::emp_ppm, q_2::emp_ppm)
     a, b = q_1.a, q_1.b
     
-    measure1 = zeros(q_1.n, q_1.m, 2)
-    measure2 = zeros(q_2.n, q_2.m, 2)
-    measure1[:, :, 1], measure2[:,:,1] = q_1.atoms, q_2.atoms
-    measure1[:, :, 2], measure2[:,:,2] = fill(1/q_1.m, (q_1.n, q_1.m)),
-                                         fill(1/q_2.m, (q_2.n, q_2.m))
+    measure1 = similar(q_1.atoms, eltype(q_1.atoms), q_1.n, q_1.m, 2)
+    measure2 = similar(q_2.atoms, eltype(q_2.atoms), q_2.n, q_2.m, 2)
+
+    @views begin
+        copyto!(measure1[:, :, 1], q_1.atoms)
+        copyto!(measure2[:, :, 1], q_2.atoms)
+        measure1[:, :, 2] .= one(eltype(q_1.atoms)) / q_1.m
+        measure2[:, :, 2] .= one(eltype(q_2.atoms)) / q_2.m
+    end
     return lowerBound(measure1, measure2)
 end
