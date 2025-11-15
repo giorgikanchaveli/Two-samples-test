@@ -12,6 +12,10 @@ using DataFrames
 using CSV
 
 
+# On the first installation of RCall, set up the path for julia to find R. 
+# ENV["R_HOME"] = "/Library/Frameworks/R.framework/Resources"
+# using Pkg
+# Pkg.build("RCall")
 
 
 
