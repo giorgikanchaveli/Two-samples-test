@@ -1,0 +1,425 @@
+# Here we compare 4 testing schemes: Dubey & Muller, Energy statistic (Szekely & Rizzo 2004), HIPM, WoW.
+
+# In particular we compare the rejection rates on the example of random probability measures from Fig 1 Dubey & Muller.
+
+
+# ### Plots
+
+# 1. **Varying Mean — Permutation (Figure 1 Left)
+   
+#    We consider Truncated normal - normal model for the law of random probability measures. 
+#                                   In that model, firstly mean $\widetilde{\mu}$ is generated from TN ditribution and 
+#                                   random probability measure is normal distribution with mean $\widetilde{\mu}$ and 
+#                                   variance $1.$ We consider several pairs of such laws by varying the means of prior distribution.
+#                                   For each pair, we display the rejection rates. For HIPM and WoW s we use Permutation approach.
+
+# 2. **Varying Mean — Bootstrap (Figure 1 Left)
+ 
+#    Same setup as (1), but using the **bootstrap** approach for **HIPM** and **WoW**.
+
+# 3. **Varying Variance — Permutation (Figure 1 Right)**  
+   
+#    Here difference from 1) and 2) is that we vary variance of the prior distribution of random probability measure.
+
+# 4. **Varying Variance — Bootstrap (Figure 1 Right)**  
+
+#    Same as 3) but with Boostrap approach for HIPM and WoW.
+
+using RCall # to call R functions
+using Plots
+
+include("distributions.jl")
+
+include("distances/new_distance.jl")
+include("distances/distance_Wasserstein.jl")
+using DataFrames
+using CSV
+
+
+
+function test_statistic_energy(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm)
+    n = hier_sample_1.n
+    atoms_1, atoms_2 = hier_sample_1.atoms, hier_sample_2.atoms
+    distances_x = Matrix{Float64}(undef, n, n)
+    distances_xy = Matrix{Float64}(undef, n, n)
+    distances_y = Matrix{Float64}(undef, n, n)
+
+    for i in 1:n
+        for j in 1:n
+            distances_x[i, j] = wasserstein1DUniform(atoms_1[i,:], atoms_1[j,:], 1)
+            distances_xy[i, j] = wasserstein1DUniform(atoms_1[i,:], atoms_2[j,:], 1)
+            distances_y[i, j] = wasserstein1DUniform(atoms_2[i,:], atoms_2[j,:], 1)
+        end
+    end
+    distance = 2 * mean(distances_xy) - mean(distances_x) - mean(distances_y)
+    return distance * n / 2
+end
+
+
+
+function rejection_rate_energy_boostrap(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
+    rej_rate = 0.0
+
+    for s in 1:S
+        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+        observed_test_stat = test_statistic_energy(hier_sample_1, hier_sample_2)
+        
+        # obtain quantile using bootstrap approach
+        boostrap_samples = zeros(n_boostrap) # zeros can be improved
+        a = minimum([hier_sample_1.a, hier_sample_2.a])
+        b = maximum([hier_sample_1.b, hier_sample_2.b])
+        total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
+        for i in 1:n_boostrap
+            indices_1 = sample(1:2*n, n; replace = true)
+            indices_2 = sample(1:2*n, n; replace = true)
+            atoms_1 = total_rows[indices_1,:]  # resample from pooled hierarchical sample
+            atoms_2 = total_rows[indices_2,:]  # resample from pooled hierarchical sample
+            
+        
+            hier_sample_1_boostrap = emp_ppm(atoms_1, n, m, a, b)
+            hier_sample_2_boostrap = emp_ppm(atoms_2, n, m, a, b)
+
+            boostrap_samples[i] = test_statistic_energy(hier_sample_1_boostrap, hier_sample_2_boostrap)
+        end
+        threshold = quantile(boostrap_samples, 1 - θ)
+        
+        rej_rate += 1.0*(observed_test_stat > threshold)
+    end
+    return rej_rate / S
+end
+
+function rejection_rate_dm(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
+
+    rej_rate = 0.0
+    
+ 
+    for s in 1:S
+     
+        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+        atoms_1, atoms_2 = hier_sample_1.atoms, hier_sample_2.atoms
+
+        @rput atoms_1 atoms_2 n n_boostrap
+        R"""
+        # if (!requireNamespace("frechet", quietly = TRUE)) {
+        #   install.packages("frechet", repos="https://cloud.r-project.org")
+        # }
+        library(frechet)
+        atoms_all = rbind(atoms_1, atoms_2)
+
+        group <- c(rep(1, n), rep(2, n))
+
+        result_denanova = DenANOVA(
+            yin = atoms_all,
+            group = group,
+            optns = list(boot = TRUE, R = n_boostrap)
+        )
+        pvalue = result_denanova$pvalBoot
+        """
+        @rget pvalue
+        rej_rate += 1 * (pvalue < θ)
+    end
+    rej_rate /= S
+    return rej_rate
+end
+
+
+function rejection_rate_hipm_boostrap(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
+    rej_rate = 0.0
+
+    for s in 1:S
+        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+        a = minimum([hier_sample_1.a, hier_sample_2.a])
+        b = maximum([hier_sample_1.b, hier_sample_2.b])
+        hier_sample_1.a = a
+        hier_sample_2.a = a
+        hier_sample_1.b = b
+        hier_sample_2.b = b
+        observed_test_stat = dlip(hier_sample_1, hier_sample_2)
+        
+        # obtain quantile using bootstrap approach
+        boostrap_samples = zeros(n_boostrap) # zeros can be improved
+        
+        total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
+        for i in 1:n_boostrap
+            indices_1 = sample(1:2*n, n; replace = true)
+            indices_2 = sample(1:2*n, n; replace = true)
+            atoms_1 = total_rows[indices_1,:]  # resample from pooled hierarchical sample
+            atoms_2 = total_rows[indices_2,:]  # resample from pooled hierarchical sample
+            
+        
+            hier_sample_1_boostrap = emp_ppm(atoms_1, n, m, a, b)
+            hier_sample_2_boostrap = emp_ppm(atoms_2, n, m, a, b)
+
+            boostrap_samples[i] = dlip(hier_sample_1_boostrap, hier_sample_2_boostrap)
+        end
+        threshold = quantile(boostrap_samples, 1 - θ)
+        
+        rej_rate += 1.0*(observed_test_stat > threshold)
+    end
+    return rej_rate / S
+end
+
+function rejection_rate_hipm_permutation(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
+    rej_rate = 0.0
+
+    for s in 1:S
+        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+        a = minimum([hier_sample_1.a, hier_sample_2.a])
+        b = maximum([hier_sample_1.b, hier_sample_2.b])
+        hier_sample_1.a = a
+        hier_sample_2.a = a
+        hier_sample_1.b = b
+        hier_sample_2.b = b
+        observed_test_stat = dlip(hier_sample_1, hier_sample_2)
+        
+        # obtain quantile using permutation approach
+        permutation_samples = zeros(n_permutation) # zeros can be improved
+        
+        total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
+        for i in 1:n_permutation
+            random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
+
+            atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
+            atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
+        
+            hier_sample_1_permutation = emp_ppm(atoms_1, n, m, a, b)
+            hier_sample_2_permutation = emp_ppm(atoms_2, n, m, a, b)
+
+            permutation_samples[i] = dlip(hier_sample_1_permutation, hier_sample_2_permutation)
+        end
+        threshold = quantile(permutation_samples, 1 - θ)
+        
+        rej_rate += 1.0*(observed_test_stat > threshold)
+    end
+    return rej_rate / S
+end
+
+
+function rejection_rate_wow_boostrap(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
+    rej_rate = 0.0
+
+    for s in 1:S
+        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+        a = minimum([hier_sample_1.a, hier_sample_2.a])
+        b = maximum([hier_sample_1.b, hier_sample_2.b])
+        hier_sample_1.a = a
+        hier_sample_2.a = a
+        hier_sample_1.b = b
+        hier_sample_2.b = b
+        observed_test_stat = ww(hier_sample_1, hier_sample_2)
+        
+        # obtain quantile using bootstrap approach
+        boostrap_samples = zeros(n_boostrap) # zeros can be improved
+  
+        total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
+        for i in 1:n_boostrap
+            indices_1 = sample(1:2*n, n; replace = true)
+            indices_2 = sample(1:2*n, n; replace = true)
+            atoms_1 = total_rows[indices_1,:]  # resample from pooled hierarchical sample
+            atoms_2 = total_rows[indices_2,:]  # resample from pooled hierarchical sample
+            
+        
+            hier_sample_1_boostrap = emp_ppm(atoms_1, n, m, a, b)
+            hier_sample_2_boostrap = emp_ppm(atoms_2, n, m, a, b)
+
+            boostrap_samples[i] = ww(hier_sample_1_boostrap, hier_sample_2_boostrap)
+        end
+        threshold = quantile(boostrap_samples, 1 - θ)
+        
+        rej_rate += 1.0*(observed_test_stat > threshold)
+    end
+    return rej_rate / S
+end
+
+function rejection_rate_wow_permutation(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
+    rej_rate = 0.0
+
+    for s in 1:S
+        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+        a = minimum([hier_sample_1.a, hier_sample_2.a])
+        b = maximum([hier_sample_1.b, hier_sample_2.b])
+        hier_sample_1.a = a
+        hier_sample_2.a = a
+        hier_sample_1.b = b
+        hier_sample_2.b = b
+        observed_test_stat = ww(hier_sample_1, hier_sample_2)
+        
+        # obtain quantile using permutation approach
+        permutation_samples = zeros(n_permutation) # zeros can be improved
+        
+        total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
+        for i in 1:n_permutation
+            random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
+
+            atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
+            atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
+        
+            hier_sample_1_permutation = emp_ppm(atoms_1, n, m, a, b)
+            hier_sample_2_permutation = emp_ppm(atoms_2, n, m, a, b)
+
+            permutation_samples[i] = ww(hier_sample_1_permutation, hier_sample_2_permutation)
+        end
+        threshold = quantile(permutation_samples, 1 - θ)
+        
+        rej_rate += 1.0*(observed_test_stat > threshold)
+    end
+    return rej_rate / S
+end
+
+
+
+
+
+function save_varying_mean_boostrap(n::Int, m::Int, S::Int, θ::Float64, n_boostrap)
+    δs = collect(-1.0:2.0:1.0)
+
+    rej_rates_hipm = zeros(length(δs))
+    rej_rates_wow = zeros(length(δs))
+    rej_rates_dm = zeros(length(δs))
+    rej_rates_energy = zeros(length(δs))
+
+    for (i, δ) in enumerate(δs)
+        μ_1, σ_1, a, b = 0.0, 0.5, -10.0, 10.0
+        μ_2, σ_2, a, b = δ, 0.5, -10.0, 10.0
+
+        q_1 = tnormal_normal(μ_1, σ_1, a, b)
+        q_2 = tnormal_normal(μ_2, σ_2, a, b)
+
+        rej_rates_hipm[i] = rejection_rate_hipm_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
+        rej_rates_dm[i] = rejection_rate_dm(q_1, q_2, n, m, S, θ, n_boostrap)
+        rej_rates_wow[i] = rejection_rate_wow_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
+        rej_rates_energy[i] = rejection_rate_energy_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
+    end
+
+    varying_mean_boostrap = plot(title = "Rejection rates of 4 testing schemes, boostrap", xlabel = "δ", ylabel = "Rej rate", xlims=(-1.0, 1.1), ylims = (-0.1, 1.1))
+    plot!(varying_mean_boostrap, δs, rej_rates_dm, label = "dm", color = "red",marker = (:circle, 4))
+    plot!(varying_mean_boostrap, δs, rej_rates_hipm, label = "hipm", color = "green", marker = (:circle, 4))
+    plot!(varying_mean_boostrap, δs, rej_rates_wow, label = "wow", color = "brown", marker = (:circle, 4))
+    plot!(varying_mean_boostrap, δs, rej_rates_energy, label = "Energy", color = "blue", marker = (:circle, 4))
+    filepath = joinpath(pwd(), "frechet/figure1")
+    savefig(varying_mean_boostrap,joinpath(filepath, "varying_mean_n=$(n)_m=$(m)_S=$(S)_nboostrap=$(n_boostrap).png"))
+end
+
+
+
+
+function save_varying_mean_permutation(n::Int, m::Int, S::Int, θ::Float64, n_permutation)
+    # note that we still use boostrap for energy and dm
+    δs = collect(-1.0:2.0:1.0)
+
+    rej_rates_hipm = zeros(length(δs))
+    rej_rates_wow = zeros(length(δs))
+    rej_rates_dm = zeros(length(δs))
+    rej_rates_energy = zeros(length(δs))
+
+    for (i, δ) in enumerate(δs)
+        μ_1, σ_1, a, b = 0.0, 0.5, -10.0, 10.0
+        μ_2, σ_2, a, b = δ, 0.5, -10.0, 10.0
+
+        q_1 = tnormal_normal(μ_1, σ_1, a, b)
+        q_2 = tnormal_normal(μ_2, σ_2, a, b)
+
+        rej_rates_hipm[i] = rejection_rate_hipm_permutation(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_dm[i] = rejection_rate_dm(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_wow[i] = rejection_rate_wow_permutation(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_energy[i] = rejection_rate_energy_boostrap(q_1, q_2, n, m, S, θ, n_permutation)
+    end
+
+    varying_mean_permutation = plot(title = "Rejection rates of 4 testing schemes, permutation", xlabel = "δ", ylabel = "Rej rate", xlims=(-1.0, 1.1), ylims = (-0.1, 1.1))
+    plot!(varying_mean_permutation, δs, rej_rates_dm, label = "dm", color = "red", marker = (:circle, 4))
+    plot!(varying_mean_permutation, δs, rej_rates_hipm, label = "hipm", color = "green", marker = (:circle, 4))
+    plot!(varying_mean_permutation, δs, rej_rates_wow, label = "wow", color = "brown", marker = (:circle, 4))
+    plot!(varying_mean_permutation, δs, rej_rates_energy, label = "Energy", color = "blue", marker = (:circle, 4))
+    filepath = joinpath(pwd(), "frechet/figure1")
+    savefig(varying_mean_permutation,joinpath(filepath, "varying_mean_n=$(n)_m=$(m)_S=$(S)_npermutation=$(n_permutation).png"))
+end
+
+
+function save_varying_variance_boostrap(n::Int, m::Int, S::Int, θ::Float64, n_boostrap)
+    τs = collect(0.1:0.1:3.0)
+
+    rej_rates_hipm = zeros(length(τs))
+    rej_rates_wow = zeros(length(τs))
+    rej_rates_dm = zeros(length(τs))
+    rej_rates_energy = zeros(length(τs))
+
+    for (i, τ) in enumerate(τs)
+        μ_1, σ_1, a, b = 0.0, 0.2, -10.0, 10.0
+
+        q_1 = tnormal_normal(μ_1, σ_1, a, b)
+        q_2 = tnormal_normal(μ_1, σ_1*τ, a, b)
+
+        rej_rates_hipm[i] = rejection_rate_hipm_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
+        rej_rates_dm[i] = rejection_rate_dm(q_1, q_2, n, m, S, θ, n_boostrap)
+        rej_rates_wow[i] = rejection_rate_wow_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
+        rej_rates_energy[i] = rejection_rate_energy_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
+    end
+
+    varying_variance_boostrap = plot(title = "Rejection rates of 4 testing schemes, boostrap", xlabel = "τ", ylabel = "Rej rate", 
+                                        xlims=(0.0, 3.1), ylims = (-0.1, 1.1))
+    plot!(varying_variance_boostrap, τs, rej_rates_dm, label = "dm", color = "red",marker = (:circle, 4))
+    plot!(varying_variance_boostrap, τs, rej_rates_hipm, label = "hipm", color = "green", marker = (:circle, 4))
+    plot!(varying_variance_boostrap, τs, rej_rates_wow, label = "wow", color = "brown", marker = (:circle, 4))
+    plot!(varying_variance_boostrap, τs, rej_rates_energy, label = "Energy", color = "blue", marker = (:circle, 4))
+    filepath = joinpath(pwd(), "frechet/figure1")
+    savefig(varying_variance_boostrap,joinpath(filepath, "varying_variance_n=$(n)_m=$(m)_S=$(S)_nboostrap=$(n_boostrap).png"))
+end
+
+function save_varying_variance_permutation(n::Int, m::Int, S::Int, θ::Float64, n_permutation)
+    τs = collect(0.1:0.1:3.0)
+
+    rej_rates_hipm = zeros(length(τs))
+    rej_rates_wow = zeros(length(τs))
+    rej_rates_dm = zeros(length(τs))
+    rej_rates_energy = zeros(length(τs))
+
+    for (i, τ) in enumerate(τs)
+        μ_1, σ_1, a, b = 0.0, 0.2, -10.0, 10.0
+
+        q_1 = tnormal_normal(μ_1, σ_1, a, b)
+        q_2 = tnormal_normal(μ_1, σ_1*τ, a, b)
+
+        rej_rates_hipm[i] = rejection_rate_hipm_permutation(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_dm[i] = rejection_rate_dm(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_wow[i] = rejection_rate_wow_permutation(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_energy[i] = rejection_rate_energy_boostrap(q_1, q_2, n, m, S, θ, n_permutation)
+    end
+
+    varying_variance_permutation = plot(title = "Rejection rates of 4 testing schemes, permutation", xlabel = "τ", ylabel = "Rej rate", 
+                                        xlims=(0.0, 3.1), ylims = (-0.1, 1.1))
+    plot!(varying_variance_permutation, τs, rej_rates_dm, label = "dm", color = "red",marker = (:circle, 4))
+    plot!(varying_variance_permutation, τs, rej_rates_hipm, label = "hipm", color = "green", marker = (:circle, 4))
+    plot!(varying_variance_permutation, τs, rej_rates_wow, label = "wow", color = "brown", marker = (:circle, 4))
+    plot!(varying_variance_permutation, τs, rej_rates_energy, label = "Energy", color = "blue", marker = (:circle, 4))
+    filepath = joinpath(pwd(), "frechet/figure1")
+    savefig(varying_variance_permutation,joinpath(filepath, "varying_variance_n=$(n)_m=$(m)_S=$(S)_npermutation=$(n_permutation).png"))
+end
+
+
+
+
+
+
+
+n, m = 5, 3
+S = 1
+θ = 0.05
+n_boostrap = 1
+n_permutation = n_boostrap
+
+t = time()
+save_varying_mean_boostrap(n,m,S,θ,n_boostrap)
+save_varying_mean_permutation(n,m,S,θ,n_permutation)
+
+save_varying_variance_boostrap(n,m,S,θ,n_boostrap)
+save_varying_variance_permutation(n,m,S,θ,n_permutation)
+duration = time() - t
+
+
+
+
+# t = time()
+# q_1 = tnormal_normal(0.0, 0.5, -10.0, 10.0)
+# q_2 = tnormal_normal(1.0, 0.5, -10.0, 10.0)
+# rej_rate = rejection_rate_wow_boostrap(q_1, q_2, 100, 200, 4, 0.05, 2)
+# duration = time() - t

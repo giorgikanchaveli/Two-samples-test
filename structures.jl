@@ -7,8 +7,8 @@
 
 
 
-# why mutable?
-struct emp_ppm
+# why mutable? because when I generate hierarchical samples from general 2 laws of RPM, a and b might not coincide.
+mutable struct emp_ppm
     # structure to store data for exchangeable sequences case
 
     atoms::Matrix{Float64} # contains all observed random variables
