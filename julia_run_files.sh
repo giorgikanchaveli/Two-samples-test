@@ -19,6 +19,8 @@ echo "Running from: $(pwd)"                    # print the current working direc
 
 # Run the Julia script using the environment defined by Project.toml in this directory
 # (gio.jl can contain 'using RCall' or any other Julia code)
+
+julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
 julia --project=. dm_enstat_hipm_wow.jl
 
 echo "This is the end"                         # simple marker showing the script reached the end successfully
