@@ -88,7 +88,7 @@ function rejection_rate_energy_boostrap(q_1::PPM, q_2::PPM, n::Int, m::Int, S::I
     return rej_rate / S
 end
 
-function rejection_rate_dm(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
+function rejection_rate_dm_boostrap(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
 
     rej_rate = 0.0
     
@@ -270,7 +270,7 @@ end
 
 
 
-function save_varying_mean_boostrap(n::Int, m::Int, S::Int, θ::Float64, n_boostrap)
+function save_varying_mean_boostrap(n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
     δs = collect(-1.0:2.0:1.0)
 
     rej_rates_hipm = zeros(length(δs))
@@ -286,7 +286,7 @@ function save_varying_mean_boostrap(n::Int, m::Int, S::Int, θ::Float64, n_boost
         q_2 = tnormal_normal(μ_2, σ_2, a, b)
 
         rej_rates_hipm[i] = rejection_rate_hipm_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
-        rej_rates_dm[i] = rejection_rate_dm(q_1, q_2, n, m, S, θ, n_boostrap)
+        rej_rates_dm[i] = rejection_rate_dm_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
         rej_rates_wow[i] = rejection_rate_wow_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
         rej_rates_energy[i] = rejection_rate_energy_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
     end
@@ -303,7 +303,7 @@ end
 
 
 
-function save_varying_mean_permutation(n::Int, m::Int, S::Int, θ::Float64, n_permutation)
+function save_varying_mean_permutation(n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
     # note that we still use boostrap for energy and dm
     δs = collect(-1.0:2.0:1.0)
 
@@ -320,7 +320,7 @@ function save_varying_mean_permutation(n::Int, m::Int, S::Int, θ::Float64, n_pe
         q_2 = tnormal_normal(μ_2, σ_2, a, b)
 
         rej_rates_hipm[i] = rejection_rate_hipm_permutation(q_1, q_2, n, m, S, θ, n_permutation)
-        rej_rates_dm[i] = rejection_rate_dm(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_dm[i] = rejection_rate_dm_boostrap(q_1, q_2, n, m, S, θ, n_permutation)
         rej_rates_wow[i] = rejection_rate_wow_permutation(q_1, q_2, n, m, S, θ, n_permutation)
         rej_rates_energy[i] = rejection_rate_energy_boostrap(q_1, q_2, n, m, S, θ, n_permutation)
     end
@@ -335,7 +335,7 @@ function save_varying_mean_permutation(n::Int, m::Int, S::Int, θ::Float64, n_pe
 end
 
 
-function save_varying_variance_boostrap(n::Int, m::Int, S::Int, θ::Float64, n_boostrap)
+function save_varying_variance_boostrap(n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
     τs = collect(0.1:0.1:3.0)
 
     rej_rates_hipm = zeros(length(τs))
@@ -350,7 +350,7 @@ function save_varying_variance_boostrap(n::Int, m::Int, S::Int, θ::Float64, n_b
         q_2 = tnormal_normal(μ_1, σ_1*τ, a, b)
 
         rej_rates_hipm[i] = rejection_rate_hipm_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
-        rej_rates_dm[i] = rejection_rate_dm(q_1, q_2, n, m, S, θ, n_boostrap)
+        rej_rates_dm[i] = rejection_rate_dm_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
         rej_rates_wow[i] = rejection_rate_wow_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
         rej_rates_energy[i] = rejection_rate_energy_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
     end
@@ -365,7 +365,7 @@ function save_varying_variance_boostrap(n::Int, m::Int, S::Int, θ::Float64, n_b
     savefig(varying_variance_boostrap,joinpath(filepath, "varying_variance_n=$(n)_m=$(m)_S=$(S)_nboostrap=$(n_boostrap).png"))
 end
 
-function save_varying_variance_permutation(n::Int, m::Int, S::Int, θ::Float64, n_permutation)
+function save_varying_variance_permutation(n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
     τs = collect(0.1:0.1:3.0)
 
     rej_rates_hipm = zeros(length(τs))
@@ -380,7 +380,7 @@ function save_varying_variance_permutation(n::Int, m::Int, S::Int, θ::Float64, 
         q_2 = tnormal_normal(μ_1, σ_1*τ, a, b)
 
         rej_rates_hipm[i] = rejection_rate_hipm_permutation(q_1, q_2, n, m, S, θ, n_permutation)
-        rej_rates_dm[i] = rejection_rate_dm(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_dm[i] = rejection_rate_dm_boostrap(q_1, q_2, n, m, S, θ, n_permutation)
         rej_rates_wow[i] = rejection_rate_wow_permutation(q_1, q_2, n, m, S, θ, n_permutation)
         rej_rates_energy[i] = rejection_rate_energy_boostrap(q_1, q_2, n, m, S, θ, n_permutation)
     end
@@ -395,25 +395,132 @@ function save_varying_variance_permutation(n::Int, m::Int, S::Int, θ::Float64, 
     savefig(varying_variance_permutation,joinpath(filepath, "varying_variance_n=$(n)_m=$(m)_S=$(S)_npermutation=$(n_permutation).png"))
 end
 
+function save_counterexample_boostrap(n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
+
+    λs = collect(0.0:0.1:1.0)
+
+    rej_rates_hipm = zeros(length(λs))
+    rej_rates_wow = zeros(length(λs))
+    rej_rates_dm = zeros(length(λs))
+    rej_rates_energy = zeros(length(λs))
+
+    q_1 = simple_discr_1()
+    q_2_aux = simple_discr_2()
+
+    for (i, λ) in enumerate(λs)
+        q_2 = mixture_ppm(q_1, q_2_aux, λ)
+
+        rej_rates_hipm[i] = rejection_rate_hipm_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
+        rej_rates_dm[i] = rejection_rate_dm_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
+        rej_rates_wow[i] = rejection_rate_wow_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
+        rej_rates_energy[i] = rejection_rate_energy_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
+    end
+    counterexmaple_boostrap = plot(title = "Rejection rates of 4 testing schemes, boostrap", xlabel = "λ", ylabel = "Rej rate", 
+                                    xlims=(-0.1, 1.1), ylims = (-0.1, 1.1))
+    plot!(counterexmaple_boostrap, λs, rej_rates_dm, label = "dm", color = "red",marker = (:circle, 4))
+    plot!(counterexmaple_boostrap, λs, rej_rates_hipm, label = "hipm", color = "green", marker = (:circle, 4))
+    plot!(counterexmaple_boostrap, λs, rej_rates_wow, label = "wow", color = "brown", marker = (:circle, 4))
+    plot!(counterexmaple_boostrap, λs, rej_rates_energy, label = "Energy", color = "blue", marker = (:circle, 4))
+    filepath = joinpath(pwd(), "frechet/counterexample")
+    savefig(counterexmaple_boostrap,joinpath(filepath, "counterexample_boostrap_n=$(n)_m=$(m)_S=$(S)_nboostrap=$(n_boostrap).png"))
+end
+
+
+function save_counterexample_permutation(n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
+
+    λs = collect(0.0:0.1:1.0)
+
+    rej_rates_hipm = zeros(length(λs))
+    rej_rates_wow = zeros(length(λs))
+    rej_rates_dm = zeros(length(λs))
+    rej_rates_energy = zeros(length(λs))
+
+    q_1 = simple_discr_1()
+    q_2_aux = simple_discr_2()
+
+    for (i, λ) in enumerate(λs)
+        q_2 = mixture_ppm(q_1, q_2_aux, λ)
+
+        rej_rates_hipm[i] = rejection_rate_hipm_permutation(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_dm[i] = rejection_rate_dm_boostrap(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_wow[i] = rejection_rate_wow_permutation(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_energy[i] = rejection_rate_energy_boostrap(q_1, q_2, n, m, S, θ, n_permutation)
+    end
+    counterexmaple_permutation = plot(title = "Rejection rates of 4 testing schemes, permutation", xlabel = "λ", ylabel = "Rej rate", 
+                                    xlims=(-0.1, 1.1), ylims = (-0.1, 1.1))
+    plot!(counterexmaple_permutation, λs, rej_rates_dm, label = "dm", color = "red",marker = (:circle, 4))
+    plot!(counterexmaple_permutation, λs, rej_rates_hipm, label = "hipm", color = "green", marker = (:circle, 4))
+    plot!(counterexmaple_permutation, λs, rej_rates_wow, label = "wow", color = "brown", marker = (:circle, 4))
+    plot!(counterexmaple_permutation, λs, rej_rates_energy, label = "Energy", color = "blue", marker = (:circle, 4))
+    filepath = joinpath(pwd(), "frechet/counterexample")
+    savefig(counterexmaple_permutation,joinpath(filepath, "counterexample_permutation_n=$(n)_m=$(m)_S=$(S)_npermutation=$(n_permutation).png"))
+end
 
 
 
 
 
+function save_counterexample_boostrap_only_dm(n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
 
-n, m = 5, 3
-S = 1
+    λs = collect(0.0:0.1:1.0)
+
+    rej_rates_dm = zeros(length(λs))
+   
+
+    q_1 = simple_discr_1()
+    q_2_aux = simple_discr_2()
+
+    for (i, λ) in enumerate(λs)
+        q_2 = mixture_ppm(q_1, q_2_aux, λ)
+
+        rej_rates_dm[i] = rejection_rate_dm_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
+    end
+    counterexmaple_boostrap = plot(title = "Rejection rate of dm", xlabel = "λ", ylabel = "Rej rate", 
+                                    xlims=(-0.1, 1.1), ylims = (-0.1, 1.1))
+    plot!(counterexmaple_boostrap, λs, rej_rates_dm, label = "dm", color = "red",marker = (:circle, 4))
+    filepath = joinpath(pwd(), "frechet/counterexample")
+    savefig(counterexmaple_boostrap,joinpath(filepath, "dm_countexample_n=$(n)_m=$(m)_S=$(S)_nboostrap=$(n_boostrap).png"))
+end
+
+
+
+
+
+# Reproduce figures from the paper Dubbey & Muller
+# n, m = 5, 3
+# S = 1
+# θ = 0.05
+# n_boostrap = 1
+# n_permutation = n_boostrap
+
+# t = time()
+# save_varying_mean_boostrap(n,m,S,θ,n_boostrap)
+# save_varying_mean_permutation(n,m,S,θ,n_permutation)
+
+# save_varying_variance_boostrap(n,m,S,θ,n_boostrap)
+# save_varying_variance_permutation(n,m,S,θ,n_permutation)
+# duration = time() - t
+
+# Example where method using Frechet mean and variance fails. 
+
+
+
+
+n = 100
+m = 100
+S = 500
 θ = 0.05
-n_boostrap = 1
-n_permutation = n_boostrap
+n_boostrap = 100
 
 t = time()
-save_varying_mean_boostrap(n,m,S,θ,n_boostrap)
-save_varying_mean_permutation(n,m,S,θ,n_permutation)
-
-save_varying_variance_boostrap(n,m,S,θ,n_boostrap)
-save_varying_variance_permutation(n,m,S,θ,n_permutation)
+save_counterexample_boostrap_only_dm(n,m,S,θ,n_boostrap)
 duration = time() - t
+
+# save_counterexample_boostrap(n,m,S,θ,n_boostrap)
+# save_counterexample_permutation(n,m,S,θ,n_boostrap)
+
+
+
 
 
 
@@ -423,3 +530,90 @@ duration = time() - t
 # q_2 = tnormal_normal(1.0, 0.5, -10.0, 10.0)
 # rej_rate = rejection_rate_wow_boostrap(q_1, q_2, 100, 200, 4, 0.05, 2)
 # duration = time() - t
+
+# function dzveli(mu_1::Vector{Float64}, mu_2::Vector{Float64}, θ::Float64, n_boostrap::Int,)
+#     @rput mu_1 mu_2 n_boostrap
+
+#     R"""
+#     # if (!requireNamespace("frechet", quietly = TRUE)) {
+#     #   install.packages("frechet", repos="https://cloud.r-project.org")
+#     # }
+
+#     n1 <- length(mu_1)
+#     n2 <- length(mu_2)
+#     qSup <- seq(0.01, 0.99, length.out = 100)
+
+#     Y1 <- lapply(seq_len(n1), function(i) qnorm(qSup, mean = mu_1[i], sd = 1.0))
+#     Y2 <- lapply(seq_len(n2), function(i) qnorm(qSup, mean = mu_2[i], sd = 1.0))
+
+#     Ly <- c(Y1, Y2)
+#     Lx <- qSup
+#     group <- c(rep(1, n1), rep(2, n2))
+
+#     res <- frechet::DenANOVA(qin = Ly, supin = Lx, group = group,
+#                     optns = list(boot = TRUE, R = n_boostrap))
+
+#     p_boot <- res$pvalBoot
+#     """
+#     @rget p_boot
+#     return 1 * (p_boot < θ)
+# end
+
+# function axali(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64}, θ::Float64, n_boostrap::Int)
+
+#     rej_rate = 0.0
+#     n = size(atoms_1)[1]
+    
+#     @rput atoms_1 atoms_2 n n_boostrap
+#     R"""
+#     # if (!requireNamespace("frechet", quietly = TRUE)) {
+#     #   install.packages("frechet", repos="https://cloud.r-project.org")
+#     # }
+    
+#     atoms_all = rbind(atoms_1, atoms_2)
+
+#     group <- c(rep(1, n), rep(2, n))
+
+#     result_denanova = frechet::DenANOVA(
+#         yin = atoms_all,
+#         group = group,
+#         optns = list(boot = TRUE, R = n_boostrap)
+#     )
+#     pvalue = result_denanova$pvalBoot
+#     """
+#     @rget pvalue
+#     rej_rate += 1 * (pvalue < θ)
+
+#     return rej_rate
+# end
+
+
+
+# S = 10
+# n = 100
+# m = 200
+# n_boostrap = 100
+# decisions_dzveli = 0.0
+# decisions_axali = 0.0
+# t = time()
+# for s in 1:S
+#     atoms_1 = zeros(n,m)
+#     atoms_2 = zeros(n,m)
+#     mu_1 = rand(Normal(0.0,1.0), n)
+#     mu_2 = rand(Normal(0.0,1.1), n)
+#     for i in 1:n
+#         atoms_1[i,:] = rand(Normal(mu_1[i]),m)
+#         atoms_2[i,:] = rand(Normal(mu_2[i]),m)
+    
+#     end
+#     global decisions_axali += axali(atoms_1,atoms_2,θ,n_boostrap)
+#     #global decisions_dzveli += dzveli(mu_1, mu_2, θ, n_boostrap,)
+# end
+
+# duration = time() - t
+# decisions_dzveli /= S
+# decisions_axali /= S
+    
+
+# 90 seconds for S - 100, boost = 100
+# 0.2 seconds for S = 1, boost = 1.
