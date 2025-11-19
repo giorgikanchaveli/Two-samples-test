@@ -268,6 +268,52 @@ function rejection_rate_hipm_boostrap_parallel(q_1::PPM, q_2::PPM, n::Int, m::In
     return rej_rate / S
 end
 
+
+function rejection_rate_hipm_permutation_wrong(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
+
+    # firstly we obtain threshold
+    hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+    a = minimum([hier_sample_1.a, hier_sample_2.a])
+    b = maximum([hier_sample_1.b, hier_sample_2.b])
+    hier_sample_1.a = a
+    hier_sample_2.a = a
+    hier_sample_1.b = b
+    hier_sample_2.b = b
+
+    permutation_samples = zeros(n_permutation) # zeros can be improved
+    total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
+        for i in 1:n_permutation
+            random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
+
+            atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
+            atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
+        
+            hier_sample_1_permutation = emp_ppm(atoms_1, n, m, a, b)
+            hier_sample_2_permutation = emp_ppm(atoms_2, n, m, a, b)
+
+            permutation_samples[i] = dlip(hier_sample_1_permutation, hier_sample_2_permutation)
+        end
+    threshold = quantile(permutation_samples, 1 - θ)
+
+    rej_rate = 0.0
+
+    @floop ThreadedEx() for s in 1:S
+        local hier_sample_1 = generate_emp(q_1, n, m)
+        local hier_sample_2 = generate_emp(q_2, n, m)
+        local a = minimum([hier_sample_1.a, hier_sample_2.a])
+        local b = maximum([hier_sample_1.b, hier_sample_2.b])
+        hier_sample_1.a = a
+        hier_sample_2.a = a
+        hier_sample_1.b = b
+        hier_sample_2.b = b
+        observed_test_stat = dlip(hier_sample_1, hier_sample_2)
+        
+        @reduce rej_rate += 1.0*(observed_test_stat > threshold)
+    end
+    return rej_rate / S
+end
+
+
 function rejection_rate_hipm_permutation(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
     rej_rate = 0.0
 
@@ -413,6 +459,50 @@ end
 
 
 
+function rejection_rate_wow_permutation_wrong(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
+
+    # firstly we obtain threshold
+    hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+    a = minimum([hier_sample_1.a, hier_sample_2.a])
+    b = maximum([hier_sample_1.b, hier_sample_2.b])
+    hier_sample_1.a = a
+    hier_sample_2.a = a
+    hier_sample_1.b = b
+    hier_sample_2.b = b
+
+    permutation_samples = zeros(n_permutation) # zeros can be improved
+    total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
+        for i in 1:n_permutation
+            random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
+
+            atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
+            atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
+        
+            hier_sample_1_permutation = emp_ppm(atoms_1, n, m, a, b)
+            hier_sample_2_permutation = emp_ppm(atoms_2, n, m, a, b)
+
+            permutation_samples[i] = ww(hier_sample_1_permutation, hier_sample_2_permutation)
+        end
+    threshold = quantile(permutation_samples, 1 - θ)
+
+    rej_rate = 0.0
+
+    @floop ThreadedEx() for s in 1:S
+        local hier_sample_1 = generate_emp(q_1, n, m)
+        local hier_sample_2 = generate_emp(q_2, n, m)
+        local a = minimum([hier_sample_1.a, hier_sample_2.a])
+        local b = maximum([hier_sample_1.b, hier_sample_2.b])
+        hier_sample_1.a = a
+        hier_sample_2.a = a
+        hier_sample_1.b = b
+        hier_sample_2.b = b
+        observed_test_stat = ww(hier_sample_1, hier_sample_2)
+        
+        @reduce rej_rate += 1.0*(observed_test_stat > threshold)
+    end
+    return rej_rate / S
+end
+
 
 
 function rejection_rate_wow_permutation(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
@@ -449,6 +539,8 @@ function rejection_rate_wow_permutation(q_1::PPM, q_2::PPM, n::Int, m::Int, S::I
     end
     return rej_rate / S
 end
+
+
 
 
 
@@ -708,36 +800,36 @@ end
 
 # obtain times
 
-q_1 = tnormal_normal(1.0, 1.0, -10.0, 10.0)
-q_2 = tnormal_normal(1.0, 1.0, -10.0, 10.0)
+# q_1 = tnormal_normal(1.0, 1.0, -10.0, 10.0)
+# q_2 = tnormal_normal(1.0, 1.10, -10.0, 10.0)
 
 
-n = 100
-m = 100
-S = 20
-n_boostrap = 100
-θ = 0.05
-times = Dict()
+# n = 100
+# m = 100
+# S = 100
+# n_boostrap = 100
+# θ = 0.05
+# times = Dict()
 
-t = time()
-rej_rate = rejection_rate_dm_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
-t = time() - t
-times["dm"] = t / S
+# t = time()
+# rej_rate = rejection_rate_dm_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
+# t = time() - t
+# times["dm"] = t / S
 
-t = time()
-rej_rate = rejection_rate_energy_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
-t = time() - t
-times["energy"] = t / S
+# t = time()
+# rej_rate = rejection_rate_energy_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
+# t = time() - t
+# times["energy"] = t / S
 
-t = time()
-rej_rate = rejection_rate_hipm_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
-t = time() - t
-times["hipm"] = t / S
+# t = time()
+# rej_rate_hipm = rejection_rate_hipm_permutation_wrong(q_1, q_2, n, m, S, θ, n_boostrap)
+# t = time() - t
+# times["hipm"] = t / S
   
-t = time()
-rej_rate = rejection_rate_wow_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
-t = time() - t
-times["wow"] = t / S
+# t = time()
+# rej_rate_wow = rejection_rate_wow_permutation_wrong(q_1, q_2, n, m, S, θ, n_boostrap)
+# t = time() - t
+# times["wow"] = t / S
 
 # for each pair q_1, q_2
 
@@ -770,8 +862,6 @@ times["wow"] = t / S
 # Example where method using Frechet mean and variance fails. 
 
 
-
-
 # n = 100
 # m = 100
 # S = 500
@@ -787,15 +877,6 @@ times["wow"] = t / S
 
 
 
-
-
-
-
-# t = time()
-# q_1 = tnormal_normal(0.0, 0.5, -10.0, 10.0)
-# q_2 = tnormal_normal(1.0, 0.5, -10.0, 10.0)
-# rej_rate = rejection_rate_wow_boostrap(q_1, q_2, 100, 200, 4, 0.05, 2)
-# duration = time() - t
 
 # function dzveli(mu_1::Vector{Float64}, mu_2::Vector{Float64}, θ::Float64, n_boostrap::Int,)
 #     @rput mu_1 mu_2 n_boostrap
