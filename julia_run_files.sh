@@ -23,6 +23,6 @@ echo "Running from: $(pwd)"                    # print the current working direc
 export JULIA_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile(); println("Threads.nthreads() = ", Threads.nthreads())'
-#julia --project=. n_vs_m_hipm.jl
+julia --project=. n_vs_m_hipm.jl
 
 echo "This is the end"                         # simple marker showing the script reached the end successfully
