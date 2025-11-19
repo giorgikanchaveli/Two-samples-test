@@ -2,7 +2,7 @@
 #SBATCH --job-name=run_julia_file              # name of the SLURM job (shows up in queue)
 #SBATCH --partition=compute                    # which partition/queue to use
 #SBATCH --ntasks=1                           # number of tasks (1 is fine for Julia)
-#SBATCH --cpus-per-task=64						# number of cores
+#SBATCH --cpus-per-task=32						# number of cores
 #SBATCH --time=00:05:00                        # maximum run time (hh:mm:ss)
 #SBATCH --output=/home/3049277/logs/%x_%j.out  # standard output log file
 #SBATCH --error=/home/3049277/logs/%x_%j.err   # standard error log file
