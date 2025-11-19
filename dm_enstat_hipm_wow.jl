@@ -739,6 +739,13 @@ rej_rate = rejection_rate_wow_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
 t = time() - t
 times["wow"] = t / S
 
+# for each pair q_1, q_2
+
+#   dm : if S = 1 it takes 9 seconds, so in total 1.2 hours for S = 500
+#   wow : if S = 1 it takes 31 seconds, so in total 4.3 hours for S = 500
+#   energy : if S = 1 it takes 16 seconds, so in total 2.2 hours for S = 500
+#   hipm : if S = 1 it takes 161 seconds, so in total 22.2 hours for S = 500
+
 
 
 
