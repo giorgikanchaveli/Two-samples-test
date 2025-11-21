@@ -17,12 +17,22 @@ using Tulip
 
 # First simplest 1D Wasserstein distance between measures with the same number of atom and equal measures
 
-function wasserstein1DUniform(atoms1, atoms2,p)
+function wasserstein1DUniform(atoms1::Vector{Float64}, atoms2::Vector{Float64}, p::Int)
    # atoms1 and atoms2 only list of position 
    # p is the exponent 
    
     if length(atoms1)==length(atoms2)
-        return sum( 1/length(atoms1) * (abs.(sort(atoms1) - sort(atoms2))).^p )^(1/p)
+        n = length(atoms1)
+        a = sort!(copy(atoms1))
+        b = sort!(copy(atoms2))
+
+        s = 0.0
+
+        @inbounds for i in 1:n
+            s += abs(a[i] - b[i])^p
+        end
+        s = (s / n)^(1/p)
+        return s
     else 
         print("ERROR: not the same number of atoms")
         return -1. 
