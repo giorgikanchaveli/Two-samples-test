@@ -108,7 +108,7 @@ function J_1(dist::Beta{Float64})
     return quadgk(f, 0.0, 1.0)[1]
 end
 
-
+println(Threads.nthreads())
 α = 1.0
 p_1 = Beta(1.0,1.0)
 p_2 = Beta(1.0,1.3)
@@ -124,7 +124,7 @@ q_2 = DP(α,p_2, 0.0, 1.0)
 ms = [2^i for i in 1:10]
 ns = [100, 200]
 
-S = 400
+S = 32*13
 n_permutation = 100
 θ = 0.05
 
