@@ -124,7 +124,7 @@ q_2 = DP(α,p_2, 0.0, 1.0)
 ms = [2^i for i in 1:10]
 ns = [100, 200]
 
-S = 500
+S = 400
 n_permutation = 100
 θ = 0.05
 
@@ -137,6 +137,7 @@ for i in 1:length(ns)
 end
 duration = time() - t
 rej_rates
+println("duration in hours is $(duration / 3600)" )
 
 col_names = Symbol.("m = " .* string.(ms))
 df = DataFrame(rej_rates, col_names)

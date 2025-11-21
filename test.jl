@@ -4,133 +4,86 @@
 include("distributions.jl")
 include("structures.jl")
 include("distances/distance_Wasserstein.jl")
-
-
-using ExactOptimalTransport
-using LinearAlgebra
-
-using Tulip
+include("distances/new_distance.jl")
 
 
 
-function f_old(q_1::emp_ppm, q_2::emp_ppm, p = 1)
-    # Assuming that the number of atoms at the lower level is the same in each measure 
-    
-    measure1, measure2 = q_1.atoms[:,:], q_2.atoms[:,:]
-    
-    s1 = size(measure1)
-    s2 = size(measure2)
 
-    if s1[2] != s2[2]
+function f_old(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
+    rej_rate = 0.0
 
-        println("PROBLEM OF DIMENSION: each lower measure should have the same dimension")
-        return -1. 
-    
-    else
+    for s in 1:S
+        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+        a = minimum([hier_sample_1.a, hier_sample_2.a])
+        b = maximum([hier_sample_1.b, hier_sample_2.b])
+        hier_sample_1.a = a
+        hier_sample_2.a = a
+        hier_sample_1.b = b
+        hier_sample_2.b = b
+        observed_test_stat = dlip(hier_sample_1, hier_sample_2)
         
-        # timer = TimerOutput()
-
-        # Extract dimensions
-        m1 = s1[1]
-        m2 = s2[1]
-        n = s1[2]
-
-        # Compute matrix of pairwise distances which will be a cost function 
-
-        # @timeit timer "Compute pairwise transports" begin
+        # obtain quantile using bootstrap approach
+        boostrap_samples = zeros(n_boostrap) # zeros can be improved
         
-        C = zeros(m1,m2)
-        for i=1:m1
-            for j =1:m2 
-                C[i,j] = wasserstein1DUniform(measure1[i,:],measure2[j,:],p)^p 
-            end
-        end 
-
-        # End timer 
-        # end
-
-        # Build the weights: uniform 
-        weight1 = fill(1 / m1, m1)
-        weight2 = fill(1 / m2, m2)
-
-        # Solving the optimal transport problem 
-        # @timeit timer "Solve outer OT problem" 
-        gamma = ExactOptimalTransport.emd(weight1, weight2, C, Tulip.Optimizer() )
-        # @timeit timer "compute transport cost" 
-        output = sum( gamma .* C )
+        total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
+        for i in 1:n_boostrap
+            indices_1 = sample(1:2*n, n; replace = true)
+            indices_2 = sample(1:2*n, n; replace = true)
+            atoms_1 = total_rows[indices_1,:]  # resample from pooled hierarchical sample
+            atoms_2 = total_rows[indices_2,:]  # resample from pooled hierarchical sample
+            
         
-        # display(timer)
+            hier_sample_1_boostrap = emp_ppm(atoms_1, n, m, a, b)
+            hier_sample_2_boostrap = emp_ppm(atoms_2, n, m, a, b)
 
-        return output^(1/p) 
-
+            boostrap_samples[i] = dlip(hier_sample_1_boostrap, hier_sample_2_boostrap)
+        end
+        threshold = quantile(boostrap_samples, 1 - θ)
+        
+        rej_rate += 1.0*(observed_test_stat > threshold)
     end
+    return rej_rate / S
+end
 
-end 
 
 
 
-function f_new(q_1::emp_ppm, q_2::emp_ppm, p = 1)
-    # Assuming that the number of atoms at the lower level is the same in each measure 
-    
-    
-    
-    s1 = size(q_1.atoms)
-    s2 = size(q_2.atoms)
 
-    atoms1 = sort(q_1.atoms; dims = 2)
-    atoms2 = sort(q_2.atoms; dims = 2)
+function f_new(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
+    rej_rate = 0.0
 
-    if s1[2] != s2[2]
-
-        println("PROBLEM OF DIMENSION: each lower measure should have the same dimension")
-        return -1. 
-    
-    else
+    for s in 1:S
+        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+        a = minimum((hier_sample_1.a, hier_sample_2.a))
+        b = maximum((hier_sample_1.b, hier_sample_2.b))
+        hier_sample_1.a = a
+        hier_sample_2.a = a
+        hier_sample_1.b = b
+        hier_sample_2.b = b
+        observed_test_stat = dlip(hier_sample_1, hier_sample_2)
         
-        # timer = TimerOutput()
-
-        # Extract dimensions
-        m1 = s1[1]
-        m2 = s2[1]
-        n = s1[2]
-
-        # Compute matrix of pairwise distances which will be a cost function 
-
-        # @timeit timer "Compute pairwise transports" begin
+        # obtain quantile using bootstrap approach
+        boostrap_samples = zeros(n_boostrap) # zeros can be improved
         
-        C = zeros(m1,m2)
-        @inbounds for i=1:m1
-            a = atoms1[i,:]
-            @inbounds for j =1:m2 
-                C[i,j] = wasserstein1DUniform_sorted(a,atoms2[j,:],p)^p 
-            end
-        end 
-
-        # End timer 
-        # end
-
-        # Build the weights: uniform 
-        weight1 = fill(1 / m1, m1)
-        weight2 = fill(1 / m2, m2)
-
-        # Solving the optimal transport problem 
-        # @timeit timer "Solve outer OT problem" 
-        gamma = ExactOptimalTransport.emd(weight1, weight2, C, Tulip.Optimizer() )
-        # @timeit timer "compute transport cost" 
-        output = sum( gamma .* C )
+        total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
+        for i in 1:n_boostrap
+            indices_1 = sample(1:2*n, n; replace = true)
+            indices_2 = sample(1:2*n, n; replace = true)
+            atoms_1 = total_rows[indices_1,:]  # resample from pooled hierarchical sample
+            atoms_2 = total_rows[indices_2,:]  # resample from pooled hierarchical sample
+            
         
-        # display(timer)
+            hier_sample_1_boostrap = emp_ppm(atoms_1, n, m, a, b)
+            hier_sample_2_boostrap = emp_ppm(atoms_2, n, m, a, b)
 
-        return output^(1/p) 
-
+            boostrap_samples[i] = dlip(hier_sample_1_boostrap, hier_sample_2_boostrap)
+        end
+        threshold = quantile(boostrap_samples, 1 - θ)
+        
+        rej_rate += 1.0*(observed_test_stat > threshold)
     end
-
-end 
-
-
-
-
-
+    return rej_rate / S
+end
 
 
 
@@ -146,24 +99,28 @@ a = 0.0
 b = 1.0
 
 p = 1
-atoms_1 = rand(n,m)
-atoms_2 = rand(n,m)
 
-hier_sample_1 = emp_ppm(atoms_1,n,m, a,b)
-hier_sample_2 = emp_ppm(atoms_2,n,m, a,b)
+S = 1
+n_boostrap = 1
+θ = 0.05
 
+
+q_1 = tnormal_normal(1.0,1.0,-10.0,10.0)
+q_2 = tnormal_normal(1.0,1.0,-10.0,10.0)
 
 
 # check that values math
-
-old_value = f_old(hier_sample_1,hier_sample_2, p)
-new_value = f_new(hier_sample_1,hier_sample_2, p)
+Random.seed!(12345)
+old_value = f_old(q_1,q_2,n,m,S,θ,n_boostrap)
+Random.seed!(12345)
+new_value = f_new(q_1,q_2,n,m,S,θ,n_boostrap)
 @assert abs(old_value - new_value) < 1e-8
 
 # compare times
-
-time_old = @elapsed f_old(hier_sample_1,hier_sample_2, p)
-time_new = @elapsed f_new(hier_sample_1,hier_sample_2, p)
+Random.seed!(12345)
+time_old = @elapsed f_old(q_1,q_2,n,m,S,θ,n_boostrap)
+Random.seed!(12345)
+time_new = @elapsed f_new(q_1,q_2,n,m,S,θ,n_boostrap)
 
 
 println("improvement difference : $(time_old - time_new)")
