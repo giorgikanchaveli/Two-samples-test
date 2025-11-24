@@ -637,10 +637,10 @@ function save_varying_mean_permutation(n::Int, m::Int, S::Int, θ::Float64, n_pe
         q_1 = tnormal_normal(μ_1, σ_1, a, b)
         q_2 = tnormal_normal(μ_2, σ_2, a, b)
 
-        rej_rates_hipm[i] = rejection_rate_hipm_permutation(q_1, q_2, n, m, S, θ, n_permutation)
-        rej_rates_dm[i] = rejection_rate_dm_boostrap(q_1, q_2, n, m, S, θ, n_permutation)
-        rej_rates_wow[i] = rejection_rate_wow_permutation(q_1, q_2, n, m, S, θ, n_permutation)
-        rej_rates_energy[i] = rejection_rate_energy_boostrap(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_hipm[i] = rejection_rate_hipm_permutation_wrong(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_dm[i] = rejection_rate_dm_boostrap_parallel(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_wow[i] = rejection_rate_wow_permutation_wrong(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_energy[i] = rejection_rate_energy_boostrap_parallel(q_1, q_2, n, m, S, θ, n_permutation)
     end
 
     varying_mean_permutation = plot(title = "Rejection rates of 4 testing schemes, permutation", xlabel = "δ", ylabel = "Rej rate", xlims=(-1.0, 1.1), ylims = (-0.1, 1.1))
@@ -697,10 +697,10 @@ function save_varying_variance_permutation(n::Int, m::Int, S::Int, θ::Float64, 
         q_1 = tnormal_normal(μ_1, σ_1, a, b)
         q_2 = tnormal_normal(μ_1, σ_1*τ, a, b)
 
-        rej_rates_hipm[i] = rejection_rate_hipm_permutation(q_1, q_2, n, m, S, θ, n_permutation)
-        rej_rates_dm[i] = rejection_rate_dm_boostrap(q_1, q_2, n, m, S, θ, n_permutation)
-        rej_rates_wow[i] = rejection_rate_wow_permutation(q_1, q_2, n, m, S, θ, n_permutation)
-        rej_rates_energy[i] = rejection_rate_energy_boostrap(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_hipm[i] = rejection_rate_hipm_permutation_wrong(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_dm[i] = rejection_rate_dm_boostrap_parallel(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_wow[i] = rejection_rate_wow_permutation_wrong(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_energy[i] = rejection_rate_energy_boostrap_parallel(q_1, q_2, n, m, S, θ, n_permutation)
     end
 
     varying_variance_permutation = plot(title = "Rejection rates of 4 testing schemes, permutation", xlabel = "τ", ylabel = "Rej rate", 
@@ -759,10 +759,10 @@ function save_counterexample_permutation(n::Int, m::Int, S::Int, θ::Float64, n_
     for (i, λ) in enumerate(λs)
         q_2 = mixture_ppm(q_1, q_2_aux, λ)
 
-        rej_rates_hipm[i] = rejection_rate_hipm_permutation(q_1, q_2, n, m, S, θ, n_permutation)
-        rej_rates_dm[i] = rejection_rate_dm_boostrap(q_1, q_2, n, m, S, θ, n_permutation)
-        rej_rates_wow[i] = rejection_rate_wow_permutation(q_1, q_2, n, m, S, θ, n_permutation)
-        rej_rates_energy[i] = rejection_rate_energy_boostrap(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_hipm[i] = rejection_rate_hipm_permutation_wrong(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_dm[i] = rejection_rate_dm_boostrap_parallel(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_wow[i] = rejection_rate_wow_permutation_wrong(q_1, q_2, n, m, S, θ, n_permutation)
+        rej_rates_energy[i] = rejection_rate_energy_boostrap_parallel(q_1, q_2, n, m, S, θ, n_permutation)
     end
     counterexmaple_permutation = plot(title = "Rejection rates of 4 testing schemes, permutation", xlabel = "λ", ylabel = "Rej rate", 
                                     xlims=(-0.1, 1.1), ylims = (-0.1, 1.1))
@@ -805,16 +805,16 @@ end
 
 #obtain times
 
-q_1 = tnormal_normal(1.0, 1.0, -10.0, 10.0)
-q_2 = tnormal_normal(1.0, 1.10, -10.0, 10.0)
+# q_1 = tnormal_normal(1.0, 1.0, -10.0, 10.0)
+# q_2 = tnormal_normal(1.0, 1.10, -10.0, 10.0)
 
 
-n = 100
-m = 100
-S = 2
-n_boostrap = 100
-θ = 0.05
-times = Dict()
+# n = 100
+# m = 100
+# S = 2
+# n_boostrap = 100
+# θ = 0.05
+# times = Dict()
 
 # t = time()
 # rej_rate = rejection_rate_dm_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
@@ -826,10 +826,10 @@ times = Dict()
 # t = time() - t
 # times["energy"] = t / S
 
-t = time()
-rej_rate_hipm = rejection_rate_hipm_permutation_parallel(q_1, q_2, n, m, S, θ, n_boostrap)
-t = time() - t
-times["hipm"] = t / S
+# t = time()
+# rej_rate_hipm = rejection_rate_hipm_permutation_parallel(q_1, q_2, n, m, S, θ, n_boostrap)
+# t = time() - t
+# times["hipm"] = t / S
   
 # t = time()
 # rej_rate_wow = rejection_rate_wow_permutation_wrong(q_1, q_2, n, m, S, θ, n_boostrap)
@@ -846,40 +846,38 @@ times["hipm"] = t / S
 
 
 
-
+println(Threads.nthreads())
 
 
 # Reproduce figures from the paper Dubbey & Muller
-# n, m = 5, 3
-# S = 1
-# θ = 0.05
-# n_boostrap = 1
-# n_permutation = n_boostrap
+n, m = 100, 100
+S = 416
+θ = 0.05
+n_boostrap = 100
+n_permutation = n_boostrap
 
-# t = time()
-# save_varying_mean_boostrap(n,m,S,θ,n_boostrap)
-# save_varying_mean_permutation(n,m,S,θ,n_permutation)
+t = time()
+#save_varying_mean_boostrap(n,m,S,θ,n_boostrap)
+save_varying_mean_permutation(n,m,S,θ,n_permutation)
 
-# save_varying_variance_boostrap(n,m,S,θ,n_boostrap)
-# save_varying_variance_permutation(n,m,S,θ,n_permutation)
-# duration = time() - t
-
+#save_varying_variance_boostrap(n,m,S,θ,n_boostrap)
+save_varying_variance_permutation(n,m,S,θ,n_permutation)
+duration = time() - t
+println("duration to plot figure 1: $(duration)")
 # Example where method using Frechet mean and variance fails. 
 
 
-# n = 100
-# m = 100
-# S = 500
-# θ = 0.05
-# n_boostrap = 100
+n = 100
+m = 100
+S = 416
+θ = 0.05
+n_boostrap = 100
 
-# t = time()
-# save_counterexample_boostrap_only_dm(n,m,S,θ,n_boostrap)
-# duration = time() - t
-
-# save_counterexample_boostrap(n,m,S,θ,n_boostrap)
-# save_counterexample_permutation(n,m,S,θ,n_boostrap)
-
+t = time()
+#save_counterexample_boostrap(n,m,S,θ,n_boostrap)
+save_counterexample_permutation(n,m,S,θ,n_boostrap)
+duration = time() - t
+println("duration to plot counterexample: $(duration)")
 
 
 
