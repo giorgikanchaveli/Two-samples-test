@@ -851,7 +851,7 @@ println(Threads.nthreads())
 
 # Reproduce figures from the paper Dubbey & Muller
 n, m = 100, 100
-S = 100
+S = 416
 θ = 0.05
 n_boostrap = 100
 n_permutation = n_boostrap
@@ -869,7 +869,7 @@ println("duration to plot figure 1: $(duration)")
 
 n = 100
 m = 100
-S = 100
+S = 416
 θ = 0.05
 n_boostrap = 100
 
