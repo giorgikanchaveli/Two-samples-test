@@ -40,16 +40,21 @@ using FLoops
 
 function test_statistic_energy(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm)
     n = hier_sample_1.n
-    atoms_1, atoms_2 = hier_sample_1.atoms, hier_sample_2.atoms
+
+    atoms_1 = sort(hier_sample_1.atoms, dims = 2)
+    atoms_2 = sort(hier_sample_2.atoms, dims = 2)
+    
     distances_x = Matrix{Float64}(undef, n, n)
     distances_xy = Matrix{Float64}(undef, n, n)
     distances_y = Matrix{Float64}(undef, n, n)
 
     for i in 1:n
+        x = atoms_1[i,:]
+        y = atoms_2[i,:]
         for j in 1:n
-            distances_x[i, j] = wasserstein1DUniform(atoms_1[i,:], atoms_1[j,:], 1)
-            distances_xy[i, j] = wasserstein1DUniform(atoms_1[i,:], atoms_2[j,:], 1)
-            distances_y[i, j] = wasserstein1DUniform(atoms_2[i,:], atoms_2[j,:], 1)
+            distances_x[i, j] = wasserstein1DUniform_sorted(x, atoms_1[j,:], 1)
+            distances_xy[i, j] = wasserstein1DUniform_sorted(x, atoms_2[j,:], 1)
+            distances_y[i, j] = wasserstein1DUniform_sorted(y, atoms_2[j,:], 1)
         end
     end
     distance = 2 * mean(distances_xy) - mean(distances_x) - mean(distances_y)
@@ -798,18 +803,18 @@ end
 
 
 
-# obtain times
+#obtain times
 
-# q_1 = tnormal_normal(1.0, 1.0, -10.0, 10.0)
-# q_2 = tnormal_normal(1.0, 1.10, -10.0, 10.0)
+q_1 = tnormal_normal(1.0, 1.0, -10.0, 10.0)
+q_2 = tnormal_normal(1.0, 1.10, -10.0, 10.0)
 
 
-# n = 100
-# m = 100
-# S = 100
-# n_boostrap = 100
-# θ = 0.05
-# times = Dict()
+n = 100
+m = 100
+S = 2
+n_boostrap = 100
+θ = 0.05
+times = Dict()
 
 # t = time()
 # rej_rate = rejection_rate_dm_boostrap(q_1, q_2, n, m, S, θ, n_boostrap)
@@ -821,10 +826,10 @@ end
 # t = time() - t
 # times["energy"] = t / S
 
-# t = time()
-# rej_rate_hipm = rejection_rate_hipm_permutation_wrong(q_1, q_2, n, m, S, θ, n_boostrap)
-# t = time() - t
-# times["hipm"] = t / S
+t = time()
+rej_rate_hipm = rejection_rate_hipm_permutation_parallel(q_1, q_2, n, m, S, θ, n_boostrap)
+t = time() - t
+times["hipm"] = t / S
   
 # t = time()
 # rej_rate_wow = rejection_rate_wow_permutation_wrong(q_1, q_2, n, m, S, θ, n_boostrap)
