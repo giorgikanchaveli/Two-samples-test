@@ -109,9 +109,9 @@ function J_1(dist::Beta{Float64})
 end
 
 println(Threads.nthreads())
-α = 1.0
+α = 0.2
 p_1 = Beta(1.0,1.0)
-p_2 = Beta(1.0,1.3)
+p_2 = Beta(1.0,1.3) 
 
 wass_beta(p_1,p_2)
 
