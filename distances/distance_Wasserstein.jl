@@ -28,7 +28,7 @@ function wasserstein1DUniform(atoms1::Vector{Float64}, atoms2::Vector{Float64}, 
 
         s = 0.0
 
-        @inbounds for i in 1:n
+        for i in 1:n
             s += abs(a[i] - b[i])^p
         end
         s = (s / n)^(1/p)
@@ -49,7 +49,7 @@ function wasserstein1DUniform_sorted(atoms1::Vector{Float64}, atoms2::Vector{Flo
 
         s = 0.0
 
-        @inbounds for i in 1:n
+        for i in 1:n
             s += abs(atoms1[i] - atoms2[i])^p
         end
         s = (s / n)^(1/p)
@@ -144,9 +144,9 @@ function ww(q_1::emp_ppm, q_2::emp_ppm, p = 1)
         # @timeit timer "Compute pairwise transports" begin
         
         C = zeros(m1,m2)
-        @inbounds for i=1:m1
+        for i=1:m1
             a = atoms1[i,:]
-            @inbounds for j =1:m2 
+            for j =1:m2 
                 C[i,j] = wasserstein1DUniform_sorted(a,atoms2[j,:],p)^p 
             end
         end 
