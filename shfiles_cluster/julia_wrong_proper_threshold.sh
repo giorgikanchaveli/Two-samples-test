@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#SBATCH --job-name=wrong_vs_proper_thresh_16            # name of the SLURM job (shows up in queue)
+#SBATCH --job-name=wrong_vs_proper_thresh_16_alpha_10            # name of the SLURM job (shows up in queue)
 #SBATCH --partition=compute                    # which partition/queue to use
 #SBATCH --ntasks=1                           # number of tasks (1 is fine for Julia)
 #SBATCH --cpus-per-task=16   					# number of cores

@@ -161,7 +161,7 @@ function save_wow(n::Int, m::Int, S::Int, θ::Float64, n_permutations::Int, βs:
     rej_rates_proper = zeros(n_pairs)
     
     # We only change p_2 for second Dirichlet process
-    α = 1.0
+    α = 10.0
     p_1 = Beta(1.0,1.0)
     q_1 = DP(α, p_1, 0.0, 1.0)
     
@@ -179,7 +179,7 @@ function save_wow(n::Int, m::Int, S::Int, θ::Float64, n_permutations::Int, βs:
     plot!(rej_plot, βs, rej_rates_wrong, label = "wrong", color = "red", marker = (:circle, 4))
 
     filepath = joinpath(pwd(), "plots/wrong_vs_proper")
-    savefig(rej_plot,joinpath(filepath, "wow_wrong_vs_proper_n=$(n)_m=$(m)_S=$(S)_npermutation=$(n_permutations).png"))
+    savefig(rej_plot,joinpath(filepath, "wow_wrong_vs_proper_n=$(n)_m=$(m)_S=$(S)_npermutation=$(n_permutations)_alpha=10.png"))
 end
 
 
