@@ -188,13 +188,13 @@ println("running file wrong_permutation_hipm_wow.jl")
 println("number of threads: $(Threads.nthreads())")
 
 βs = collect(1.0:0.1:2.0)
-println("expected duration 30 hours")
+println("expected duration 0.9 hours")
 
 
 n = 100
 m = 100
 S = 16
-n_permutations = 5
+n_permutations = 100
 θ = 0.05
 
 t = time()
