@@ -191,10 +191,10 @@ println("number of threads: $(Threads.nthreads())")
 println("expected duration 30 hours")
 
 
-n = 1
-m = 1
-S = 1
-n_permutations = 1
+n = 100
+m = 100
+S = 16
+n_permutations = 100
 θ = 0.05
 
 t = time()
