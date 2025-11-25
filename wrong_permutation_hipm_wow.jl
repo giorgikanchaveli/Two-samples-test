@@ -193,7 +193,7 @@ println("expected duration 30 hours")
 
 n = 100
 m = 100
-S = 16
+S = 32
 n_permutations = 100
 θ = 0.05
 

@@ -1,8 +1,8 @@
 #!/bin/bash -l
-#SBATCH --job-name=wrong_vs_proper_thresh            # name of the SLURM job (shows up in queue)
+#SBATCH --job-name=wrong_vs_proper_thresh_32            # name of the SLURM job (shows up in queue)
 #SBATCH --partition=compute                    # which partition/queue to use
 #SBATCH --ntasks=1                           # number of tasks (1 is fine for Julia)
-#SBATCH --cpus-per-task=16						# number of cores
+#SBATCH --cpus-per-task=32						# number of cores
 #SBATCH --time=00:50:00                        # maximum run time (hh:mm:ss)
 #SBATCH --output=/home/3049277/logs/%x_%j.out  # standard output log file
 #SBATCH --error=/home/3049277/logs/%x_%j.err   # standard error log file
