@@ -49,8 +49,8 @@ function rejection_rate_hipm_permutation_wrong(q_1::PPM, q_2::PPM, n::Int, m::In
 
     # firstly we obtain threshold
     hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
-    a = minimum([hier_sample_1.a, hier_sample_2.a])
-    b = maximum([hier_sample_1.b, hier_sample_2.b])
+    a = minimum((hier_sample_1.a, hier_sample_2.a))
+    b = maximum((hier_sample_1.b, hier_sample_2.b))
     hier_sample_1.a = a
     hier_sample_2.a = a
     hier_sample_1.b = b
