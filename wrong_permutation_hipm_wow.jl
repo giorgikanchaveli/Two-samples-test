@@ -91,7 +91,7 @@ function save_hipm(n::Int, m::Int, S::Int, θ::Float64, n_permutations::Int, βs
     plot!(rej_plot, βs, rej_rates_wrong, label = "wrong", color = "red", marker = (:circle, 4))
 
     filepath = joinpath(pwd(), "plots/wrong_vs_proper")
-    savefig(rej_plot,joinpath(filepath, "hipm_wrong_vs_wrong_n=$(n)_m=$(m)_S=$(S)_npermutation=$(n_permutations).png"))
+    savefig(rej_plot,joinpath(filepath, "hipm_wrong_vs_proper_n=$(n)_m=$(m)_S=$(S)_npermutation=$(n_permutations).png"))
 end
 
 # Now everything same but for WoW
@@ -179,12 +179,12 @@ function save_wow(n::Int, m::Int, S::Int, θ::Float64, n_permutations::Int, βs:
     plot!(rej_plot, βs, rej_rates_wrong, label = "wrong", color = "red", marker = (:circle, 4))
 
     filepath = joinpath(pwd(), "plots/wrong_vs_proper")
-    savefig(rej_plot,joinpath(filepath, "wow_wrong_vs_wrong_n=$(n)_m=$(m)_S=$(S)_npermutation=$(n_permutations).png"))
+    savefig(rej_plot,joinpath(filepath, "wow_wrong_vs_proper_n=$(n)_m=$(m)_S=$(S)_npermutation=$(n_permutations).png"))
 end
 
 
 
-
+println("running file wrong_permutation_hipm_wow.jl")
 println("number of threads: $(Threads.nthreads())")
 
 βs = collect(1.0:0.1:2.0)
@@ -194,7 +194,7 @@ println("expected duration 30 hours")
 n = 100
 m = 100
 S = 32
-n_permutations = 100
+n_permutations = 5
 θ = 0.05
 
 t = time()
