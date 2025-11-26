@@ -73,7 +73,7 @@ function save_hipm(n::Int, m::Int, S::Int, θ::Float64, n_permutations::Int, βs
     rej_rates_proper = zeros(n_pairs)
     
     # We only change p_2 for second Dirichlet process
-    α = 1.0
+    α = 10.0
     p_1 = Beta(1.0,1.0)
     q_1 = DP(α, p_1, 0.0, 1.0)
     
@@ -81,7 +81,7 @@ function save_hipm(n::Int, m::Int, S::Int, θ::Float64, n_permutations::Int, βs
         p_2 = Beta(1.0, βs[i])
         q_2 = DP(α, p_2, 0.0, 1.0)
 
-        rej_rates = rejection_rate_hipm(q_1, q_2, n, m, S, θ, n_permutations)
+        rej_rates = rejection_rate_hipm(q_2, q_2, n, m, S, θ, n_permutations)
         rej_rates_wrong[i] = rej_rates[1]
         rej_rates_proper[i] = rej_rates[2]
     end
@@ -91,7 +91,7 @@ function save_hipm(n::Int, m::Int, S::Int, θ::Float64, n_permutations::Int, βs
     plot!(rej_plot, βs, rej_rates_wrong, label = "wrong", color = "red", marker = (:circle, 4))
 
     filepath = joinpath(pwd(), "plots/wrong_vs_proper")
-    savefig(rej_plot,joinpath(filepath, "hipm_wrong_vs_proper_n=$(n)_m=$(m)_S=$(S)_npermutation=$(n_permutations).png"))
+    savefig(rej_plot,joinpath(filepath, "hipm_wrong_vs_proper_n=$(n)_m=$(m)_S=$(S)_npermutation=$(n_permutations)_same_diff_beta.png"))
 end
 
 # Now everything same but for WoW
@@ -169,7 +169,7 @@ function save_wow(n::Int, m::Int, S::Int, θ::Float64, n_permutations::Int, βs:
         p_2 = Beta(1.0, βs[i])
         q_2 = DP(α, p_2, 0.0, 1.0)
 
-        rej_rates = rejection_rate_wow(q_1, q_2, n, m, S, θ, n_permutations)
+        rej_rates = rejection_rate_wow(q_2, q_2, n, m, S, θ, n_permutations)
         rej_rates_wrong[i] = rej_rates[1]
         rej_rates_proper[i] = rej_rates[2]
     end
@@ -179,7 +179,7 @@ function save_wow(n::Int, m::Int, S::Int, θ::Float64, n_permutations::Int, βs:
     plot!(rej_plot, βs, rej_rates_wrong, label = "wrong", color = "red", marker = (:circle, 4))
 
     filepath = joinpath(pwd(), "plots/wrong_vs_proper")
-    savefig(rej_plot,joinpath(filepath, "wow_wrong_vs_proper_n=$(n)_m=$(m)_S=$(S)_npermutation=$(n_permutations)_alpha=10.png"))
+    savefig(rej_plot,joinpath(filepath, "wow_wrong_vs_proper_n=$(n)_m=$(m)_S=$(S)_npermutation=$(n_permutations)_same_diff_beta.png"))
 end
 
 
@@ -188,7 +188,7 @@ println("running file wrong_permutation_hipm_wow.jl")
 println("number of threads: $(Threads.nthreads())")
 
 βs = collect(1.0:0.1:2.0)
-println("expected duration 11 hours")
+println("expected duration 8 hours")
 
 
 n = 100
