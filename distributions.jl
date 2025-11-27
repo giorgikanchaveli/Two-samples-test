@@ -18,7 +18,7 @@ struct tnormal_normal<:PPM
     # random probability measure is gaussian distributions on R with mean generated from truncated normal(μ, σ) on [a,b]
     # and variance is 1.
     # sample space is R
-    μ::Float64 # mean of normal distribution from which we generate mean of inner normal distribution
+    μ::Float64 # mean of truncated normal distribution from which we generate mean of inner normal distribution
     σ::Float64 # standard deviation of truncated normal distribution from which we generate mean of inner normal distribution
     a::Float64 # left end of truncation interval
     b::Float64 # right end of truncation interval
@@ -178,6 +178,11 @@ function generate_emp(ppm::DP, n_top::Int, n_bottom::Int)
     return emp_ppm(atoms, n_top, n_bottom, ppm.a, ppm.b)
 end
 
+
+function generate_prob_measures(ppm::tnormal_normal, n::Int)
+    truncated_normal = truncated(Normal(ppm.μ, ppm.σ), ppm.a, ppm.b)
+    return rand(truncated_normal, n)
+end
 
 
 function generate_emp(ppm::tnormal_normal, n_top::Int, n_bottom::Int)

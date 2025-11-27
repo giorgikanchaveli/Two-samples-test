@@ -189,17 +189,49 @@ function decide_dm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, 
     return 1 * (pvalue < θ)
 end
 
-q_1 = DP(20.0, Beta(1,1), 0.0,1.0)
-q_2 = DP(20.0, Beta(1,5), 0.0,1.0)
-S = 1
-r = 0.0
-t = time()
-for i in 1:S
-    r += decide_dm(generate_emp(q_1,100,100),generate_emp(q_2,100,100),0.05,100)
-end
-r = r / S
-dur = time() - t
+function decide_dm(mu_1::Vector{Float64}, mu_2::Vector{Float64}, θ::Float64, n_bootstrap::Int)
+    n = length(mu_1)
+    
+    @rput mu_1 mu_2 n n_bootstrap
+    R"""
 
+    library(frechet)
+    n1 <- n
+    n2 <- n
+    delta <- 1
+    qSup <- seq(0.01, 0.99, (0.99 - 0.01) / 50)
+
+    Y1 <- lapply(1:n1, function(i) {
+    qnorm(qSup, mu_1[i], sd = 1)
+    })
+    Y2 <- lapply(1:n2, function(i) {
+    qnorm(qSup, mu_2[i], sd = 1)
+    })
+    Ly <- c(Y1, Y2)
+    Lx <- qSup
+    group <- c(rep(1, n1), rep(2, n2))
+    res <- DenANOVA(qin = Ly, supin = Lx, group = group, optns = list(boot = TRUE, R = n_bootstrap))
+    pvalue = res$pvalBoot # returns bootstrap pvalue
+    """
+    @rget pvalue  
+    return 1 * (pvalue < θ)
+end
+
+
+
+function rejection_rate_dm(q_1::tnormal_normal, q_2::tnormal_normal, n::Int,
+             S::Int, θ::Float64, n_bootstrap::Int)
+    rate = 0.0
+    
+    for i in 1:S
+        # generate normal distributions 
+        mu_1 = generate_prob_measures(q_1, n) # only contains means for normal distribution
+        mu_2 = generate_prob_measures(q_2, n) # only contains means for normal distribution
+        
+        rate += decide_dm(mu_1, mu_2, θ, n_bootstrap) 
+    end
+    return rate/S
+end
 
 
 function rejection_rate_dm_boostrap(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
@@ -667,7 +699,6 @@ function rejection_rate_all(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Floa
 
     rates_hipm = 0.0
     rates_wow = 0.0
-    rates_dm = 0.0
     rates_energy = 0.0
 
     @floop ThreadedEx() for s in 1:S
@@ -683,12 +714,23 @@ function rejection_rate_all(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Floa
         # record decisions from each testing methods
         #@reduce rates_hipm += 1.0*(dlip(hier_sample_1, hier_sample_2, a, b) > threshold_hipm_wrong)
         #@reduce rates_wow += 1.0 * (ww(hier_sample_1, hier_sample_2) > threshold_wow_wrong)
-        @reduce rates_dm += decide_dm(hier_sample_1, hier_sample_2, θ, n_samples) 
         @reduce rates_energy += decide_energy(hier_sample_1, hier_sample_2, θ, n_samples) 
     end
+    rates_energy /= S
+    rates_wow /= S
+    rates_hipm /= S
+    rates_dm = rejection_rate_dm(q_1, q_2, n, S, θ, n_samples)
     return rates_hipm,rates_wow,rates_dm,rates_energy
 end
-#rates_hipm,rates_wow,rates_dm,rates_energy = rejection_rate_all(q_1,q_2,100,100,5,0.05,100,true)
+# q_1 = tnormal_normal(0.0,0.5,-10.0,10.0)
+# q_2 = tnormal_normal(0.3,0.5,-10.0,10.0)
+# t = time()
+# rates_hipm,rates_wow,rates_dm,rates_energy = rejection_rate_all(q_1,q_2,100,
+#             100,50,0.05,100,true)
+# dur = time() - t
+# rates_dm
+# rates_energy
+
 
 
 
@@ -952,38 +994,38 @@ end
 
 
 
-println(Threads.nthreads())
+# println(Threads.nthreads())
 
 
-# Reproduce figures from the paper Dubbey & Muller
-n, m = 100, 100
-S = 416
-θ = 0.05
-n_boostrap = 100
-n_permutation = n_boostrap
+# # Reproduce figures from the paper Dubbey & Muller
+# n, m = 100, 100
+# S = 416
+# θ = 0.05
+# n_boostrap = 100
+# n_permutation = n_boostrap
 
-t = time()
+# t = time()
 #save_varying_mean_boostrap(n,m,S,θ,n_boostrap)
-save_varying_mean_permutation(n,m,S,θ,n_permutation)
+# save_varying_mean_permutation(n,m,S,θ,n_permutation)
 
-#save_varying_variance_boostrap(n,m,S,θ,n_boostrap)
-save_varying_variance_permutation(n,m,S,θ,n_permutation)
-duration = time() - t
-println("duration to plot figure 1: $(duration)")
-# Example where method using Frechet mean and variance fails. 
+# #save_varying_variance_boostrap(n,m,S,θ,n_boostrap)
+# save_varying_variance_permutation(n,m,S,θ,n_permutation)
+# duration = time() - t
+# println("duration to plot figure 1: $(duration)")
+# # Example where method using Frechet mean and variance fails. 
 
 
-n = 100
-m = 100
-S = 416
-θ = 0.05
-n_boostrap = 100
+# n = 100
+# m = 100
+# S = 416
+# θ = 0.05
+# n_boostrap = 100
 
-t = time()
-#save_counterexample_boostrap(n,m,S,θ,n_boostrap)
-save_counterexample_permutation(n,m,S,θ,n_boostrap)
-duration = time() - t
-println("duration to plot counterexample: $(duration)")
+# t = time()
+# #save_counterexample_boostrap(n,m,S,θ,n_boostrap)
+# save_counterexample_permutation(n,m,S,θ,n_boostrap)
+# duration = time() - t
+# println("duration to plot counterexample: $(duration)")
 
 
 
