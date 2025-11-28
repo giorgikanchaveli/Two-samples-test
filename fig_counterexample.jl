@@ -1,5 +1,7 @@
 using Plots
 
+
+
 include("methods.jl")
 
 
@@ -46,29 +48,26 @@ end
 #      280 seconds in total, S = 400
 
 # total S = 400 for one pair is 960 seconds
-        
-# fig 1 with varying mean
-println("running file fig_1_mean.jl")
-println("number of threads: $(Threads.nthreads())")
-println("expected duration is 0.53 hours")
 
 
-#δs = collect(-1.0:0.05:1.0)
-δs = [0.0,0.1]
-pairs = [(tnormal_normal(0.0,0.5,-10.0,10.0), tnormal_normal(δ, 0.5, -10.0,10.0)) for δ in δs]
-file_path = "plots/frechet/figure1"
+
+# counterexample 
+
+λs = collect(0.0:0.1:1.0)
+q_1 = simple_discr_1()
+q_2_aux = simple_discr_2()
+pairs = [(q_1, mixture_ppm(q_1, q_2_aux, λ)) for λ in λs]
+file_path = "plots/frechet/counterexample"
 title = "Rejection rates for 4 schemes"
-xlabel = "δ"
+xlabel = "λ"
 ylabel = "Rej rate"
 n = 100
 m = 100
-S = 400
+S = 4
 n_samples = 100
 θ = 0.05
-bootstrap = false
-file_name = "varying_mean_n=$(n)_m=$(m)_S=$(S)_bootstrap_n_samples=$(n_samples)"
+bootstrap = true
+file_name = "counterexample_n=$(n)_m=$(m)_S=$(S)_bootstrap_n_samples=$(n_samples)"
 t = time()
-save_fig(pairs, δs, file_name, file_path, title, xlabel,ylabel, n,m,S,θ,n_samples,bootstrap)
+save_fig(pairs, λs, file_name, file_path, title, xlabel,ylabel, n,m,S,θ,n_samples,bootstrap)
 dur = time() - t
-println("total duration is (dur / 3600) hours")
-
