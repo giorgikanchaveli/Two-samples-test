@@ -263,10 +263,10 @@ file_path = "plots/frechet/figure1"
 title = "Rejection rates for 4 schemes"
 xlabel = "δ"
 ylabel = "Rej rate"
-n = 10
-m = 10
+n = 100
+m = 100
 S = 1
-n_samples = 1
+n_samples = 100
 θ = 0.05
 bootstrap = true
 file_name = "varying_mean_n=$(n)_m=$(m)_S=$(S)_bootstrap_n_samples=$(n_samples)"
