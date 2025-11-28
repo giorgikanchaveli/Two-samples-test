@@ -50,11 +50,10 @@ end
 # fig 1 with varying mean
 println("running file fig_1_mean.jl")
 println("number of threads: $(Threads.nthreads())")
-println("expected duration is 0.5 hours")
+println("expected duration is 7 hours")
 
 
-#δs = collect(-1.0:0.05:1.0)
-δs = [0.0]
+δs = collect(-1.0:0.05:1.0)
 pairs = [(tnormal_normal(0.0,0.5,-10.0,10.0), tnormal_normal(δ, 0.5, -10.0,10.0)) for δ in δs]
 file_path = "plots/frechet/figure1"
 title = "Rejection rates for 4 schemes"
@@ -63,7 +62,7 @@ ylabel = "Rej rate"
 n = 100
 m = 100
 S = 400
-n_samples = 100
+n_samples = 100 # bootstrap\perm samples
 θ = 0.05
 bootstrap = false
 file_name = "varying_mean_n=$(n)_m=$(m)_S=$(S)_permutation_n_samples=$(n_samples)"

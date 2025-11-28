@@ -50,21 +50,29 @@ end
 # total S = 400 for one pair is 960 seconds
 
 
+println("running file fig_1_variance.jl")
+println("number of threads: $(Threads.nthreads())")
+println("expected duration is 9 hours")
+
+
 
 #fig 1 with varying variance
-τs = collect(0.1:0.1:3.0)
+
+
+τs = collect(0.1:0.05:3.0)
 pairs = [(tnormal_normal(0.0,0.2,-10.0,10.0), tnormal_normal(0.0,0.2*τ,-10.0,10.0)) for τ in τs]
 file_path = "plots/frechet/figure1"
 title = "Rejection rates for 4 schemes"
 xlabel = "τ"
 ylabel = "Rej rate"
-n = 10
-m = 10
-S = 1
-n_samples = 1
+n = 100
+m = 100
+S = 400
+n_samples = 100
 θ = 0.05
-bootstrap = true
-file_name = "varying_variance_n=$(n)_m=$(m)_S=$(S)_bootstrap_n_samples=$(n_samples)"
+bootstrap = false
+file_name = "varying_variance_n=$(n)_m=$(m)_S=$(S)_permutation_n_samples=$(n_samples)"
 t = time()
 save_fig(pairs, τs, file_name, file_path, title, xlabel,ylabel, n,m,S,θ,n_samples,bootstrap)
 dur = time() - t
+println("total duration is $(dur/3600) hours")

@@ -49,11 +49,15 @@ end
 
 # total S = 400 for one pair is 960 seconds
 
+println("running file fig_counterexample.jl")
+println("number of threads: $(Threads.nthreads())")
+println("expected duration is 4 hours")
+
 
 
 # counterexample 
 
-λs = collect(0.0:0.1:1.0)
+λs = collect(0.0:0.05:1.0)
 q_1 = simple_discr_1()
 q_2_aux = simple_discr_2()
 pairs = [(q_1, mixture_ppm(q_1, q_2_aux, λ)) for λ in λs]
@@ -63,11 +67,12 @@ xlabel = "λ"
 ylabel = "Rej rate"
 n = 100
 m = 100
-S = 4
+S = 400
 n_samples = 100
 θ = 0.05
-bootstrap = true
-file_name = "counterexample_n=$(n)_m=$(m)_S=$(S)_bootstrap_n_samples=$(n_samples)"
+bootstrap = false
+file_name = "counterexample_n=$(n)_m=$(m)_S=$(S)_permutation_n_samples=$(n_samples)"
 t = time()
 save_fig(pairs, λs, file_name, file_path, title, xlabel,ylabel, n,m,S,θ,n_samples,bootstrap)
 dur = time() - t
+println("total duration is $(dur/3600) hours")
