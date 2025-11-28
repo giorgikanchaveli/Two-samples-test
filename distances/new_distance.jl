@@ -143,7 +143,8 @@ end
 # Function for the new HIPM distance 
 # -----------------------------------------------------------------------------------
 
-function dlip(measure1, measure2, a,b, nGrid = 250, nSteps=1000,nRerun = 5,tol = 1e-4)
+function dlip(measure1::Array{Float64, 3}, measure2::Array{Float64, 3}, a::Float64, b::Float64, nGrid::Int = 250,
+                     nSteps::Int=1000,nRerun::Int = 5, tol::Float64 = 1e-4)
 
     s1 = size(measure1)
     s2 = size(measure2)
@@ -295,7 +296,7 @@ function dlip(measure1, measure2, a,b, nGrid = 250, nSteps=1000,nRerun = 5,tol =
 
 end 
 
-function dlip(q_1::emp_ppm, q_2::emp_ppm; nGrid=150, nSteps=1000, nRerun=5, tol=1e-4)
+function dlip(q_1::emp_ppm, q_2::emp_ppm; nGrid::Int=150, nSteps::Int=1000, nRerun::Int=5, tol::Float64=1e-4)
     @assert q_1.a == q_2.a "a's of q_1 and q_2 must be same"
     @assert q_1.b == q_2.b "b's of q_1 and q_2 must be same"
 
