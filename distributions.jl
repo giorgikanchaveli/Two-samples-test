@@ -184,6 +184,48 @@ function generate_prob_measures(ppm::tnormal_normal, n::Int)
     return rand(truncated_normal, n)
 end
 
+function generate_prob_measures(ppm::simple_discr_1, n::Int)
+    means = zeros(n)
+    for i in 1:n
+        if rand() <= 0.5
+            means[i] = -1.0
+        else
+            means[i] = 1.0
+        end
+    end 
+    return means
+end
+
+function generate_prob_measures(ppm::simple_discr_2, n::Int)
+    means = zeros(n)
+    for i in 1:n
+        r = rand()
+        if r <= 1/8
+            means[i] = -2.0
+        elseif r <= 7/8
+            means[i] = 0.0
+        else
+            means[i] = 2.0
+        end
+    end 
+    return means
+end
+
+
+function generate_prob_measures(ppm::mixture_ppm, n::Int)
+    means = zeros(n)
+    λ = ppm.λ
+    for i in 1:n
+        if rand() <= λ
+            means[i] = generate_prob_measures(ppm.ppm1, 1)[1]
+        else
+            means[i] = generate_prob_measures(ppm.ppm2, 1)[1]
+        end
+    end
+    return means
+end
+
+
 
 function generate_emp(ppm::tnormal_normal, n_top::Int, n_bottom::Int)
 

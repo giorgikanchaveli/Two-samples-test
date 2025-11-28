@@ -1,9 +1,9 @@
 #!/bin/bash -l
-#SBATCH --job-name=varyingmean            # name of the SLURM job (shows up in queue)
+#SBATCH --job-name=varyingmean_test           # name of the SLURM job (shows up in queue)
 #SBATCH --partition=compute                    # which partition/queue to use
 #SBATCH --ntasks=1                           # number of tasks (1 is fine for Julia)
 #SBATCH --cpus-per-task=16   					# number of cores
-#SBATCH --time=00:15:00                        # maximum run time (hh:mm:ss)
+#SBATCH --time=01:15:00                        # maximum run time (hh:mm:ss)
 #SBATCH --output=/home/3049277/logs/%x_%j.out  # standard output log file
 #SBATCH --error=/home/3049277/logs/%x_%j.err   # standard error log file
 #SBATCH --chdir=/home/3049277/Two-samples-test # working directory for the job
@@ -23,6 +23,6 @@ echo "Running from: $(pwd)"                    # print the current working direc
 export JULIA_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile(); println("Threads.nthreads() = ", Threads.nthreads())'
-julia --project=. ise.jl
+julia --project=. fig_1_mean.jl
 
 echo "This is the end"                         # simple marker showing the script reached the end successfully
