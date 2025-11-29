@@ -33,31 +33,18 @@ end
 
 
 
-# obtain times: for S = 4, 1 pair of RPMS, n = 100, m = 100 and n_samples = 100.
-
-# wow : 23 seconds (40 minutes in total if proper threshold, S = 400)
-#        70 seconds in total if wrong threshold, S = 400
-        
-# hipm : 50 seconds ( 83 minutes in total if proper threshold, S = 400)
-#         210 seconds in total if wrong threshold, S = 400    
-
-# energy: 4 seconds 
-#           400 seconds in total, S = 400
-
-# dm : 0.7 seconds ( S = 1 )
-#      280 seconds in total, S = 400
-
-# total S = 400 for one pair is 960 seconds
+# for one pair, S = 400, n = 100, m = 200, n_samples = 200 : 
 
 println("running file fig_counterexample.jl")
 println("number of threads: $(Threads.nthreads())")
-println("expected duration is 4 hours")
+println("expected duration is 8 hours")
 
 
 
 # counterexample 
 
 λs = collect(0.0:0.05:1.0)
+λs = [0.1]
 q_1 = simple_discr_1()
 q_2_aux = simple_discr_2()
 pairs = [(q_1, mixture_ppm(q_1, q_2_aux, λ)) for λ in λs]
@@ -66,9 +53,9 @@ title = "Rejection rates for 4 schemes"
 xlabel = "λ"
 ylabel = "Rej rate"
 n = 100
-m = 100
+m = 200
 S = 400
-n_samples = 100
+n_samples = 200
 θ = 0.05
 bootstrap = false
 file_name = "counterexample_n=$(n)_m=$(m)_S=$(S)_permutation_n_samples=$(n_samples)"
