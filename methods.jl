@@ -247,6 +247,25 @@ end
 
 
 
+function save_fig_hipm_wow(pairs::Vector{<:Tuple{PPM,PPM}}, param_pairs::Vector{Float64}, file_name::String, file_path::String, title::String, xlabel::String, ylabel::String,
+    n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
+    rates_hipm = zeros(length(param_pairs))
+    rates_wow = zeros(length(param_pairs))
+    for i in 1:length(pairs)
+        q_1, q_2 = pairs[i]
+        r_hipm, r_wow = rejection_rate_hipm_wow(q_1,q_2,n,m,S,θ,n_samples,bootstrap)
+        rates_hipm[i] = r_hipm
+        rates_wow[i] = r_wow
+        println(i)
+    end
+    fig = plot(title = title, xlabel = xlabel, ylabel = ylabel, xlims=(minimum(param_pairs) - 0.10, maximum(param_pairs)+ 0.10),
+                         ylims = (-0.1, 1.1))
+    plot!(fig, param_pairs, rates_hipm, label = "hipm", color = "green", marker = (:circle, 4))
+    plot!(fig, param_pairs, rates_wow, label = "wow", color = "brown", marker = (:circle, 4))
+    filepath = joinpath(pwd(), file_path)
+    savefig(fig,joinpath(filepath, file_name))
+end
+
 
 # up to now more or less everything is fine
 
