@@ -65,10 +65,10 @@ file_path = "plots/frechet/counterexample"
 title = "Rejection rates for 4 schemes"
 xlabel = "λ"
 ylabel = "Rej rate"
-n = 10
-m = 10
-S = 1
-n_samples = 1
+n = 100
+m = 100
+S = 400
+n_samples = 100
 θ = 0.05
 bootstrap = false
 file_name = "counterexample_n=$(n)_m=$(m)_S=$(S)_permutation_n_samples=$(n_samples)"
