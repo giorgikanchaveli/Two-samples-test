@@ -82,8 +82,9 @@ end
 
 
 
-function rejection_rate_dm(q_1::tnormal_normal, q_2::tnormal_normal, n::Int,
-             S::Int, θ::Float64, n_bootstrap::Int)
+function rejection_rate_dm(q_1::Union{tnormal_normal,simple_discr_1, simple_discr_2,mixture_ppm},
+                             q_2::Union{tnormal_normal,simple_discr_1, simple_discr_2,mixture_ppm}, n::Int,
+                         S::Int, θ::Float64, n_bootstrap::Int)
     rate = 0.0
     
     for i in 1:S
