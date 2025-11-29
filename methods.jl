@@ -214,6 +214,38 @@ function rejection_rate_all(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Floa
 end
 
 
+function rejection_rate_hipm_wow(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
+    # if bootstrap is true then do bootstrap approach, n_samples refers to either number of permutations or bootstraps
+
+    # firstly we obtain fixed thresholds for HIPM and WoW
+    aux_hier_sample_1 = generate_emp(q_1,n,m)
+    aux_hier_sample_2 = generate_emp(q_2, n, m)
+    threshold_hipm_wrong = threshold_hipm(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
+    threshold_wow_wrong = threshold_wow(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
+
+    rates_hipm = 0.0
+    rates_wow = 0.0
+
+    @floop ThreadedEx() for s in 1:S
+        # generate samples and set endpoints
+        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+        a = minimum((hier_sample_1.a, hier_sample_2.a))
+        b = maximum((hier_sample_1.b, hier_sample_2.b))
+        hier_sample_1.a = a
+        hier_sample_2.a = a
+        hier_sample_1.b = b
+        hier_sample_2.b = b
+
+        # record decisions from each testing methods
+        @reduce rates_hipm += 1.0*(dlip(hier_sample_1, hier_sample_2) > threshold_hipm_wrong)
+        @reduce rates_wow += 1.0 * (ww(hier_sample_1, hier_sample_2) > threshold_wow_wrong)
+    end
+    rates_wow /= S
+    rates_hipm /= S
+    return rates_hipm,rates_wow
+end
+
+
 
 
 # up to now more or less everything is fine
