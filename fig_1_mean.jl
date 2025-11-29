@@ -60,9 +60,9 @@ title = "Rejection rates for 4 schemes"
 xlabel = "δ"
 ylabel = "Rej rate"
 n = 100
-m = 100
-S = 400
-n_samples = 100 # bootstrap\perm samples
+m = 200
+S = 500
+n_samples = 200 # bootstrap\perm samples
 θ = 0.05
 bootstrap = false
 file_name = "varying_mean_n=$(n)_m=$(m)_S=$(S)_permutation_n_samples=$(n_samples)"
