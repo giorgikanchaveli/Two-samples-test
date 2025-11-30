@@ -27,7 +27,7 @@ end
 
 println("running file fp_hipm_vs_wow.jl")
 println("number of threads: $(Threads.nthreads())")
-println("expected duration is 6 hours")
+println("expected duration is 15 hours")
 
 
 # for S = 400, for one pair of RPMS total time should be 280 seconds. ( it is 200 seconds actually) (n = 100, m = 200, n_samples = 100, S = 400)
@@ -40,10 +40,10 @@ file_path = "plots/hipm_vs_wow"
 title = "False Positive Rates"
 xlabel = "α"
 ylabel = "Rej rate"
-n = 100
+n = 250
 m = 200
-S = 400
-n_samples = 200 # bootstrap\perm samples
+S = 500
+n_samples = 100 # bootstrap\perm samples
 θ = 0.05
 bootstrap = false
 if bootstrap
@@ -64,10 +64,10 @@ file_path = "plots/hipm_vs_wow"
 title = "False Positive Rates"
 xlabel = "τ"
 ylabel = "Rej rate"
-n = 100
+n = 250
 m = 200
-S = 400
-n_samples = 200 # bootstrap\perm samples
+S = 500
+n_samples = 100 # bootstrap\perm samples
 θ = 0.05
 bootstrap = false
 if bootstrap
