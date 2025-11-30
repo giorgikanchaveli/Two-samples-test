@@ -42,9 +42,21 @@ end
 
 
 
-hier_sample_1 = get_matrix(group1)
-hier_sample_2 = get_matrix(group2)
+hier_sample_1 = get_matrix(group1, 2, "males")
+#hier_sample_2 = get_matrix(group2)
 
 
 
 # 111 length
+# fullpath = "mortality_dataset/group1/males/belarus_males.txt"
+
+# df = open(fullpath) do io
+#     readline(io)  # ignore metadata line
+#     CSV.read(io, DataFrame;
+#              delim=' ',
+#              ignorerepeated=true)
+#     end
+
+
+
+# sum(df[1:111,"dx"])
