@@ -44,7 +44,6 @@ println("expected duration is 8 hours")
 # counterexample 
 
 λs = collect(0.0:0.05:1.0)
-λs = [0.1]
 q_1 = simple_discr_1()
 q_2_aux = simple_discr_2()
 pairs = [(q_1, mixture_ppm(q_1, q_2_aux, λ)) for λ in λs]
@@ -54,7 +53,7 @@ xlabel = "λ"
 ylabel = "Rej rate"
 n = 100
 m = 200
-S = 400
+S = 500
 n_samples = 200
 θ = 0.05
 bootstrap = false
