@@ -71,3 +71,4 @@ save_fig(pairs, δs, file_name, file_path, title, xlabel,ylabel, n,m,S,θ,n_samp
 dur = time() - t
 println("total duration is $(dur/3600) hours")
 
+# it ran 4 hours

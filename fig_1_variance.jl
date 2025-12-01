@@ -60,16 +60,16 @@ println("expected duration is 22 hours")
 
 
 τs = collect(0.1:0.05:3.0)
-τs = [0.25]
+
 pairs = [(tnormal_normal(0.0,0.2,-10.0,10.0), tnormal_normal(0.0,0.2*τ,-10.0,10.0)) for τ in τs]
 file_path = "plots/frechet/figure1"
 title = "Rejection rates for 4 schemes"
 xlabel = "τ"
 ylabel = "Rej rate"
 n = 100
-m = 200
-S = 500
-n_samples = 200
+m = 100
+S = 1000
+n_samples = 100
 θ = 0.05
 bootstrap = false
 file_name = "varying_variance_n=$(n)_m=$(m)_S=$(S)_permutation_n_samples=$(n_samples)"
