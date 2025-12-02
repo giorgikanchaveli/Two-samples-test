@@ -1,6 +1,7 @@
 # Improvements: 
 #           1) generate sorted hierarchical samples.
 #           2) Ignore energy and dm to check smoothness
+#           3) better way to run simulations (array of jobs???)
 using Distributed
 using Plots
 
