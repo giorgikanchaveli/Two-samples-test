@@ -1,8 +1,8 @@
 #!/bin/bash -l
-#SBATCH --job-name=variance5                 # name of the SLURM job (shows up in queue)
+#SBATCH --job-name=variancedistr6                 # name of the SLURM job (shows up in queue)
 #SBATCH --partition=compute                    # which partition/queue to use
 #SBATCH --ntasks=1                           # number of tasks (1 is fine for Julia)
-#SBATCH --cpus-per-task=5    					# number of cores
+#SBATCH --cpus-per-task=30    					# number of cores
 #SBATCH --time=02:00:00                        # maximum run time (hh:mm:ss)
 #SBATCH --output=/home/3049277/logs/%x_%j.out  # standard output log file
 #SBATCH --error=/home/3049277/logs/%x_%j.err   # standard error log file
@@ -20,7 +20,7 @@ echo "Running from: $(pwd)"                    # print the current working direc
 
 # Run the Julia script using the environment defined by Project.toml in this directory
 # (gio.jl can contain 'using RCall' or any other Julia code)
-export JULIA_NUM_THREADS=$SLURM_CPUS_PER_TASK
+export JULIA_NUM_THREADS=6
 
 julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile(); println("Threads.nthreads() = ", Threads.nthreads())'
 julia --project=. fig_1_variance.jl
