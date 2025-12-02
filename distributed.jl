@@ -4,7 +4,7 @@
 using Distributed
 using Plots
 
-addprocs(4)
+
 @everywhere using RCall # to call R functions
 @everywhere using FLoops # for parallel computing
 

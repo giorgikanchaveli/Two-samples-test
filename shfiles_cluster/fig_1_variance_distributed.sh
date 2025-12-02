@@ -20,7 +20,7 @@ echo "Running from: $(pwd)"                    # print the current working direc
 
 # Run the Julia script using the environment defined by Project.toml in this directory
 # (gio.jl can contain 'using RCall' or any other Julia code)
-export JULIA_NUM_THREADS=6
+export JULIA_NUM_THREADS=30
 
 julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile(); println("Threads.nthreads() = ", Threads.nthreads())'
 julia --project=. fig_1_variance.jl
