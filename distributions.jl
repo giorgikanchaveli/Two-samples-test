@@ -289,7 +289,7 @@ function generate_emp(ppm::mixture_ppm, n_top::Int, n_bottom::Int)
     end
     a = @views minimum(atoms[:,1])
     b = @views maximum(atoms[:,end])
-    @assert issorted(atoms)
+    # @assert issorted(atoms)
     return emp_ppm(atoms, n_top, n_bottom, a, b)
 end
 

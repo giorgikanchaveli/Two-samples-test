@@ -18,9 +18,9 @@ function test_statistic_energy(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64
         x = atoms_1[i,:]
         y = atoms_2[i,:]
         for j in 1:n
-            distances_x[i, j] = wasserstein1DUniform_sorted(x, atoms_1[j,:], 1)
-            distances_xy[i, j] = wasserstein1DUniform_sorted(x, atoms_2[j,:], 1)
-            distances_y[i, j] = wasserstein1DUniform_sorted(y, atoms_2[j,:], 1)
+            distances_x[i, j] = wasserstein1DUniform_sorted(x, atoms_1[j,:])
+            distances_xy[i, j] = wasserstein1DUniform_sorted(x, atoms_2[j,:])
+            distances_y[i, j] = wasserstein1DUniform_sorted(y, atoms_2[j,:])
         end
     end
     distance = 2 * mean(distances_xy) - mean(distances_x) - mean(distances_y)
@@ -30,8 +30,8 @@ end
 function decide_energy(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int)
     n = hier_sample_1.n
 
-    atoms_1 = sort(hier_sample_1.atoms, dims = 2)
-    atoms_2 = sort(hier_sample_2.atoms, dims = 2)
+    atoms_1 = hier_sample_1.atoms
+    atoms_2 = hier_sample_2.atoms
 
     
     observed_test_stat = test_statistic_energy(atoms_1, atoms_2)
@@ -100,7 +100,6 @@ end
 
 
 
-
 function threshold_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
     n = hier_sample_1.n
     m = hier_sample_1.m
@@ -115,7 +114,7 @@ function threshold_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Floa
     samples = zeros(n_samples)
     total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
     if bootstrap
-        for i in 1:n_samples
+        @floop ThreadedEx() for i in 1:n_samples
             indices_1 = sample(1:2*n, n; replace = true)
             indices_2 = sample(1:2*n, n; replace = true)
 
@@ -125,10 +124,10 @@ function threshold_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Floa
             hier_sample_1_bootstrap = emp_ppm(atoms_1, n, m, a, b)
             hier_sample_2_bootstrap = emp_ppm(atoms_2, n, m, a, b)
 
-            samples[i] = dlip(hier_sample_1_bootstrap, hier_sample_2_bootstrap)
+            samples[i] = dlip(hier_sample_1_bootstrap, hier_sample_2_bootstrap, a, b)
         end
     else
-        for i in 1:n_samples
+        @floop ThreadedEx() for i in 1:n_samples
             random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
 
             atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
@@ -137,11 +136,12 @@ function threshold_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Floa
             hier_sample_1_permutation = emp_ppm(atoms_1, n, m, a, b)
             hier_sample_2_permutation = emp_ppm(atoms_2, n, m, a, b)
 
-            samples[i] = dlip(hier_sample_1_permutation, hier_sample_2_permutation)
+            samples[i] = dlip(hier_sample_1_permutation, hier_sample_2_permutation, a,b)
         end
     end
     return quantile(samples, 1 - θ)
 end
+
 
 
 function threshold_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
@@ -153,28 +153,32 @@ function threshold_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float
     samples = zeros(n_samples)
     total_rows = vcat(atoms_1, atoms_2) # collect all rows
     if bootstrap
-        for i in 1:n_samples
+        @floop ThreadedEx() for i in 1:n_samples
             indices_1 = sample(1:2*n, n; replace = true)
             indices_2 = sample(1:2*n, n; replace = true)
 
             new_atoms_1 = total_rows[indices_1,:] # first rows indexed by n random indices to the atoms_1
             new_atoms_2 = total_rows[indices_2,:] # first rows indexed by n random indices to the atoms_2
 
-            samples[i] = ww(new_atoms_1, new_atoms_2, true) # sorted = true
+            samples[i] = ww(new_atoms_1, new_atoms_2) # sorted = true
         end
     else
-        for i in 1:n_samples
+        @floop ThreadedEx() for i in 1:n_samples
             random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
 
             new_atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
             new_atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
         
          
-            samples[i] = ww(new_atoms_1, new_atoms_2, true) # sorted = true
+            samples[i] = ww(new_atoms_1, new_atoms_2) # sorted = true
         end
     end
     return quantile(samples, 1 - θ)
 end
+
+
+
+
 
 
 function rejection_rate_all(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
@@ -212,6 +216,46 @@ function rejection_rate_all(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Floa
     rates_dm = rejection_rate_dm(q_1, q_2, n, S, θ, n_samples)
     return rates_hipm,rates_wow,rates_dm,rates_energy
 end
+
+
+
+
+function rejection_rate_wow(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int,
+                     threshold_wow_wrong::Float64)
+    # if bootstrap is true then do bootstrap approach, n_samples refers to either number of permutations or bootstraps
+
+
+
+    rates_wow = 0.0
+  
+    @floop ThreadedEx() for s in 1:S
+        # generate samples and set endpoints
+        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+        
+
+        # record decisions from each testing methods
+        @reduce rates_wow += 1.0 * (ww(hier_sample_1, hier_sample_2) > threshold_wow_wrong)
+    end
+    rates_wow /= S
+    return rates_wow
+end
+
+function rejection_rate_wow(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int,
+                     θ::Float64, n_samples::Int, bootstrap::Bool)
+    # firstly obtain threshold
+    aux_hier_sample_1 = generate_emp(q_1,n,m)
+    aux_hier_sample_2 = generate_emp(q_2, n, m)
+    threshold_wow_wrong = threshold_wow(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
+    return rejection_rate_wow(q_1, q_2, n, m, S, threshold_wow_wrong)
+end
+
+
+
+
+
+
+
+
 
 
 function rejection_rate_hipm_wow(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
