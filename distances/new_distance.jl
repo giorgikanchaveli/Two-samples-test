@@ -48,7 +48,7 @@ end
 # Auxilliary functions new distance 
 # -----------------------------------------------------------------------------------
 
-function projectionGrid(x,a,b,nGrid)
+function projectionGrid(x::Float64, a::Float64, b::Float64, nGrid::Int)
 
     if (x <a) | (x > b) 
         println("PROBLEM with the projection: wrong bounds")
@@ -143,7 +143,7 @@ end
 # Function for the new HIPM distance 
 # -----------------------------------------------------------------------------------
 
-function dlip(measure1::Array{Float64, 3}, measure2::Array{Float64, 3}, a::Float64, b::Float64, nGrid::Int = 250,
+function dlip(measure1::AbstractArray{Float64, 3}, measure2::AbstractArray{Float64, 3}, a::Float64, b::Float64, nGrid::Int = 250,
                      nSteps::Int=1000,nRerun::Int = 5, tol::Float64 = 1e-4)
 
     s1 = size(measure1)
@@ -296,21 +296,20 @@ function dlip(measure1::Array{Float64, 3}, measure2::Array{Float64, 3}, a::Float
 
 end 
 
-function dlip(q_1::emp_ppm, q_2::emp_ppm; nGrid::Int=150, nSteps::Int=1000, nRerun::Int=5, tol::Float64=1e-4)
-    @assert q_1.a == q_2.a "a's of q_1 and q_2 must be same"
-    @assert q_1.b == q_2.b "b's of q_1 and q_2 must be same"
 
+function dlip(q_1::emp_ppm, q_2::emp_ppm, a::Float64, b::Float64; nGrid::Int=150, nSteps::Int=1000, nRerun::Int=5, tol::Float64=1e-4)
+   
     measure1 = similar(q_1.atoms, eltype(q_1.atoms), q_1.n, q_1.m, 2)
     measure2 = similar(q_2.atoms, eltype(q_2.atoms), q_2.n, q_2.m, 2)
 
     @views begin
         copyto!(measure1[:, :, 1], q_1.atoms)
         copyto!(measure2[:, :, 1], q_2.atoms)
-        measure1[:, :, 2] .= one(eltype(q_1.atoms)) / q_1.m
-        measure2[:, :, 2] .= one(eltype(q_2.atoms)) / q_2.m
+        measure1[:, :, 2] .= 1.0 / q_1.m
+        measure2[:, :, 2] .= 1.0 / q_2.m
     end
 
-    return dlip(measure1, measure2, q_1.a, q_1.b, nGrid, nSteps, nRerun, tol)
+    return dlip(measure1, measure2, a, b, nGrid, nSteps, nRerun, tol)
 end
 
 
