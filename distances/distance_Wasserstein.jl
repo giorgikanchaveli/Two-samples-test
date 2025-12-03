@@ -17,7 +17,7 @@ using Tulip
 
 # First simplest 1D Wasserstein distance between measures with the same number of atom and equal measures
 
-function wasserstein1DUniform_sorted(atoms1::AbstractVector{Float64}, atoms2::AbstractVector{Float64}, p::Int)
+function wasserstein1DUniform_sorted(atoms1::AbstractVector{Float64}, atoms2::AbstractVector{Float64})
    # p is the exponent 
    
     if length(atoms1)==length(atoms2)
@@ -26,9 +26,9 @@ function wasserstein1DUniform_sorted(atoms1::AbstractVector{Float64}, atoms2::Ab
         s = 0.0
 
         @simd for i in 1:n
-            s += abs(atoms1[i] - atoms2[i])^p
+            s += abs(atoms1[i] - atoms2[i])
         end
-        s = (s / n)^(1/p)
+        s = s / n
         return s
     else 
         print("ERROR: not the same number of atoms")
@@ -37,7 +37,7 @@ function wasserstein1DUniform_sorted(atoms1::AbstractVector{Float64}, atoms2::Ab
 end
 
 
-function ww(atoms_1::AbstractArray{Float64, 2}, atoms_2::AbstractArray{Float64, 2}, p::Int = 1)
+function ww(atoms_1::AbstractArray{Float64, 2}, atoms_2::AbstractArray{Float64, 2})
     # Assuming that the number of atoms at the lower level is the same in each measure and atoms have sorted rows
     
     s1 = size(atoms_1)
@@ -66,7 +66,7 @@ function ww(atoms_1::AbstractArray{Float64, 2}, atoms_2::AbstractArray{Float64, 
             a = view(atoms_1, i, :)
             for j =1:m2 
 
-                C[i,j] = wasserstein1DUniform_sorted(a, view(atoms_2, j, :),p)^p 
+                C[i,j] = wasserstein1DUniform_sorted(a, view(atoms_2, j, :))
             end
         end 
         # End timer 
@@ -79,9 +79,10 @@ function ww(atoms_1::AbstractArray{Float64, 2}, atoms_2::AbstractArray{Float64, 
         # @timeit timer "Solve outer OT problem" 
         gamma = ExactOptimalTransport.emd(weight1, weight2, C, Tulip.Optimizer() )
         # @timeit timer "compute transport cost" 
-        output = sum( gamma .* C )
+        #output = sum( gamma .* C )
+        output = sum(gamma[i,j] * C[i,j] for i in 1:m1, j in 1:m2)
         # display(timer)
-        return output^(1/p) 
+        return output 
     end
 end 
 
@@ -90,9 +91,9 @@ end
 
 
 
-function ww(q_1::emp_ppm, q_2::emp_ppm, p::Int = 1)
+function ww(q_1::emp_ppm, q_2::emp_ppm)
     # Assuming that the number of atoms at the lower level is the same in each measure and atoms are have sorted rows
-    return ww(q_1.atoms, q_2.atoms, p)
+    return ww(q_1.atoms, q_2.atoms)
 end 
 
 
