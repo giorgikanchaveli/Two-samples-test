@@ -37,10 +37,10 @@ file_path = "plots/frechet/figure1"
 title = "Rejection rates for wow"
 xlabel = "τ"
 ylabel = "Rej rate"
-n = 300
+n = 100
 m = 200
-S = 1000
-n_samples = 1000
+S = 500
+n_samples = 500
 θ = 0.05
 bootstrap = false
 file_name = "varying_variance_n=$(n)_m=$(m)_S=$(S)_permutation_n_samples=$(n_samples)"
