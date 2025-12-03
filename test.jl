@@ -1,85 +1,91 @@
 # optimize wow code
 
-
+using Distributions, Random
 include("distributions.jl")
 include("structures.jl")
 include("distances/distance_Wasserstein.jl")
 include("distances/new_distance.jl")
-using RCall # to call R functions
 
 
 
+function wasserstein1DUniform_sorted_new(atoms1::AbstractVector{Float64}, atoms2::AbstractVector{Float64}, p::Int)
+   # atoms1 and atoms2 only list of position 
+   # p is the exponent 
+   
+    if length(atoms1)==length(atoms2)
+        n = length(atoms1)
 
-    
-function f_old(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
+        s = 0.0
 
-    rej_rate = 0.0
-    
- 
-    for s in 1:S
-     
-        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
-        atoms_1, atoms_2 = hier_sample_1.atoms, hier_sample_2.atoms
-
-        @rput atoms_1 atoms_2 n n_boostrap
-        R"""
-        # if (!requireNamespace("frechet", quietly = TRUE)) {
-        #   install.packages("frechet", repos="https://cloud.r-project.org")
-        # }
-        library(frechet)
-        atoms_all = rbind(atoms_1, atoms_2)
-
-        group <- c(rep(1, n), rep(2, n))
-
-        result_denanova = DenANOVA(
-            yin = atoms_all,
-            group = group,
-            optns = list(boot = TRUE, R = n_boostrap)
-        )
-        pvalue = result_denanova$pvalBoot
-        """
-        @rget pvalue
-        rej_rate += 1 * (pvalue < θ)
-    end
-    rej_rate /= S
-    return rej_rate
+        @simd for i in 1:n
+            s += abs(atoms1[i] - atoms2[i])^p
+        end
+        s = (s / n)^(1/p)
+        return s
+    else 
+        print("ERROR: not the same number of atoms")
+        return -1. 
+    end 
 end
 
 
-
-function f_new(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
-
-    rej_rate = 0.0
+function ww_new(atoms_1::AbstractArray{Float64, 2}, atoms_2::AbstractArray{Float64, 2}, p = 1)
+    # Assuming that the number of atoms at the lower level is the same in each measure 
     
- 
-    for s in 1:S
-     
-        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
-        atoms_1, atoms_2 = hier_sample_1.atoms, hier_sample_2.atoms
+    
+    s1 = size(atoms_1)
+    s2 = size(atoms_2)
 
-        @rput atoms_1 atoms_2 n n_boostrap
-        R"""
-        # if (!requireNamespace("frechet", quietly = TRUE)) {
-        #   install.packages("frechet", repos="https://cloud.r-project.org")
-        # }
-        library(frechet)
-        atoms_all = rbind(atoms_1, atoms_2)
+    
+    if s1[2] != s2[2]
 
-        group <- c(rep(1, n), rep(2, n))
+        println("PROBLEM OF DIMENSION: each lower measure should have the same dimension")
+        return -1. 
+    
+    else
+        
+        # timer = TimerOutput()
 
-        result_denanova = DenANOVA(
-            yin = atoms_all,
-            group = group,
-            optns = list(boot = TRUE, R = n_boostrap)
-        )
-        pvalue = result_denanova$pvalBoot
-        """
-        @rget pvalue
-        rej_rate += 1 * (pvalue < θ)
+        # Extract dimensions
+        m1 = s1[1]
+        m2 = s2[1]
+    
+        # Compute matrix of pairwise distances which will be a cost function 
+
+        # @timeit timer "Compute pairwise transports" begin
+        
+        C = zeros(m1,m2)
+        for i=1:m1
+            a = view(atoms_1, i, :)
+            for j =1:m2 
+
+                C[i,j] = wasserstein1DUniform_sorted_new(a, view(atoms_2, j, :),p)^p 
+            end
+        end 
+       
+
+        # End timer 
+        # end
+
+        # Build the weights: uniform 
+        weight1 = fill(1 / m1, m1)
+        weight2 = fill(1 / m2, m2)
+
+        # Solving the optimal transport problem 
+        # @timeit timer "Solve outer OT problem" 
+        gamma = ExactOptimalTransport.emd(weight1, weight2, C, Tulip.Optimizer() )
+        # @timeit timer "compute transport cost" 
+        output = sum( gamma .* C )
+        
+        # display(timer)
+
+        return output^(1/p) 
     end
-    rej_rate /= S
-    return rej_rate
-end
+end 
+
+
+
+
 
 
 
@@ -94,26 +100,22 @@ end
 # parameters for functions
 
 n = 100
-m = 100
+m = 200
 
-a = 0.0
-b = 1.0
-
-p = 1
-
-S = 1
-n_boostrap = 100
-θ = 0.05
+# a = 0.0
+# b = 1.0
 
 
 q_1 = tnormal_normal(1.0,1.0,-10.0,10.0)
 q_2 = tnormal_normal(1.0,1.0,-10.0,10.0)
-
-hier_sample_1 = generate_emp(q_1, n, m)
-hier_sample_2 = generate_emp(q_2, n, m)
+q_3 = mixture_ppm(q_1, q_2, 0.5)
 
 
+h_1,h_2 = generate_emp(q_3,n,m),  generate_emp(q_3,n,m)
+t_1 = @time [old_value = ww(h_1,h_2) for i in 1:10]
+t_2 = @time [ww_new(h_1.atoms,h_2.atoms) for i in 1:10]
 
+@assert abs(old_value - new_value) <= 1e-5
 
 # check that values math
 Random.seed!(12345)

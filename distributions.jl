@@ -173,7 +173,7 @@ function generate_emp(ppm::DP, n_top::Int, n_bottom::Int)
     # m is the number of atoms from each random probability measure
     atoms = zeros(n_top,n_bottom)
     for i in 1:n_top
-        atoms[i,:] = dirichlet_process_without_weight_new(n_bottom, ppm.α, ppm.p_0)
+        atoms[i,:] = sort(dirichlet_process_without_weight_new(n_bottom, ppm.α, ppm.p_0))
     end
     return emp_ppm(atoms, n_top, n_bottom, ppm.a, ppm.b)
 end
@@ -227,6 +227,7 @@ end
 
 
 
+
 function generate_emp(ppm::tnormal_normal, n_top::Int, n_bottom::Int)
 
     atoms = zeros(n_top,n_bottom)
@@ -234,10 +235,13 @@ function generate_emp(ppm::tnormal_normal, n_top::Int, n_bottom::Int)
         truncated_normal = truncated(Normal(ppm.μ, ppm.σ), ppm.a, ppm.b)
         μ_inner = rand(truncated_normal)
         
-        atoms[i,:] = rand(Normal(μ_inner, 1.0), n_bottom)
+        atoms[i,:] = sort(rand(Normal(μ_inner, 1.0), n_bottom))
     end
-    return emp_ppm(atoms, n_top, n_bottom, minimum(atoms), maximum(atoms))
+    a = @views minimum(atoms[:,1])
+    b = @views maximum(atoms[:,end])
+    return emp_ppm(atoms, n_top, n_bottom, a, b)
 end
+
 
 function generate_emp(ppm::normal_tnormal, n_top::Int, n_bottom::Int)
     # given random probability measure which takes values as trunacted normal distributions where mean is random variable from normal(μ,σ), 
@@ -251,9 +255,24 @@ function generate_emp(ppm::normal_tnormal, n_top::Int, n_bottom::Int)
     for i in 1:n_top
         μ_inner = rand(Normal(ppm.μ, ppm.σ))
         truncated_normal = truncated(Normal(μ_inner, ppm.σ), a, b)
-        atoms[i,:] = rand(truncated_normal, n_bottom)
+        atoms[i,:] = sort(rand(truncated_normal, n_bottom))
     end
     return emp_ppm(atoms, n_top, n_bottom, a, b)
+end
+
+
+function issorted(m::Matrix{Float64})
+    flag = true
+    for i in m.size[1]
+        row = m[i,:]
+        for i in 1:(length(row)-1)
+            if row[i] > row[i + 1]
+                flag = false
+                return flag
+            end
+        end
+    end
+    return flag
 end
 
 
@@ -268,8 +287,10 @@ function generate_emp(ppm::mixture_ppm, n_top::Int, n_bottom::Int)
             atoms[i,:] = generate_emp(ppm.ppm2, 1, n_bottom).atoms[1,:]
         end
     end
-
-    return emp_ppm(atoms, n_top, n_bottom, minimum(atoms),maximum(atoms))
+    a = @views minimum(atoms[:,1])
+    b = @views maximum(atoms[:,end])
+    @assert issorted(atoms)
+    return emp_ppm(atoms, n_top, n_bottom, a, b)
 end
 
 
@@ -279,12 +300,14 @@ function generate_emp(ppm::simple_discr_1, n_top::Int, n_bottom::Int)
     atoms = zeros(n_top,n_bottom)
     for i in 1:n_top
         if rand() <= 0.5
-            atoms[i,:] = rand(Normal(-1.0,1.0), n_bottom)
+            atoms[i,:] = sort(rand(Normal(-1.0,1.0), n_bottom))
         else
-            atoms[i,:] = rand(Normal(1.0,1.0), n_bottom)
+            atoms[i,:] = sort(rand(Normal(1.0,1.0), n_bottom))
         end
     end
-    return emp_ppm(atoms, n_top, n_bottom, minimum(atoms), maximum(atoms))
+    a = @views minimum(atoms[:,1])
+    b = @views maximum(atoms[:,end])
+    return emp_ppm(atoms, n_top, n_bottom, a, b)
 end
 
 function generate_emp(ppm::simple_discr_2, n_top::Int, n_bottom::Int)
@@ -292,14 +315,16 @@ function generate_emp(ppm::simple_discr_2, n_top::Int, n_bottom::Int)
     for i in 1:n_top
         r = rand()
         if r <= 1/8
-            atoms[i,:] = rand(Normal(-2.0,1.0), n_bottom)
+            atoms[i,:] = sort(rand(Normal(-2.0,1.0), n_bottom))
         elseif r <= 7/8
-            atoms[i,:] = rand(Normal(0.0,1.0), n_bottom)
+            atoms[i,:] = sort(rand(Normal(0.0,1.0), n_bottom))
         else
-            atoms[i,:] = rand(Normal(2.0,1.0), n_bottom)
+            atoms[i,:] = sort(rand(Normal(2.0,1.0), n_bottom))
         end
     end
-    return emp_ppm(atoms, n_top, n_bottom, minimum(atoms), maximum(atoms))
+    a = @views minimum(atoms[:,1])
+    b = @views maximum(atoms[:,end])
+    return emp_ppm(atoms, n_top, n_bottom, a, b)
 end
 
 
