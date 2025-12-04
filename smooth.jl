@@ -37,8 +37,8 @@ file_path = "plots/frechet/figure1"
 title = "Rejection rates for wow"
 xlabel = "τ"
 ylabel = "Rej rate"
-n = 200
-m = 200
+n = 100
+m = 2000
 S = 1000
 n_samples = 1000
 θ = 0.05
@@ -48,3 +48,4 @@ t = time()
 save_fig(pairs, τs, file_name, file_path, title, xlabel,ylabel, n,m,S,θ,n_samples,bootstrap)
 dur = time() - t
 println("total duration is $(dur/3600) hours")
+println("parameters are n = $(n), m = $(m), S = $(S), n_samples = $(n_samples), permutation")
