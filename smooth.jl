@@ -31,15 +31,16 @@ println("expected duration is 3.4 hours")
 
 
 
-τs = collect(0.1:0.05:3.0)
+#τs = collect(0.1:0.05:3.0)
+τs = collect(0.5:0.05:1.8)
 pairs = [(tnormal_normal(0.0,0.2,-10.0,10.0), tnormal_normal(0.0,0.2*τ,-10.0,10.0)) for τ in τs]
 file_path = "plots/frechet/figure1"
 title = "Rejection rates for wow"
 xlabel = "τ"
 ylabel = "Rej rate"
 n = 100
-m = 2000
-S = 1000
+m = 200
+S = 10000
 n_samples = 1000
 θ = 0.05
 bootstrap = false
