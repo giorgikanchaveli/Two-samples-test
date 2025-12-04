@@ -147,9 +147,7 @@ end
 function threshold_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
     n = hier_sample_1.n
 
-    atoms_1 = sort(hier_sample_1.atoms, dims = 2)
-    atoms_2 = sort(hier_sample_2.atoms, dims = 2)
-
+   
     samples = zeros(n_samples)
     total_rows = vcat(atoms_1, atoms_2) # collect all rows
     if bootstrap
