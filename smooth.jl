@@ -39,6 +39,40 @@ function threshold_wow_nothread(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, 
     return quantile(samples, 1 - θ)
 end
 
+
+function threshold_wow_thread(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
+    n = hier_sample_1.n
+    atoms_1 = hier_sample_1.atoms
+    atoms_2 = hier_sample_2.atoms
+    
+    samples = zeros(n_samples)
+    total_rows = vcat(atoms_1, atoms_2) # collect all rows
+    if bootstrap
+        @floop ThreadedEx() for i in 1:n_samples
+            indices_1 = sample(1:2*n, n; replace = true)
+            indices_2 = sample(1:2*n, n; replace = true)
+
+            new_atoms_1 = total_rows[indices_1,:] # first rows indexed by n random indices to the atoms_1
+            new_atoms_2 = total_rows[indices_2,:] # first rows indexed by n random indices to the atoms_2
+
+            samples[i] = ww(new_atoms_1, new_atoms_2) # sorted = true
+        end
+    else
+        @floop ThreadedEx() for i in 1:n_samples
+            random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
+
+            new_atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
+            new_atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
+        
+         
+            samples[i] = ww(new_atoms_1, new_atoms_2) # sorted = true
+        end
+    end
+    return quantile(samples, 1 - θ)
+end
+
+
+
 function rejection_rate_wow_correct(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int,
                      θ::Float64, n_samples::Int, bootstrap::Bool)
     # if bootstrap is true then do bootstrap approach, n_samples refers to either number of permutations or bootstraps
@@ -91,55 +125,52 @@ println("expected duration is 3.4 hours")
 
 
 # #τs = collect(0.1:0.05:3.0)
-τs = collect(0.5:0.05:1.8)
-pairs = [(tnormal_normal(0.0,0.2,-10.0,10.0), tnormal_normal(0.0,0.2*τ,-10.0,10.0)) for τ in τs]
-file_path = "plotscluster/"
-title = "Rejection rates for wow"
-xlabel = "τ"
-ylabel = "Rej rate"
-n = 100
-m = 200
-S = 500
-n_samples = 100
-θ = 0.05
-bootstrap = false
-file_name = "varying_variance_truethresh_n=$(n)_m=$(m)_S=$(S)_permutation_n_samples=$(n_samples)"
-t = time()
-save_fig(pairs, τs, file_name, file_path, title, xlabel,ylabel, n,m,S,θ,n_samples,bootstrap)
-dur = time() - t
-println("total duration is $(dur/3600) hours")
-println("parameters are n = $(n), m = $(m), S = $(S), n_samples = $(n_samples), permutation")
+ τs = collect(0.5:0.05:1.8)
+# pairs = [(tnormal_normal(0.0,0.2,-10.0,10.0), tnormal_normal(0.0,0.2*τ,-10.0,10.0)) for τ in τs]
+# file_path = "plotscluster/"
+# title = "Rejection rates for wow"
+# xlabel = "τ"
+# ylabel = "Rej rate"
+# n = 100
+# m = 200
+# S = 500
+# n_samples = 100
+# θ = 0.05
+# bootstrap = false
+# file_name = "varying_variance_truethresh_n=$(n)_m=$(m)_S=$(S)_permutation_n_samples=$(n_samples)"
+# t = time()
+# save_fig(pairs, τs, file_name, file_path, title, xlabel,ylabel, n,m,S,θ,n_samples,bootstrap)
+# dur = time() - t
+# println("total duration is $(dur/3600) hours")
+# println("parameters are n = $(n), m = $(m), S = $(S), n_samples = $(n_samples), permutation")
 
 
 # compare thresholds: 
 
-# q_1 = tnormal_normal(0.0,0.2,-10.0,10.0)
-# τ = 1.4
-# q_2 = tnormal_normal(0.0,0.2*τ,-10.0,10.0)
 
+q_1 = tnormal_normal(0.0,0.2,-10.0,10.0)
+τ = 1.4
+q_2 = tnormal_normal(0.0,0.2*τ,-10.0,10.0)
 
+n = 100
+m = 200
+n_samples = [100,500,1000]
+θ = 0.05
 
+bootstrap = true
+K = 10
+thresholds = zeros(K, length(n_samples))
+distances = zeros(K)
+t = time()
+for i in 1:K
+    h_1 = generate_emp(q_1, n, m)
+    h_2 = generate_emp(q_2, n, m)
+    a = minimum((h_1.a,h_2.a))
+    b = maximum((h_1.b,h_2.b))
+    distances[i] = dlip(h_1,h_2,a,b)
+    # for j in 1:length(n_samples)
+    #     thresholds[i, j] = threshold_wow_nothread(h_1, h_2, θ, n_samples[j], bootstrap) # gasaketebeli
+    # end
+end 
 
-# n = 100
-# m = 200
-# n_samples = 100
-# θ = 0.05
-
-# bootstrap = true
-# K = 100
-# thresholds = zeros(K)
-# distances = zeros(K)
-# t = time()
-# for i in 1:K
-#     aux_hier_sample_1 = generate_emp(q_1, n, m)
-#     aux_hier_sample_2 = generate_emp(q_2, n, m)
-#     distances[i] = ww(aux_hier_sample_1,aux_hier_sample_2)
-#     thresholds[i] = threshold_wow(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
-# end
-
-# dur = time() - t
-# rates = zeros(K)
-# for i in 1:K
-#     rates[i] = mean(distances .>= thresholds[i])
-# end
-# histogram(thresholds)
+dur = time() - t
