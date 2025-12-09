@@ -1,9 +1,9 @@
 #!/bin/bash -l
-#SBATCH --job-name=time40                 # name of the SLURM job (shows up in queue)
+#SBATCH --job-name=time1                 # name of the SLURM job (shows up in queue)
 #SBATCH --partition=compute                    # which partition/queue to use
 #SBATCH --ntasks=1                           # number of tasks (1 is fine for Julia)
-#SBATCH --cpus-per-task=40    					# number of cores
-#SBATCH --time=01:00:00                        # maximum run time (hh:mm:ss)
+#SBATCH --cpus-per-task=1   					# number of cores
+#SBATCH --time=16:00:00                        # maximum run time (hh:mm:ss)
 #SBATCH --output=/home/3049277/logs/%x_%j.out  # standard output log file
 #SBATCH --error=/home/3049277/logs/%x_%j.err   # standard error log file
 #SBATCH --chdir=/home/3049277/Two-samples-test # working directory for the job
