@@ -78,6 +78,7 @@ function ww(atoms_1::AbstractArray{Float64, 2}, atoms_2::AbstractArray{Float64, 
         # Solving the optimal transport problem 
         # @timeit timer "Solve outer OT problem" 
         gamma = ExactOptimalTransport.emd(weight1, weight2, C, Tulip.Optimizer() )
+       
         # @timeit timer "compute transport cost" 
         #output = sum( gamma .* C )
         output = sum(gamma[i,j] * C[i,j] for i in 1:m1, j in 1:m2)
