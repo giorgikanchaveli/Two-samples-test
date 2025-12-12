@@ -1,8 +1,9 @@
-# This is original code (almost before I modified) for computing HIPM. The only thing I changed is that by default nGrid = 250
+# This is original code (before I modified) for computing HIPM.
 
-
+include("distances/hipm_original.jl")
 using LinearAlgebra 
-
+using BenchmarkTools
+include("distances/distance_Wasserstein.jl")
 # Measures are given as a nTop x nBottom x 2 array
 # nTop = n in the article 
 # nBottom = m in the article 
@@ -11,15 +12,14 @@ using LinearAlgebra
 # a[:,:,2] -> mass of the atom 
 
 
-# -----------------------------------------------------------------------------------
-# Auxilliary functions new distance 
-# -----------------------------------------------------------------------------------
+# # -----------------------------------------------------------------------------------
+# # Auxilliary functions new distance 
+# # -----------------------------------------------------------------------------------
 
-function projectionGrid(x,a,b,nGrid)
+function projectionGrid_new(x,a,b,nGrid)
 
     if (x <a) | (x > b) 
-        println("PROBLEM with the projection: wrong bounds")
-        return -1
+        error("PROBLEM with the projection: Atom location $x is outside of bounds [$a, $b]")
     else
         return round(Int,(x - a) / (b-a) * nGrid)+1
     end 
@@ -28,20 +28,20 @@ end
 
 
 
-function projectionGridMeasure(measure,a,b,nGrid)
+function projectionGridMeasure_new(atoms::Vector{Float64},a,b,nGrid)
 
     output = zeros(nGrid+1)
 
-    nBottom = size(measure)[1]
+    nBottom = length(atoms)
     for i=1:nBottom 
-        output[projectionGrid(measure[i,1],a,b,nGrid)] += measure[i,2]
+        output[projectionGrid_new(atoms[i],a,b,nGrid)] += 1.0 / nBottom
     end
 
     return output
 end 
 
 
-function buildEvaluationMatrixGrid(a,b,nGrid)
+function buildEvaluationMatrixGrid_new(a,b,nGrid)
 
     # Step size 
     deltaX = (b-a) / nGrid
@@ -58,7 +58,9 @@ function buildEvaluationMatrixGrid(a,b,nGrid)
 
 end 
 
-function evaluationObjectiveGrid(unknown,weights,Q,derivative)
+
+
+function evaluationObjectiveGrid_new(unknown::Vector{Float64},weights::AbstractArray{Float64, 3},Q::Matrix{Float64},derivative::Bool)
     # derivative: true or false, to decide if to output the derivative
 
     nTop = size(weights)[2]
@@ -67,37 +69,68 @@ function evaluationObjectiveGrid(unknown,weights,Q,derivative)
     # Value of the function f on grid point 
     # f = Q * unknown
     # Alternative formula
-    f = vcat(0., cumsum(unknown)) * Q[2,1]
+    #f = vcat(0., cumsum(unknown)) * Q[2,1]
+
+    # Change: avoid new allocations
+    f = Vector{Float64}(undef, length(unknown) + 1) 
+    f[1] = 0.0
+    cumsum!(view(f, 2:(nGrid+1)), unknown) # compute cumsum in place
+    f .*= Q[2,1]
+
+
+    
 
     # Compute the value of the integral of f 
-    integralF = zeros(2,nTop)
-    for k =1:2
-        integralF[k,:] = weights[k,:,:] * f
+    integralF = zeros(2,nTop)    
+    for k = 1:2
+        Wk = view(weights, k, :, :) # Matrix (nTop x nGrid)
+        I_k = view(integralF, k, :) # Destination vector (nTop)
+        # I_k = Wk * f
+        mul!(I_k, Wk, f)           
     end
+    #integralF[k,:] = weights[k,:,:] * f
 
-    output = sum( abs.( sort(integralF[1,:]) - sort(integralF[2,:] ) )) * 1/nTop
+    # Change: Avoid allocations and sorting two times in addition.
+    permutation1 = sortperm(integralF[1,:])
+    permutation2 = sortperm(integralF[2,:])
+
+    sortedF1 = view(integralF, 1, :)[permutation1] 
+    sortedF2 = view(integralF, 2, :)[permutation2]
+
+    output = sum(abs.(sortedF1 .- sortedF2)) * (1.0/nTop)
+
+    #output = sum( abs.( sort(integralF[1,:]) - sort(integralF[2,:] ) )) * 1/nTop
 
     if !derivative 
         return output, 0.
     else
 
         # Find the increasing permutation for each 
-        permutation1 = sortperm(integralF[1,:])
-        permutation2 = sortperm(integralF[2,:])
-
+        
         # First compute the value of the function 
        
         # Then output the derivative 
+
+        # Change: Factor out matrix Q' to avoid matrix multiplication nTop times.
         outputderivative = zeros(nGrid)
 
+        tempsum = zeros(size(weights, 3))
         for i=1:nTop 
             
             # Find the sign of the block
             s = sign(integralF[1,permutation1[i]] - integralF[2,permutation2[i]] )
             # Add the right weighted column of the matrix Q, with a sign 
-            outputderivative += s * 1/nTop * Q' * (weights[1,permutation1[i],:] - weights[2,permutation2[i],:] )
 
+            
+            w1 = view(weights, 1, permutation1[i], :)
+            w2 = view(weights, 2, permutation2[i], :)
+            @. tempsum .+= s.* (w1 .- w2)
+            #outputderivative += s * 1/nTop * Q' * (weights[1,permutation1[i],:] - weights[2,permutation2[i],:] )
         end 
+        outputderivative = (1.0 / nTop) .* (Q' * tempsum)
+
+        
+
 
         return output, outputderivative
     
@@ -110,10 +143,11 @@ end
 # Function for the new HIPM distance 
 # -----------------------------------------------------------------------------------
 
-function dlip(measure1, measure2, a,b, nGrid = 250, nSteps=1000,nRerun = 5,tol = 1e-4)
+function dlip_new(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64}, a::Float64, b::Float64, nGrid::Int = 250,nSteps::Int=1000,
+                                            nRerun::Int = 5,tol::Float64 = 1e-4)
 
-    s1 = size(measure1)
-    s2 = size(measure2)
+    s1 = size(atoms_1)
+    s2 = size(atoms_2)
 
     if s1[1] != s2[1] 
 
@@ -134,12 +168,12 @@ function dlip(measure1, measure2, a,b, nGrid = 250, nSteps=1000,nRerun = 5,tol =
         weightsAtoms = zeros(2,nTop,nGrid+1)
 
         for i=1:nTop 
-            weightsAtoms[1,i,:] = projectionGridMeasure(measure1[i,:,:],a,b,nGrid)
-            weightsAtoms[2,i,:] = projectionGridMeasure(measure2[i,:,:],a,b,nGrid)
+            weightsAtoms[1,i,:] = projectionGridMeasure_new(atoms_1[i, :],a,b,nGrid)
+            weightsAtoms[2,i,:] = projectionGridMeasure_new(atoms_2[i, :],a,b,nGrid)
         end
-        return 1.0
+        
         # Build the matrix 
-        Q = buildEvaluationMatrixGrid(a,b,nGrid)
+        Q = buildEvaluationMatrixGrid_new(a,b,nGrid)
 
         # Gradient ascent loop 
         # Rerun every time with 5 initial conditions
@@ -167,7 +201,7 @@ function dlip(measure1, measure2, a,b, nGrid = 250, nSteps=1000,nRerun = 5,tol =
             while (i <= nSteps) & continueLoop
 
                 # Evaluation of the function and ascent direction 
-                f, df = evaluationObjectiveGrid(unknown,weightsAtoms, Q,true)
+                f, df = evaluationObjectiveGrid_new(unknown,weightsAtoms, Q,true)
                 
                 # Project the ascent direction on the admissible set and find how luch we can advance 
                 ascentDirection = df
@@ -211,11 +245,11 @@ function dlip(measure1, measure2, a,b, nGrid = 250, nSteps=1000,nRerun = 5,tol =
                     expectedIncrease = dot(df, ascentDirection) 
                     t = t_max 
                     candidateUnknown = unknown + t * ascentDirection 
-                    newf = evaluationObjectiveGrid(candidateUnknown,weightsAtoms, Q,false)[1]
+                    newf = evaluationObjectiveGrid_new(candidateUnknown,weightsAtoms, Q,false)[1]
                     while (newf < f + 0.5 * t * expectedIncrease) & (t > 1/128) 
                         t *= 0.5 
                         candidateUnknown = unknown + t * ascentDirection
-                        newf = evaluationObjectiveGrid(candidateUnknown,weightsAtoms, Q,false)[1]
+                        newf = evaluationObjectiveGrid_new(candidateUnknown,weightsAtoms, Q,false)[1]
                     end 
 
                     # Stop also the loop if the increase is too small 
@@ -264,3 +298,26 @@ end
 
 
 
+
+
+n = 100
+m = 200
+
+atoms_1, atoms_2 = rand(n,m), rand(n,m)
+a = minimum((minimum(atoms_1), minimum(atoms_2)))
+b = maximum((maximum(atoms_1), maximum(atoms_2)))
+
+measure_1 = Array{Float64}(undef, n, m, 2)
+measure_2 = Array{Float64}(undef, n, m, 2)
+
+measure_1[:,:,1] = atoms_1
+measure_2[:,:,1] = atoms_2
+
+measure_1[:,:,2] = fill(1.0 / m, n, m)
+measure_2[:,:,2] = fill(1.0 / m, n, m)
+
+original = @btime dlip(measure_1, measure_2, a, b)
+new = @btime dlip_new(atoms_1, atoms_2, a, b)
+@assert abs(original[1]  - new[1]) < 1e-5
+
+wwtime = @btime ww(atoms_1, atoms_2)

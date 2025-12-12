@@ -137,7 +137,7 @@ function dlip(measure1, measure2, a,b, nGrid = 250, nSteps=1000,nRerun = 5,tol =
             weightsAtoms[1,i,:] = projectionGridMeasure(measure1[i,:,:],a,b,nGrid)
             weightsAtoms[2,i,:] = projectionGridMeasure(measure2[i,:,:],a,b,nGrid)
         end
-        return 1.0
+
         # Build the matrix 
         Q = buildEvaluationMatrixGrid(a,b,nGrid)
 
