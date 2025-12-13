@@ -51,8 +51,9 @@ end
 
 
 println("running file fig_1_variance.jl")
-println("number of threads: $(Threads.nthreads())")
-println("expected duration is 22 hours")
+println("parameters are S = $S, n_samples = $(n_samples), n = n, m = m, n_threads = $(Threads.nthreads())")
+
+println("expected duration is 7 hours")
 
 
 
@@ -80,5 +81,4 @@ dur = time() - t
 println("total duration is $(dur/3600) hours")
 
 
-println("parameters are S = $S, n_samples = $(n_samples), n = n, m = m, n_threads = $(Threads.nthreads())")
 println("for one pair cluster takes $(dur/3600) hours. ")
