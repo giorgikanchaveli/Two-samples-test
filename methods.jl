@@ -99,59 +99,45 @@ end
 
 
 
-
 function threshold_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
     n = hier_sample_1.n
-    m = hier_sample_1.m
-    # set endpoints
-    a = minimum((hier_sample_1.a, hier_sample_2.a))
-    b = maximum((hier_sample_1.b, hier_sample_2.b))
-    hier_sample_1.a = a
-    hier_sample_2.a = a
-    hier_sample_1.b = b
-    hier_sample_2.b = b
-
+    a = minimum((hier_sample_1.a,hier_sample_2.a))
+    b = maximum((hier_sample_1.b,hier_sample_2.b))
+   
     samples = zeros(n_samples)
     total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
     if bootstrap
-        @floop ThreadedEx() for i in 1:n_samples
+        for i in 1:n_samples
             indices_1 = sample(1:2*n, n; replace = true)
             indices_2 = sample(1:2*n, n; replace = true)
 
-            atoms_1 = total_rows[indices_1,:] # first rows indexed by n random indices to the atoms_1
-            atoms_2 = total_rows[indices_2,:] # first rows indexed by n random indices to the atoms_2
+            new_atoms_1 = total_rows[indices_1,:] # first rows indexed by n random indices to the atoms_1
+            new_atoms_2 = total_rows[indices_2,:] # first rows indexed by n random indices to the atoms_2
 
-            hier_sample_1_bootstrap = emp_ppm(atoms_1, n, m, a, b)
-            hier_sample_2_bootstrap = emp_ppm(atoms_2, n, m, a, b)
-
-            samples[i] = dlip(hier_sample_1_bootstrap, hier_sample_2_bootstrap, a, b)
+            samples[i] = dlip(new_atoms_1, new_atoms_2, a, b)
         end
     else
-        @floop ThreadedEx() for i in 1:n_samples
+        for i in 1:n_samples
             random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
 
-            atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
-            atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
+            new_atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
+            new_atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-            hier_sample_1_permutation = emp_ppm(atoms_1, n, m, a, b)
-            hier_sample_2_permutation = emp_ppm(atoms_2, n, m, a, b)
-
-            samples[i] = dlip(hier_sample_1_permutation, hier_sample_2_permutation, a,b)
+            samples[i] = dlip(new_atoms_1, new_atoms_2, a, b)
         end
     end
     return quantile(samples, 1 - θ)
 end
 
-
-
 function threshold_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
     n = hier_sample_1.n
-
-   
+    atoms_1 = hier_sample_1.atoms
+    atoms_2 = hier_sample_2.atoms
+    
     samples = zeros(n_samples)
     total_rows = vcat(atoms_1, atoms_2) # collect all rows
     if bootstrap
-        @floop ThreadedEx() for i in 1:n_samples
+        for i in 1:n_samples
             indices_1 = sample(1:2*n, n; replace = true)
             indices_2 = sample(1:2*n, n; replace = true)
 
@@ -161,7 +147,7 @@ function threshold_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float
             samples[i] = ww(new_atoms_1, new_atoms_2) # sorted = true
         end
     else
-        @floop ThreadedEx() for i in 1:n_samples
+        for i in 1:n_samples
             random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
 
             new_atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
@@ -173,7 +159,6 @@ function threshold_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float
     end
     return quantile(samples, 1 - θ)
 end
-
 
 
 

@@ -1,6 +1,10 @@
 # This is original code (before I modified) for computing HIPM.
 
-include("distances/hipm_original.jl")
+include("distributions.jl")
+
+
+#include("distances/hipm_original.jl")
+include("distances/new_distance.jl")
 using LinearAlgebra 
 using BenchmarkTools
 include("distances/distance_Wasserstein.jl")
@@ -57,6 +61,19 @@ function buildEvaluationMatrixGrid_new(a,b,nGrid)
      
 
 end 
+
+function suffix_sum(tempsum::Vector{Float64})
+    n = length(tempsum)
+    s = sum(tempsum) - tempsum[end]
+
+    output = Vector{Float64}(undef, n - 1)
+    
+    for i in 1:(n-1)
+        output[i] = s
+        s = s - tempsum[n - i] 
+    end
+    return output
+end
 
 
 
@@ -127,8 +144,10 @@ function evaluationObjectiveGrid_new(unknown::Vector{Float64},weights::AbstractA
             @. tempsum .+= s.* (w1 .- w2)
             #outputderivative += s * 1/nTop * Q' * (weights[1,permutation1[i],:] - weights[2,permutation2[i],:] )
         end 
+        # Change: Q' is upper triangular matrice of deltaX with first column equal to 0's. So matrix multiplication is almost reverse of cumsum.
+        # Actually it doesn't make it faster so I don't do it.
         outputderivative = (1.0 / nTop) .* (Q' * tempsum)
-
+        #outputderivative = (1.0 / nTop) * ((b-a) / nGrid) .* optimized_suffix_sum_original_logic(tempsum)
         
 
 
@@ -143,7 +162,7 @@ end
 # Function for the new HIPM distance 
 # -----------------------------------------------------------------------------------
 
-function dlip_new(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64}, a::Float64, b::Float64, nGrid::Int = 250,nSteps::Int=1000,
+function dlip_new(atoms_1::AbstractArray{Float64,2}, atoms_2::AbstractArray{Float64,2}, a::Float64, b::Float64, nGrid::Int = 250,nSteps::Int=1000,
                                             nRerun::Int = 5,tol::Float64 = 1e-4)
 
     s1 = size(atoms_1)
@@ -288,13 +307,19 @@ function dlip_new(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64}, a::Float64
         
         # Best run 
         index = argmax(valueFunction[:,end])
-
-        return maximum(valueFunction[index,end]), Q *unknownArray[index,:] 
+        # Change only return best run
+        return valueFunction[index]
+        #return maximum(valueFunction[index,end]), Q *unknownArray[index,:] 
 
 
     end
 
 end 
+
+
+function dlip_new(h_1::emp_ppm, h_2::emp_ppm, a::Float64, b::Float64, nGrid::Int = 250)
+    return dlip_new(h_1.atoms, h_2.atoms, a, b, nGrid)
+end
 
 
 
@@ -303,7 +328,7 @@ end
 n = 100
 m = 200
 
-atoms_1, atoms_2 = rand(n,m), rand(n,m)
+atoms_1, atoms_2 = 3 .* rand(n,m), 3 .* rand(n,m)
 a = minimum((minimum(atoms_1), minimum(atoms_2)))
 b = maximum((maximum(atoms_1), maximum(atoms_2)))
 
@@ -318,6 +343,24 @@ measure_2[:,:,2] = fill(1.0 / m, n, m)
 
 original = @btime dlip(measure_1, measure_2, a, b)
 new = @btime dlip_new(atoms_1, atoms_2, a, b)
-@assert abs(original[1]  - new[1]) < 1e-5
+@assert abs(original[1]  - new) < 1e-5
 
-wwtime = @btime ww(atoms_1, atoms_2)
+#wwtime = @btime ww(atoms_1, atoms_2)
+
+
+
+
+# q_1 = tnormal_normal(1.0, 2.0, -10.0, 10.0)
+# q_2 = tnormal_normal(2.0, 2.0, -10.0, 10.0)
+q_1 = DP(1.0, Beta(1, 1),0.0,1.0)
+q_2 = DP(1.0, Beta(1, 1),0.0,1.0)
+
+h_1 = generate_emp(q_1, n, m)
+h_2 = generate_emp(q_2, n, m)
+
+# h_1 = emp_ppm(atoms_1, n, m, a, b)
+# h_2 = emp_ppm(atoms_2, n, m, a, b)
+
+
+new = @btime dlip_new(h_1, h_2, 0.0, 1.0)
+original = @btime dlip(h_1, h_2, 0.0, 1.0)

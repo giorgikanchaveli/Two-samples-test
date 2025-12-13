@@ -43,15 +43,13 @@ function ww_new(atoms_1::AbstractArray{Float64,2 }, atoms_2::AbstractArray{Float
 
     # 💡 The critical optimization: Use @view and optimized loop order (j then i)
     for j=1:n2
-        # Use @view to create a cheap, non-allocating view for the atoms_2 column
+        # Use @view to create non-allocating view for the atoms_2 column
         atom_j_view = @view atoms_2[:, j] 
         
-        # Iterate down the columns of C and atoms_1 for better cache performance
         for i =1:n1 
-            # Use @view to create a cheap, non-allocating view for the atoms_1 column
             atom_i_view = @view atoms_1[:, i]
 
-            # Pass the views to the function (assuming you meant atoms_1)
+            # Pass the views to the function 
             C[i,j] = wasserstein1DUniform(atom_i_view, atom_j_view)
         end
     end 
@@ -59,7 +57,7 @@ function ww_new(atoms_1::AbstractArray{Float64,2 }, atoms_2::AbstractArray{Float
     # Rest of the code is clean
     weight1 = fill(1 / n1, n1)
     weight2 = fill(1 / n2, n2)
-
+    
     gamma = ExactOptimalTransport.emd(weight1, weight2, C, Tulip.Optimizer() )
     # Optimal way to compute the final cost
     output = sum(gamma[i,j] * C[i,j] for j in 1:n2, i in 1:n1)
