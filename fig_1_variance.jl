@@ -51,16 +51,15 @@ end
 
 
 println("running file fig_1_variance.jl")
-println("expected duration is 7 hours")
+println("expected duration is 30 hours")
 
 
 
 #fig 1 with varying variance
 
 
-# τs = collect(0.1:0.05:3.0)
-τs = [1.0]
-#τs = collect(0.1:0.5:3.0)
+τs = collect(0.1:0.05:2.5)
+
 pairs = [(tnormal_normal(0.0,0.2,-10.0,10.0), tnormal_normal(0.0,0.2*τ,-10.0,10.0)) for τ in τs]
 file_path = "plots/frechet/figure1"
 title = "Rejection rates for 4 schemes"
@@ -68,7 +67,7 @@ xlabel = "τ"
 ylabel = "Rej rate"
 n = 100
 m = 200
-S = 1000
+S = 500
 n_samples = 100
 θ = 0.05
 bootstrap = false
