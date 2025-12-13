@@ -51,8 +51,6 @@ end
 
 
 println("running file fig_1_variance.jl")
-println("parameters are S = $S, n_samples = $(n_samples), n = n, m = m, n_threads = $(Threads.nthreads())")
-
 println("expected duration is 7 hours")
 
 
@@ -75,6 +73,7 @@ n_samples = 100
 θ = 0.05
 bootstrap = false
 file_name = "varying_variance_n=$(n)_m=$(m)_S=$(S)_permutation_n_samples=$(n_samples)"
+println("parameters are S = $S, n_samples = $(n_samples), n = n, m = m, n_threads = $(Threads.nthreads())")
 t = time()
 save_fig(pairs, τs, file_name, file_path, title, xlabel,ylabel, n,m,S,θ,n_samples,bootstrap)
 dur = time() - t
