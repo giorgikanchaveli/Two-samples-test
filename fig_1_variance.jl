@@ -58,7 +58,7 @@ println("expected duration is 30 hours")
 #fig 1 with varying variance
 
 
-τs = collect(0.1:0.1:2.5)
+τs = collect(0.1:0.05:1.8)
 
 pairs = [(tnormal_normal(0.0,0.2,-10.0,10.0), tnormal_normal(0.0,0.2*τ,-10.0,10.0)) for τ in τs]
 file_path = "plots/frechet/figure1"
@@ -67,8 +67,8 @@ xlabel = "τ"
 ylabel = "Rej rate"
 n = 100
 m = 200
-S = 1000
-n_samples = 100
+S = 500
+n_samples = 200
 θ = 0.05
 bootstrap = false
 file_name = "varying_variance_n=$(n)_m=$(m)_S=$(S)_permutation_n_samples=$(n_samples)"
