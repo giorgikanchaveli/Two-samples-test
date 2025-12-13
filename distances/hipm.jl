@@ -1,7 +1,6 @@
 # This is modified dlip computation code
 
 using LinearAlgebra 
-using BenchmarkTools
 # Measures are given as a nTop x nBottom x 2 array
 # nTop = n in the article 
 # nBottom = m in the article 
