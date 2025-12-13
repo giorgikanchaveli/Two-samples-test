@@ -47,7 +47,7 @@ println("expected duration is 30 hours")
 q_1 = simple_discr_1()
 q_2_aux = simple_discr_2()
 pairs = [(q_1, mixture_ppm(q_1, q_2_aux, λ)) for λ in λs]
-file_path = "plots/frechet/counterexample"
+file_path = "plotscluster"
 title = "Rejection rates for 4 schemes"
 xlabel = "λ"
 ylabel = "Rej rate"
