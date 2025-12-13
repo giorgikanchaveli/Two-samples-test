@@ -37,7 +37,7 @@ end
 
 println("running file fig_counterexample.jl")
 println("number of threads: $(Threads.nthreads())")
-println("expected duration is 8 hours")
+println("expected duration is 30 hours")
 
 
 
@@ -53,8 +53,8 @@ xlabel = "λ"
 ylabel = "Rej rate"
 n = 100
 m = 200
-S = 500
-n_samples = 200
+S = 1000
+n_samples = 100
 θ = 0.05
 bootstrap = false
 file_name = "counterexample_n=$(n)_m=$(m)_S=$(S)_permutation_n_samples=$(n_samples)"
