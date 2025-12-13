@@ -3,7 +3,7 @@ using FLoops # for parallel computing
 
 include("distributions.jl")
 
-include("distances/new_distance.jl")
+include("distances/hipm.jl")
 include("distances/distance_Wasserstein.jl")
 
 function test_statistic_energy(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64})
@@ -129,6 +129,14 @@ function threshold_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Floa
     return quantile(samples, 1 - θ)
 end
 
+function decide_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
+    threshold = threshold_hipm(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
+    a = minimum((hier_sample_1.a, hier_sample_2.a))
+    b = maximum((hier_sample_1.b, hier_sample_2.b))
+
+    return 1.0*(dlip(hier_sample_1, hier_sample_2, a, b) > threshold)
+end
+
 function threshold_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
     n = hier_sample_1.n
     atoms_1 = hier_sample_1.atoms
@@ -160,11 +168,50 @@ function threshold_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float
     return quantile(samples, 1 - θ)
 end
 
+function decide_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
+    threshold = threshold_wow(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
+
+    return 1.0*(ww(hier_sample_1, hier_sample_2) > threshold)
+end
 
 
 
 
 function rejection_rate_all(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
+    # if bootstrap is true then do bootstrap approach, n_samples refers to either number of permutations or bootstraps
+
+    
+    rates_hipm = 0.0
+    rates_wow = 0.0
+    rates_energy = 0.0
+
+    @floop ThreadedEx() for s in 1:S
+        # generate samples and set endpoints
+        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+
+        # record decisions from each testing methods
+        @reduce rates_hipm += decide_hipm(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
+        @reduce rates_wow += decide_wow(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
+
+        #@reduce rates_hipm += 1.0*(dlip(hier_sample_1, hier_sample_2) > threshold_hipm_wrong)
+        #@reduce rates_wow += 1.0 * (ww(hier_sample_1, hier_sample_2) > threshold_wow_wrong)
+        
+        @reduce rates_energy += decide_energy(hier_sample_1, hier_sample_2, θ, n_samples) 
+    end
+    rates_energy /= S
+    rates_wow /= S
+    rates_hipm /= S
+    rates_dm = 0.0
+    rates_dm = rejection_rate_dm(q_1, q_2, n, S, θ, n_samples)
+    return rates_hipm,rates_wow,rates_dm,rates_energy
+end
+
+
+
+
+
+
+function rejection_rate_all_fake(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
     # if bootstrap is true then do bootstrap approach, n_samples refers to either number of permutations or bootstraps
 
     # firstly we obtain fixed thresholds for HIPM and WoW
@@ -199,6 +246,45 @@ function rejection_rate_all(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Floa
     rates_dm = rejection_rate_dm(q_1, q_2, n, S, θ, n_samples)
     return rates_hipm,rates_wow,rates_dm,rates_energy
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
