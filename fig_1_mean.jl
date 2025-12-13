@@ -53,16 +53,16 @@ println("number of threads: $(Threads.nthreads())")
 println("expected duration is 7 hours")
 
 
-δs = collect(-1.0:0.05:1.0)
+δs = collect(-1.0:0.1:1.0)
 pairs = [(tnormal_normal(0.0,0.5,-10.0,10.0), tnormal_normal(δ, 0.5, -10.0,10.0)) for δ in δs]
-file_path = "plots/frechet/figure1"
+file_path = "plotscluster"
 title = "Rejection rates for 4 schemes"
 xlabel = "δ"
 ylabel = "Rej rate"
 n = 100
 m = 200
-S = 500
-n_samples = 200 # bootstrap\perm samples
+S = 1000
+n_samples = 100 # bootstrap\perm samples
 θ = 0.05
 bootstrap = false
 file_name = "varying_mean_n=$(n)_m=$(m)_S=$(S)_permutation_n_samples=$(n_samples)"

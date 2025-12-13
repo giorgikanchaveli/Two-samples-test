@@ -79,4 +79,4 @@ dur = time() - t
 println("total duration is $(dur/3600) hours")
 
 
-println("for one pair cluster takes $(dur/3600) hours. ")
+#println("for one pair cluster takes $(dur/3600) hours. ")
