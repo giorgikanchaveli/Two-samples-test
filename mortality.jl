@@ -158,7 +158,7 @@ scatterplot = scatter(
     pvalues_dm,
     xticks = all_ticks,
     xlabel = "Time Periods (Years)",
-    ylabel = "P-Value DM / HIPM", # Updated label to reflect both series
+    ylabel = "P-Value", # Updated label to reflect both series
     ylims = (-0.005,0.5),
     title = "Scatter Plot of P-Values Over Time",
     label = "DM"
