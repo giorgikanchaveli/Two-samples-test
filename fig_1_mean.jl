@@ -53,7 +53,7 @@ println("number of threads: $(Threads.nthreads())")
 println("expected duration is 7 hours")
 
 
-δs = collect(-1.0:0.1:1.0)
+δs = collect(-1.0:0.05:1.0)
 pairs = [(tnormal_normal(0.0,0.5,-10.0,10.0), tnormal_normal(δ, 0.5, -10.0,10.0)) for δ in δs]
 file_path = "plotscluster"
 title = "Rejection rates for 4 schemes"
@@ -66,7 +66,7 @@ n_samples = 100 # bootstrap\perm samples
 θ = 0.05
 bootstrap = false
 file_name = "varying_mean_n=$(n)_m=$(m)_S=$(S)_permutation_n_samples=$(n_samples)"
-println("parameters are S = $S, n_samples = $(n_samples), n = n, m = m, n_threads = $(Threads.nthreads())")
+println("parameters are S = $S, n_samples = $(n_samples), n = $(n), m = $(m), n_threads = $(Threads.nthreads())")
 println("number of pairs of laws of RPMS: $(length(δs))")
 t = time()
 save_fig(pairs, δs, file_name, file_path, title, xlabel,ylabel, n,m,S,θ,n_samples,bootstrap)

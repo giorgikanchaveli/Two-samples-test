@@ -58,7 +58,7 @@ println("expected duration is 30 hours")
 #fig 1 with varying variance
 
 
-τs = collect(0.1:0.1:2.5)
+τs = collect(0.1:0.05:2.5)
 
 pairs = [(tnormal_normal(0.0,0.2,-10.0,10.0), tnormal_normal(0.0,0.2*τ,-10.0,10.0)) for τ in τs]
 file_path = "plotscluster"
@@ -72,7 +72,7 @@ n_samples = 100
 θ = 0.05
 bootstrap = false
 file_name = "varying_variance_n=$(n)_m=$(m)_S=$(S)_permutation_n_samples=$(n_samples)"
-println("parameters are S = $S, n_samples = $(n_samples), n = n, m = m, n_threads = $(Threads.nthreads())")
+println("parameters are S = $S, n_samples = $(n_samples), n = $(n), m = $(m), n_threads = $(Threads.nthreads())")
 println("number of pairs of laws of RPMS: $(length(τs))")
 t = time()
 save_fig(pairs, τs, file_name, file_path, title, xlabel,ylabel, n,m,S,θ,n_samples,bootstrap)

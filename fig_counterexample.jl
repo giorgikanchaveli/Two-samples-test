@@ -58,7 +58,7 @@ n_samples = 100
 θ = 0.05
 bootstrap = false
 file_name = "counterexample_n=$(n)_m=$(m)_S=$(S)_permutation_n_samples=$(n_samples)"
-println("parameters are S = $S, n_samples = $(n_samples), n = n, m = m, n_threads = $(Threads.nthreads())")
+println("parameters are S = $S, n_samples = $(n_samples), n = $(n), m = $(m), n_threads = $(Threads.nthreads())")
 println("number of pairs of laws of RPMS: $(length(pairs))")
 t = time()
 save_fig(pairs, λs, file_name, file_path, title, xlabel,ylabel, n,m,S,θ,n_samples,bootstrap)
