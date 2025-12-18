@@ -7,7 +7,7 @@ include("distances/hipm.jl")
 group1 = ["belarus", "Bulgaria", "Czechia", "Estonia", "Hungary", "Latvia", "Poland", "Lithuania", "Russia", "Slovakia", "Ukraine"]
 
 group2 = ["Australia", "Austria", "Belgium", "Canada", "Denmark", "Finland", "France", "Iceland", "Ireland", "Italy", 
-"Japan", "Luxembourg", "Netherlands", "New Zealand", "Norway", "Spain", "Sweden",
+"Japan", "Luxembourg", "Netherlands", "NewZealand", "Norway", "Spain", "Sweden",
 "Switzerland", "UnitedKingdom" , "UnitedStatesofAmerica"]
 # skipped Luxembourg, Netherlands, New Zealand, Norway, Spain, Sweden, Switzerland, United Kingdom and United States of America
 
@@ -130,8 +130,8 @@ end
 
 
 
-gender = "males"
-time_periods = collect(1960:1985)
+gender = "females"
+time_periods = collect(1960:2010)
 max_age = 80
 n_bootstrap = 100
 bootstrap = false
@@ -146,10 +146,10 @@ for (i, t) in enumerate(time_periods)
     atoms_2, weights_2 = get_matrix(group2, 2, t, gender, max_age)
 
     pvalue_dm = p_value_dm(atoms_1, atoms_2, weights_1, weights_2, n_bootstrap)
-    pvalue_hipm = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, n_bootstrap, bootstrap, maxTime)
+    #pvalue_hipm = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, n_bootstrap, bootstrap, maxTime)
     
     pvalues_dm[i] = pvalue_dm
-    pvalues_hipm[i] = pvalue_hipm
+    #pvalues_hipm[i] = pvalue_hipm
 end
 
 
@@ -167,12 +167,12 @@ scatterplot = scatter(
 )
 
 # Add the second scatterplot to the existing plot object
-scatter!(
-    scatterplot, 
-    time_periods, # Assuming the x-axis data is the same
-    pvalues_hipm, 
-    label = "HIPM"
-)
+# scatter!(
+#     scatterplot, 
+#     time_periods, # Assuming the x-axis data is the same
+#     pvalues_hipm, 
+#     label = "HIPM"
+# )
 
 # Add the horizontal line to the existing plot object
 hline!(scatterplot, [0.05], linestyle = :dash, label = "θ = 0.05")
