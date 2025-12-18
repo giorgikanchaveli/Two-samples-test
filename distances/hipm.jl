@@ -1,6 +1,9 @@
 # This is modified dlip computation code
 include("../structures.jl")
 using LinearAlgebra 
+using BlackBoxOptim
+using ExactOptimalTransport
+using Tulip
 # Measures are given as a nTop x nBottom x 2 array
 # nTop = n in the article 
 # nBottom = m in the article 
@@ -479,4 +482,56 @@ function dlip(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64},
     end
 
 end
+
+
+
+
+function dlip_diffsize(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64}, 
+              weights_1::Matrix{Float64}, weights_2::Matrix{Float64}, a::Float64, b::Float64,
+              nGrid::Int = 250, maxTime = 10.0::Float64)
+    s1 = size(atoms_1)
+    s2 = size(atoms_2)
+
+    deltaX = (b-a) / nGrid
+
+
+    # Project atoms on a grid
+    weight_atoms_1 = zeros(s1[1], nGrid + 1)
+    weight_atoms_2 = zeros(s2[1], nGrid + 1)
+
+    for i in 1:s1[1]
+        weight_atoms_1[i, :] .= projectionGridMeasure_new(atoms_1[i, :], weights_1[i,:], a,b,nGrid)
+    end
+    for i in 1:s2[1]
+        weight_atoms_2[i, :] .= projectionGridMeasure_new(atoms_2[i, :], weights_2[i,:], a,b,nGrid)
+    end
+
+    # define objective function to optimize
+
+    function obj(g::Vector{Float64})
+        # we define firstly f from g and then wass distance 
+        @assert length(g) == nGrid
+        f = deltaX .* vcat([0.0], cumsum(g))
+        
+        weights_mu = fill(1.0 / s1[1], s1[1])
+        weights_nu = fill(1.0 / s2[1], s2[1])
+        
+        atoms_mu = weight_atoms_1 * f
+        atoms_nu = weight_atoms_2 * f
+
+        C = abs.(atoms_mu .- transpose(atoms_nu))
+
+        gamma = ExactOptimalTransport.emd(weights_mu, weights_nu, C, Tulip.Optimizer() )
+       
+        # @timeit timer "compute transport cost" 
+        #output = sum( gamma .* C )
+        output = -1.0 * sum(gamma.*C)
+        return output
+    end
+
+    res = bboptimize(obj; SearchRange = (-1.0, 1.0), NumDimensions = nGrid, MaxTime = maxTime, TraceMode = :silent)
+    return -1.0 * best_fitness(res)
+end
+
+
 

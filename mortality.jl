@@ -7,7 +7,8 @@ include("distances/hipm.jl")
 group1 = ["belarus", "Bulgaria", "Czechia", "Estonia", "Hungary", "Latvia", "Poland", "Lithuania", "Russia", "Slovakia", "Ukraine"]
 
 group2 = ["Australia", "Austria", "Belgium", "Canada", "Denmark", "Finland", "France", "Iceland", "Ireland", "Italy", 
-"Japan"]
+"Japan", "Luxembourg", "Netherlands", "New Zealand", "Norway", "Spain", "Sweden",
+"Switzerland", "UnitedKingdom" , "UnitedStatesofAmerica"]
 # skipped Luxembourg, Netherlands, New Zealand, Norway, Spain, Sweden, Switzerland, United Kingdom and United States of America
 
 # 111 * (i - 1) + 1, 111*i i denotes the time periods. 
@@ -91,12 +92,12 @@ end
 
 
 function p_value_hipm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64}, 
-                    weights_1::Matrix{Float64},weights_2::Matrix{Float64}, n_samples::Int, bootstrap::Bool)
+                    weights_1::Matrix{Float64},weights_2::Matrix{Float64}, n_samples::Int, bootstrap::Bool, maxTime::Int)
     n, m = size(atoms_1)
     a = 0.0
     b = maximum(atoms_1[1,:])
 
-    T_observed = dlip(atoms_1,atoms_2, weights_1, weights_2, a, b)
+    T_observed = dlip_diffsize(atoms_1,atoms_2, weights_1, weights_2, a, b, 250, maxTime)
    
     samples = zeros(n_samples)
     total_weights = vcat(weights_1, weights_2) # collect all rows
@@ -108,7 +109,7 @@ function p_value_hipm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64},
             new_weights_1 = total_weights[indices_1,:] # first rows indexed by n random indices to the weights_1
             new_weights_2 = total_weights[indices_2,:] # first rows indexed by n random indices to the weights_2
 
-            samples[i] = dlip(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b)
+            samples[i] = dlip_diffsize(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b, 250, maxTime)
         end
     else
         for i in 1:n_samples
@@ -117,7 +118,7 @@ function p_value_hipm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64},
             new_weights_1 = total_weights[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
             new_weights_2 = total_weights[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-            samples[i] = dlip(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b)
+            samples[i] = dlip_diffsize(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b, 250, maxTime)
         end
     end
     return mean(samples.>T_observed)
@@ -130,10 +131,11 @@ end
 
 
 gender = "males"
-time_periods = collect(1960:2009)
+time_periods = collect(1960:1985)
 max_age = 80
 n_bootstrap = 100
 bootstrap = false
+maxTime = 1
 
 pvalues_dm = zeros(length(time_periods))
 pvalues_hipm = zeros(length(time_periods))
@@ -144,7 +146,7 @@ for (i, t) in enumerate(time_periods)
     atoms_2, weights_2 = get_matrix(group2, 2, t, gender, max_age)
 
     pvalue_dm = p_value_dm(atoms_1, atoms_2, weights_1, weights_2, n_bootstrap)
-    pvalue_hipm = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, n_bootstrap, bootstrap)
+    pvalue_hipm = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, n_bootstrap, bootstrap, maxTime)
     
     pvalues_dm[i] = pvalue_dm
     pvalues_hipm[i] = pvalue_hipm
@@ -174,8 +176,8 @@ scatter!(
 
 # Add the horizontal line to the existing plot object
 hline!(scatterplot, [0.05], linestyle = :dash, label = "θ = 0.05")
-
-savefig(scatterplot, gender)
+scatterplot
+#savefig(scatterplot, gender)
 
 # test
 
