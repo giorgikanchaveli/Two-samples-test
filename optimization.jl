@@ -11,12 +11,48 @@ using LinearAlgebra
 using BlackBoxOptim
 using ExactOptimalTransport
 using Tulip
+using Random
+
+
+function wasserstein1_uniform(x::AbstractVector{<:Real},
+                                    y::AbstractVector{<:Real};
+                                    tol = 1e-12)
+    x = sort(collect(x))
+    y = sort(collect(y))
+
+    m, n = length(x), length(y)
+    @assert m > 0 && n > 0
+
+    i, j = 1, 1
+    a = 1.0 / m   # remaining mass at x[i]
+    b = 1.0 / n   # remaining mass at y[j]
+
+    cost = 0.0
+
+    while i <= m && j <= n
+        δ = min(a, b)
+        cost += δ * abs(float(x[i]) - float(y[j]))
+        a -= δ
+        b -= δ
+
+        if a ≤ tol
+            i += 1
+            a = (i <= m) ? 1.0 / m : 0.0
+        end
+
+        if b ≤ tol
+            j += 1
+            b = (j <= n) ? 1.0 / n : 0.0
+        end
+    end
+
+    return cost
+end
 
 
 
 
-
-function dlip_diffsize(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64}, 
+function dlip_diffsize_new(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64}, 
               weights_1::Matrix{Float64}, weights_2::Matrix{Float64}, a::Float64, b::Float64,
               nGrid::Int = 250, maxTime = 10.0::Float64)
     s1 = size(atoms_1)
@@ -43,20 +79,11 @@ function dlip_diffsize(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64},
         @assert length(g) == nGrid
         f = deltaX .* vcat([0.0], cumsum(g))
         
-        weights_mu = fill(1.0 / s1[1], s1[1])
-        weights_nu = fill(1.0 / s2[1], s2[1])
-        
+       
         atoms_mu = weight_atoms_1 * f
         atoms_nu = weight_atoms_2 * f
 
-        C = abs.(atoms_mu .- transpose(atoms_nu))
-
-        gamma = ExactOptimalTransport.emd(weights_mu, weights_nu, C, Tulip.Optimizer() )
-       
-        # @timeit timer "compute transport cost" 
-        #output = sum( gamma .* C )
-        output = -1.0 * sum(gamma.*C)
-        return output
+        return -1.0*wasserstein1_uniform(atoms_mu, atoms_nu)
     end
 
     res = bboptimize(obj; SearchRange = (-1.0, 1.0), NumDimensions = nGrid, MaxTime = maxTime)
@@ -66,13 +93,14 @@ end
 
 
 
-n = 70
-m = 100
+n = 100
+m = 1
+Random.seed!(2344)
 atoms_1 = rand(n,m)
-atoms_2 = rand(n,m)
+atoms_2 = rand(n+2,m)
 
 weights_1 = fill(1.0 / m, n, m)
-weights_2 = fill(1.0 / m, n, m)
+weights_2 = fill(1.0 / m, n+2, m)
 
 
 # weights_1 = rand(n, m)
@@ -86,17 +114,16 @@ weights_2 = fill(1.0 / m, n, m)
 # end
 a = 0.0
 b = 1.0
-maxTime = 500.0
+maxTime = 10.0
 
-hipm_old = dlip(atoms_1, atoms_2,  a, b)
+hipm_old = dlip(atoms_1, atoms_2, weights_1, weights_2, a, b)
 hipm_new = dlip_diffsize(atoms_1, atoms_2, weights_1, weights_2, a, b, 250, maxTime)
-wwass = ww(atoms_1, atoms_2)
-println("ww : $(wwass)")
+hipm_new_2 = dlip_diffsize(atoms_1, atoms_2, weights_1, weights_2, a, b, 250, maxTime)
 println("HIPM Old : $(hipm_old)")
 println("HIPM New : $(hipm_new)")
+println("HIPM New 2  : $(hipm_new_2)")
 
-
-
+println(sum(abs.(sort(atoms_1[:,1]) .- sort(atoms_2[:,1])) )/ n)
 
 
 
