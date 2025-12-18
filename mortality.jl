@@ -92,8 +92,10 @@ end
 
 
 function p_value_hipm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64}, 
-                    weights_1::Matrix{Float64},weights_2::Matrix{Float64}, n_samples::Int, bootstrap::Bool, maxTime::Int)
-    n, m = size(atoms_1)
+                    weights_1::Matrix{Float64},weights_2::Matrix{Float64}, n_samples::Int, bootstrap::Bool, maxTime::Float64)
+    n1 = size(atoms_1,1)
+    n2 = size(atoms_2,1)
+    n = n1 + n2
     a = 0.0
     b = maximum(atoms_1[1,:])
 
@@ -103,8 +105,8 @@ function p_value_hipm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64},
     total_weights = vcat(weights_1, weights_2) # collect all rows
     if bootstrap
         for i in 1:n_samples
-            indices_1 = sample(1:2*n, n; replace = true)
-            indices_2 = sample(1:2*n, n; replace = true)
+            indices_1 = sample(1:n, n1; replace = true)
+            indices_2 = sample(1:n, n2; replace = true)
 
             new_weights_1 = total_weights[indices_1,:] # first rows indexed by n random indices to the weights_1
             new_weights_2 = total_weights[indices_2,:] # first rows indexed by n random indices to the weights_2
@@ -113,10 +115,10 @@ function p_value_hipm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64},
         end
     else
         for i in 1:n_samples
-            random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
+            random_indices = randperm(n) # indices to distribute rows to new hierarchical meausures
 
-            new_weights_1 = total_weights[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
-            new_weights_2 = total_weights[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
+            new_weights_1 = total_weights[random_indices[1:n1],:] # first rows indexed by n random indices to the atoms_1
+            new_weights_2 = total_weights[random_indices[n1+1:end],:] # first rows indexed by n random indices to the atoms_2
         
             samples[i] = dlip_diffsize(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b, 250, maxTime)
         end
@@ -131,11 +133,11 @@ end
 
 
 gender = "females"
-time_periods = collect(1960:2010)
+time_periods = collect(1960:1965)
 max_age = 80
 n_bootstrap = 100
 bootstrap = false
-maxTime = 1
+maxTime = 1.0
 
 pvalues_dm = zeros(length(time_periods))
 pvalues_hipm = zeros(length(time_periods))
@@ -146,10 +148,10 @@ for (i, t) in enumerate(time_periods)
     atoms_2, weights_2 = get_matrix(group2, 2, t, gender, max_age)
 
     pvalue_dm = p_value_dm(atoms_1, atoms_2, weights_1, weights_2, n_bootstrap)
-    #pvalue_hipm = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, n_bootstrap, bootstrap, maxTime)
+    pvalue_hipm = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, n_bootstrap, bootstrap, maxTime)
     
     pvalues_dm[i] = pvalue_dm
-    #pvalues_hipm[i] = pvalue_hipm
+    pvalues_hipm[i] = pvalue_hipm
 end
 
 
@@ -167,12 +169,12 @@ scatterplot = scatter(
 )
 
 # Add the second scatterplot to the existing plot object
-# scatter!(
-#     scatterplot, 
-#     time_periods, # Assuming the x-axis data is the same
-#     pvalues_hipm, 
-#     label = "HIPM"
-# )
+scatter!(
+    scatterplot, 
+    time_periods, # Assuming the x-axis data is the same
+    pvalues_hipm, 
+    label = "HIPM"
+)
 
 # Add the horizontal line to the existing plot object
 hline!(scatterplot, [0.05], linestyle = :dash, label = "θ = 0.05")

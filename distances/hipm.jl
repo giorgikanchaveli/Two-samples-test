@@ -483,12 +483,47 @@ function dlip(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64},
 
 end
 
+function wasserstein1_uniform(x::AbstractVector{<:Real},
+                                    y::AbstractVector{<:Real};
+                                    tol = 1e-12)
+    # this code is from chatgpt
+    x = sort(collect(x))
+    y = sort(collect(y))
+
+    m, n = length(x), length(y)
+    @assert m > 0 && n > 0
+
+    i, j = 1, 1
+    a = 1.0 / m   # remaining mass at x[i]
+    b = 1.0 / n   # remaining mass at y[j]
+
+    cost = 0.0
+
+    while i <= m && j <= n
+        δ = min(a, b)
+        cost += δ * abs(float(x[i]) - float(y[j]))
+        a -= δ
+        b -= δ
+
+        if a ≤ tol
+            i += 1
+            a = (i <= m) ? 1.0 / m : 0.0
+        end
+
+        if b ≤ tol
+            j += 1
+            b = (j <= n) ? 1.0 / n : 0.0
+        end
+    end
+
+    return cost
+end
 
 
 
 function dlip_diffsize(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64}, 
               weights_1::Matrix{Float64}, weights_2::Matrix{Float64}, a::Float64, b::Float64,
-              nGrid::Int = 250, maxTime = 10.0::Float64)
+              nGrid::Int = 250, maxTime::Float64 = 10.0)
     s1 = size(atoms_1)
     s2 = size(atoms_2)
 
@@ -513,23 +548,14 @@ function dlip_diffsize(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64},
         @assert length(g) == nGrid
         f = deltaX .* vcat([0.0], cumsum(g))
         
-        weights_mu = fill(1.0 / s1[1], s1[1])
-        weights_nu = fill(1.0 / s2[1], s2[1])
-        
+       
         atoms_mu = weight_atoms_1 * f
         atoms_nu = weight_atoms_2 * f
 
-        C = abs.(atoms_mu .- transpose(atoms_nu))
-
-        gamma = ExactOptimalTransport.emd(weights_mu, weights_nu, C, Tulip.Optimizer() )
-       
-        # @timeit timer "compute transport cost" 
-        #output = sum( gamma .* C )
-        output = -1.0 * sum(gamma.*C)
-        return output
+        return -1.0*wasserstein1_uniform(atoms_mu, atoms_nu)
     end
 
-    res = bboptimize(obj; SearchRange = (-1.0, 1.0), NumDimensions = nGrid, MaxTime = maxTime, TraceMode = :silent)
+    res = bboptimize(obj; SearchRange = (-1.0, 1.0), NumDimensions = nGrid, MaxTime = maxTime,TraceMode = :silent)
     return -1.0 * best_fitness(res)
 end
 
