@@ -1,3 +1,7 @@
+# This file is for distributed computing rather than using Threads. Not using. 
+
+
+
 # Improvements: 
 #           1) generate sorted hierarchical samples.
 #           2) Ignore energy and dm to check smoothness
