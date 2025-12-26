@@ -1,3 +1,6 @@
+#  In this file we define structures for several types of laws of random probability measures. 
+#  Each law of RPM has function generate_emp which generates hierarhical sample and wraps it into the struct emp_ppm.
+
 include("structures.jl")
 
 using Distributions, Random
@@ -31,7 +34,7 @@ struct DP<:PPM # Dirichlet process
     p_0::Distribution # function generating observations from p_0
     a::Float64 
     b::Float64
-    # R is the observation space
+    # [a,b] is the observation space
 end
 
 struct normal_normal<:PPM 
@@ -71,6 +74,210 @@ struct simple_discr_2<:PPM
     
     # Note that sample space for exhangeable sequences is R
 end
+
+
+
+
+# methods to generate hierarhical samples
+
+
+
+
+
+ function dirichlet_process_without_weight_new(n, α, p_0::Distribution)
+    # this is auxiliary function.
+    # Given function p_0 that returns sample from p_0
+    # we generate a n-sample from a Dirichlet process with parameter α and p_0
+
+    @assert n > 0 "n must be positive integer"
+    samples = Vector{Float64}(undef, n)
+    samples[1] = rand(p_0)
+    for i in 2:n
+        if rand() <= α / (α + i - 1)
+            samples[i] = rand(p_0)
+        else
+            index = rand(1:(i-1))
+            samples[i] = samples[index]
+        end
+    end
+    return samples
+end
+
+# Note that each time we generate row of atoms, we sort them. This is This is done to avoid sorting during the
+# computation of WoW.
+
+    
+
+
+function generate_emp(ppm::DP, n_top::Int, n_bottom::Int)
+    # given random probability measure from Dirichlet process, generates empirical measure struct
+    # n is the number of random probability measures we want to sample
+    # m is the number of atoms from each random probability measure
+    atoms = zeros(n_top,n_bottom)
+    for i in 1:n_top
+        atoms[i,:] = sort(dirichlet_process_without_weight_new(n_bottom, ppm.α, ppm.p_0))
+    end
+    return emp_ppm(atoms, n_top, n_bottom, ppm.a, ppm.b)
+end
+
+
+
+
+function generate_emp(ppm::tnormal_normal, n_top::Int, n_bottom::Int)
+
+    atoms = zeros(n_top,n_bottom)
+    for i in 1:n_top
+        truncated_normal = truncated(Normal(ppm.μ, ppm.σ), ppm.a, ppm.b)
+        μ_inner = rand(truncated_normal)
+        
+        atoms[i,:] = sort(rand(Normal(μ_inner, 1.0), n_bottom))
+    end
+    a = @views minimum(atoms[:,1])
+    b = @views maximum(atoms[:,end])
+    return emp_ppm(atoms, n_top, n_bottom, a, b)
+end
+
+
+function generate_emp(ppm::normal_tnormal, n_top::Int, n_bottom::Int)
+    # given random probability measure which takes values as trunacted normal distributions where mean is random variable from normal(μ,σ), 
+    # we generate hieraarchical measure
+    # which is used for estimating law of rpm.
+
+    # n is the number of random probability measures we want to sample
+    # m is the number of atoms from each random probability measure
+    a,b = ppm.a, ppm.b
+    atoms = zeros(n_top,n_bottom)
+    for i in 1:n_top
+        μ_inner = rand(Normal(ppm.μ, ppm.σ))
+        truncated_normal = truncated(Normal(μ_inner, ppm.σ), a, b)
+        atoms[i,:] = sort(rand(truncated_normal, n_bottom))
+    end
+    return emp_ppm(atoms, n_top, n_bottom, a, b)
+end
+
+
+function issorted(m::Matrix{Float64})
+    # Checks if each row of matrix m is sorted.
+    flag = true
+    for i in m.size[1]
+        row = m[i,:]
+        for i in 1:(length(row)-1)
+            if row[i] > row[i + 1]
+                flag = false
+                return flag
+            end
+        end
+    end
+    return flag
+end
+
+
+
+function generate_emp(ppm::mixture_ppm, n_top::Int, n_bottom::Int)
+    # Given mixture of two laws of RPM, generate hierarchical sample from it.
+    atoms = zeros(n_top,n_bottom)
+    λ = ppm.λ
+    for i in 1:n_top
+        if rand() <= λ
+            atoms[i,:] = generate_emp(ppm.ppm1, 1, n_bottom).atoms[1,:]
+        else
+            atoms[i,:] = generate_emp(ppm.ppm2, 1, n_bottom).atoms[1,:]
+        end
+    end
+    a = @views minimum(atoms[:,1])
+    b = @views maximum(atoms[:,end])
+    # @assert issorted(atoms)
+    return emp_ppm(atoms, n_top, n_bottom, a, b)
+end
+
+
+
+
+function generate_emp(ppm::simple_discr_1, n_top::Int, n_bottom::Int)
+    atoms = zeros(n_top,n_bottom)
+    for i in 1:n_top
+        if rand() <= 0.5
+            atoms[i,:] = sort(rand(Normal(-1.0,1.0), n_bottom))
+        else
+            atoms[i,:] = sort(rand(Normal(1.0,1.0), n_bottom))
+        end
+    end
+    a = @views minimum(atoms[:,1])
+    b = @views maximum(atoms[:,end])
+    return emp_ppm(atoms, n_top, n_bottom, a, b)
+end
+
+function generate_emp(ppm::simple_discr_2, n_top::Int, n_bottom::Int)
+    atoms = zeros(n_top,n_bottom)
+    for i in 1:n_top
+        r = rand()
+        if r <= 1/8
+            atoms[i,:] = sort(rand(Normal(-2.0,1.0), n_bottom))
+        elseif r <= 7/8
+            atoms[i,:] = sort(rand(Normal(0.0,1.0), n_bottom))
+        else
+            atoms[i,:] = sort(rand(Normal(2.0,1.0), n_bottom))
+        end
+    end
+    a = @views minimum(atoms[:,1])
+    b = @views maximum(atoms[:,end])
+    return emp_ppm(atoms, n_top, n_bottom, a, b)
+end
+
+
+# generate_prob measures function generates one parameter which completely characterizes the probability measure.
+# In the case of DM method,instead of doing the test on hierarchical samples, we do the test on vectors of probability
+# measures, because this way their method is much faster. This gives DM method advantage because we estimate probability
+# measures from the sample generatad by them.
+
+function generate_prob_measures(ppm::tnormal_normal, n::Int)
+    truncated_normal = truncated(Normal(ppm.μ, ppm.σ), ppm.a, ppm.b)
+    return rand(truncated_normal, n)
+end
+
+function generate_prob_measures(ppm::simple_discr_1, n::Int)
+    means = zeros(n)
+    for i in 1:n
+        if rand() <= 0.5
+            means[i] = -1.0
+        else
+            means[i] = 1.0
+        end
+    end 
+    return means
+end
+
+function generate_prob_measures(ppm::simple_discr_2, n::Int)
+    means = zeros(n)
+    for i in 1:n
+        r = rand()
+        if r <= 1/8
+            means[i] = -2.0
+        elseif r <= 7/8
+            means[i] = 0.0
+        else
+            means[i] = 2.0
+        end
+    end 
+    return means
+end
+
+
+function generate_prob_measures(ppm::mixture_ppm, n::Int)
+    means = zeros(n)
+    λ = ppm.λ
+    for i in 1:n
+        if rand() <= λ
+            means[i] = generate_prob_measures(ppm.ppm1, 1)[1]
+        else
+            means[i] = generate_prob_measures(ppm.ppm2, 1)[1]
+        end
+    end
+    return means
+end
+
+
+
 
 # function probability(baseMeasure::String)
 #     # function to generate observation either from uniform(-1/2,1/2) or from splitting measure
@@ -132,200 +339,6 @@ end
 #     weights::Vector{Float64} # Vector of weights associated to each normal distribution
 # end
 
-
-
-
-# methods to generate hierarhical samples
-
-
-
-
-
- function dirichlet_process_without_weight_new(n, α, p_0::Distribution)
-    # auxiliary function
-    # Given function p_0 that returns sample from chosen probability measure P_0
-    # we generate a n-sample from a Dirichlet process with parameter α and p_0
-
-    @assert n > 0 "n must be positive integer"
-    samples = Vector{Float64}(undef, n)
-    samples[1] = rand(p_0)
-    for i in 2:n
-        if rand() <= α / (α + i - 1)
-            samples[i] = rand(p_0)
-        else
-            index = rand(1:(i-1))
-            samples[i] = samples[index]
-        end
-    end
-    return samples
-end
-
-    
-
-
-
-
-
-function generate_emp(ppm::DP, n_top::Int, n_bottom::Int)
-    # given random probability measure from Dirichlet process, generates empirical measure struct
-    # which is used for estimating law of rpm.
-    # n is the number of random probability measures we want to sample
-    # m is the number of atoms from each random probability measure
-    atoms = zeros(n_top,n_bottom)
-    for i in 1:n_top
-        atoms[i,:] = sort(dirichlet_process_without_weight_new(n_bottom, ppm.α, ppm.p_0))
-    end
-    return emp_ppm(atoms, n_top, n_bottom, ppm.a, ppm.b)
-end
-
-
-function generate_prob_measures(ppm::tnormal_normal, n::Int)
-    truncated_normal = truncated(Normal(ppm.μ, ppm.σ), ppm.a, ppm.b)
-    return rand(truncated_normal, n)
-end
-
-function generate_prob_measures(ppm::simple_discr_1, n::Int)
-    means = zeros(n)
-    for i in 1:n
-        if rand() <= 0.5
-            means[i] = -1.0
-        else
-            means[i] = 1.0
-        end
-    end 
-    return means
-end
-
-function generate_prob_measures(ppm::simple_discr_2, n::Int)
-    means = zeros(n)
-    for i in 1:n
-        r = rand()
-        if r <= 1/8
-            means[i] = -2.0
-        elseif r <= 7/8
-            means[i] = 0.0
-        else
-            means[i] = 2.0
-        end
-    end 
-    return means
-end
-
-
-function generate_prob_measures(ppm::mixture_ppm, n::Int)
-    means = zeros(n)
-    λ = ppm.λ
-    for i in 1:n
-        if rand() <= λ
-            means[i] = generate_prob_measures(ppm.ppm1, 1)[1]
-        else
-            means[i] = generate_prob_measures(ppm.ppm2, 1)[1]
-        end
-    end
-    return means
-end
-
-
-
-
-function generate_emp(ppm::tnormal_normal, n_top::Int, n_bottom::Int)
-
-    atoms = zeros(n_top,n_bottom)
-    for i in 1:n_top
-        truncated_normal = truncated(Normal(ppm.μ, ppm.σ), ppm.a, ppm.b)
-        μ_inner = rand(truncated_normal)
-        
-        atoms[i,:] = sort(rand(Normal(μ_inner, 1.0), n_bottom))
-    end
-    a = @views minimum(atoms[:,1])
-    b = @views maximum(atoms[:,end])
-    return emp_ppm(atoms, n_top, n_bottom, a, b)
-end
-
-
-function generate_emp(ppm::normal_tnormal, n_top::Int, n_bottom::Int)
-    # given random probability measure which takes values as trunacted normal distributions where mean is random variable from normal(μ,σ), 
-    # we generate hieraarchical measure
-    # which is used for estimating law of rpm.
-
-    # n is the number of random probability measures we want to sample
-    # m is the number of atoms from each random probability measure
-    a,b = ppm.a, ppm.b
-    atoms = zeros(n_top,n_bottom)
-    for i in 1:n_top
-        μ_inner = rand(Normal(ppm.μ, ppm.σ))
-        truncated_normal = truncated(Normal(μ_inner, ppm.σ), a, b)
-        atoms[i,:] = sort(rand(truncated_normal, n_bottom))
-    end
-    return emp_ppm(atoms, n_top, n_bottom, a, b)
-end
-
-
-function issorted(m::Matrix{Float64})
-    flag = true
-    for i in m.size[1]
-        row = m[i,:]
-        for i in 1:(length(row)-1)
-            if row[i] > row[i + 1]
-                flag = false
-                return flag
-            end
-        end
-    end
-    return flag
-end
-
-
-
-function generate_emp(ppm::mixture_ppm, n_top::Int, n_bottom::Int)
-    atoms = zeros(n_top,n_bottom)
-    λ = ppm.λ
-    for i in 1:n_top
-        if rand() <= λ
-            atoms[i,:] = generate_emp(ppm.ppm1, 1, n_bottom).atoms[1,:]
-        else
-            atoms[i,:] = generate_emp(ppm.ppm2, 1, n_bottom).atoms[1,:]
-        end
-    end
-    a = @views minimum(atoms[:,1])
-    b = @views maximum(atoms[:,end])
-    # @assert issorted(atoms)
-    return emp_ppm(atoms, n_top, n_bottom, a, b)
-end
-
-
-
-
-function generate_emp(ppm::simple_discr_1, n_top::Int, n_bottom::Int)
-    atoms = zeros(n_top,n_bottom)
-    for i in 1:n_top
-        if rand() <= 0.5
-            atoms[i,:] = sort(rand(Normal(-1.0,1.0), n_bottom))
-        else
-            atoms[i,:] = sort(rand(Normal(1.0,1.0), n_bottom))
-        end
-    end
-    a = @views minimum(atoms[:,1])
-    b = @views maximum(atoms[:,end])
-    return emp_ppm(atoms, n_top, n_bottom, a, b)
-end
-
-function generate_emp(ppm::simple_discr_2, n_top::Int, n_bottom::Int)
-    atoms = zeros(n_top,n_bottom)
-    for i in 1:n_top
-        r = rand()
-        if r <= 1/8
-            atoms[i,:] = sort(rand(Normal(-2.0,1.0), n_bottom))
-        elseif r <= 7/8
-            atoms[i,:] = sort(rand(Normal(0.0,1.0), n_bottom))
-        else
-            atoms[i,:] = sort(rand(Normal(2.0,1.0), n_bottom))
-        end
-    end
-    a = @views minimum(atoms[:,1])
-    b = @views maximum(atoms[:,end])
-    return emp_ppm(atoms, n_top, n_bottom, a, b)
-end
 
 
 
