@@ -1,15 +1,17 @@
 # This is modified dlip computation code
+
+
+# We have 3 main functions for dlip: 
+#   -  between hierarchical samples with equal sizes and uniform weights
+#   -  between hierarchical samples with equal sizes and general weights
+#   -  between hierarchical samples with general sizes and general weights
+
+
 include("../structures.jl")
 using LinearAlgebra 
 using BlackBoxOptim
 using ExactOptimalTransport
 using Tulip
-# Measures are given as a nTop x nBottom x 2 array
-# nTop = n in the article 
-# nBottom = m in the article 
-# nGrid = M in the article 
-# a[:,:,1] -> location of the atom 
-# a[:,:,2] -> mass of the atom 
 
 
 # # -----------------------------------------------------------------------------------
@@ -17,6 +19,7 @@ using Tulip
 # # -----------------------------------------------------------------------------------
 
 function projectionGrid_new(x,a,b,nGrid)
+    # this is same function although in the name it has "new".
 
     if (x <a) | (x > b) 
         error("PROBLEM with the projection: Atom location $x is outside of bounds [$a, $b]")
@@ -29,7 +32,7 @@ end
 
 
 function projectionGridMeasure_new(atoms::Vector{Float64},a,b,nGrid)
-
+    # This function assumes that weights are uniform accross atoms. 
     output = zeros(nGrid+1)
 
     nBottom = length(atoms)
@@ -40,7 +43,7 @@ function projectionGridMeasure_new(atoms::Vector{Float64},a,b,nGrid)
     return output
 end 
 function projectionGridMeasure_new(atoms::Vector{Float64}, weights::Vector{Float64}, a, b, nGrid)
-
+    # We provide specific weights to each atom.
     output = zeros(nGrid+1)
 
     nBottom = length(atoms)
@@ -70,6 +73,7 @@ function buildEvaluationMatrixGrid_new(a,b,nGrid)
 end 
 
 function suffix_sum(tempsum::Vector{Float64})
+    # this is not needed because it didn't speed up the function.
     n = length(tempsum)
     s = sum(tempsum) - tempsum[end]
 
@@ -101,8 +105,6 @@ function evaluationObjectiveGrid_new(unknown::Vector{Float64},weights::AbstractA
     cumsum!(view(f, 2:(nGrid+1)), unknown) # compute cumsum in place
     f .*= Q[2,1]
 
-
-    
 
     # Compute the value of the integral of f 
     integralF = zeros(2,nTop)    
@@ -172,6 +174,8 @@ end
 function dlip(atoms_1::AbstractArray{Float64,2}, atoms_2::AbstractArray{Float64,2}, a::Float64, b::Float64, nGrid::Int = 250,nSteps::Int=1000,
                                             nRerun::Int = 5,tol::Float64 = 1e-4)
 
+    # This function computes HIPM between two hierarchical samples. It assumes that each atom in the 
+    # hierarchical sample has same weight, i.e. weight matrix is 1/m on each entry.
     s1 = size(atoms_1)
     s2 = size(atoms_2)
 
@@ -332,6 +336,9 @@ end
 function dlip(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64}, 
               weights_1::Matrix{Float64}, weights_2::Matrix{Float64}, a::Float64, b::Float64, nGrid::Int = 250,nSteps::Int=1000,
                                             nRerun::Int = 5,tol::Float64 = 1e-4)
+    # This function does not assume that weights are uniform on atoms of hierarchical samples.
+    # Difference compared to the dlip above is how it projects atoms on a grid. In particular,
+    # it adds weights[i,j] to the projected atom [i,j].
     s1 = size(atoms_1)
     s2 = size(atoms_2)
 
@@ -486,7 +493,8 @@ end
 function wasserstein1_uniform(x::AbstractVector{<:Real},
                                     y::AbstractVector{<:Real};
                                     tol = 1e-12)
-    # this code is from chatgpt
+    # this code is from chatgpt. It computes Wasserstein 1 distance between two vectors
+    # of different sizes.
     x = sort(collect(x))
     y = sort(collect(y))
 
@@ -522,8 +530,11 @@ end
 
 
 function dlip_diffsize(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64}, 
-              weights_1::Matrix{Float64}, weights_2::Matrix{Float64}, a::Float64, b::Float64,
+              weights_1::Matrix{Float64}, weights_2::Matrix{Float64}, a::Float64, b::Float64;
               nGrid::Int = 250, maxTime::Float64 = 10.0)
+    # This function does not assume that hierarchical samples have same number of rows.
+    # Weights are also general for each atom.
+
     s1 = size(atoms_1)
     s2 = size(atoms_2)
 
