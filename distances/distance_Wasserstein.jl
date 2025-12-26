@@ -1,6 +1,6 @@
 # Compute the Wasserstein distance and the wasserstein over wasserstein distance 
-# The main function of this code is 
-# wassersteinOverWasserstein
+
+
 include("../structures.jl")
 
 using ExactOptimalTransport
@@ -19,6 +19,7 @@ using Tulip
 
 function wasserstein1DUniform_sorted(atoms1::AbstractVector{Float64}, atoms2::AbstractVector{Float64})
    # p is the exponent 
+   # this function assumes that both of the vectors atoms1 and atoms2 are sorted.
    
     if length(atoms1)==length(atoms2)
         n = length(atoms1)
