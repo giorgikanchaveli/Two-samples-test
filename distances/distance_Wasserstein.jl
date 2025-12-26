@@ -7,13 +7,7 @@ using ExactOptimalTransport
 using Tulip
 
 
-# Measures are given as a nTop x nBottom x 2 array
-# nTop = n in the article 
-# nBottom = m in the article 
-# nGrid = M in the article 
-# a[:,:,1] -> location of the atom 
-# a[:,:,2] -> mass of the atom 
-
+# We give uniform weights to the atoms in each row of the hierarchical sample.
 
 # First simplest 1D Wasserstein distance between measures with the same number of atom and equal measures
 
