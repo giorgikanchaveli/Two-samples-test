@@ -1,3 +1,7 @@
+# This file contains functions for simulations. In particular
+# functions for test statistics, decision of rejection, thresholds and rejection rates.
+
+
 using RCall # to call R functions
 using FLoops # for parallel computing
 
@@ -7,7 +11,10 @@ include("distances/hipm.jl")
 include("distances/distance_Wasserstein.jl")
 
 function test_statistic_energy(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64})
+    # Given two hierarchical samples, computes test statistic
+    # according to energy statistic method. 
     # we assume that rows in each atoms are sorted.
+
     n = size(atoms_1)[1]
     
     distances_x = Matrix{Float64}(undef, n, n)
@@ -28,6 +35,9 @@ function test_statistic_energy(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64
 end
 
 function decide_energy(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int)
+    # Given two hierarchical samples, it decides whether to reject H_0 using 
+    # bootstrap or permutation approach.
+
     n = hier_sample_1.n
 
     atoms_1 = hier_sample_1.atoms
@@ -53,6 +63,8 @@ end
 
 
 function decide_dm(mu_1::Vector{Float64}, mu_2::Vector{Float64}, θ::Float64, n_bootstrap::Int)
+    # Given two vectors containing probability measures, decides whether to reject H_0 or not
+    # according to DM method.
     n = length(mu_1)
     
     @rput mu_1 mu_2 n n_bootstrap
@@ -85,6 +97,8 @@ end
 function rejection_rate_dm(q_1::Union{tnormal_normal,simple_discr_1, simple_discr_2,mixture_ppm},
                              q_2::Union{tnormal_normal,simple_discr_1, simple_discr_2,mixture_ppm}, n::Int,
                          S::Int, θ::Float64, n_bootstrap::Int)
+    # Given two laws of RPMs, returns rate of rejecting H_0 according to DM method.
+ 
     rate = 0.0
     
     for i in 1:S
@@ -100,6 +114,7 @@ end
 
 
 function threshold_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
+    # Obtains threshold for HIPM via permutation or bootstrap approach.
     n = hier_sample_1.n
     a = minimum((hier_sample_1.a,hier_sample_2.a))
     b = maximum((hier_sample_1.b,hier_sample_2.b))
@@ -130,6 +145,8 @@ function threshold_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Floa
 end
 
 function decide_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
+    # Given two hierarchical samples, it decides whether to reject H_0 using HIPM via
+    # bootstrap or permutation approach. 
     threshold = threshold_hipm(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
     a = minimum((hier_sample_1.a, hier_sample_2.a))
     b = maximum((hier_sample_1.b, hier_sample_2.b))
@@ -138,6 +155,7 @@ function decide_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64
 end
 
 function threshold_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
+    # Obtains threshold for WoW via permutation or bootstrap approach.
     n = hier_sample_1.n
     atoms_1 = hier_sample_1.atoms
     atoms_2 = hier_sample_2.atoms
@@ -169,6 +187,8 @@ function threshold_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float
 end
 
 function decide_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
+    # Given two hierarchical samples, it decides whether to reject H_0 using WoW via
+    # bootstrap or permutation approach. 
     threshold = threshold_wow(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
 
     return 1.0*(ww(hier_sample_1, hier_sample_2) > threshold)
@@ -178,8 +198,11 @@ end
 
 
 function rejection_rate_all(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
-    # if bootstrap is true then do bootstrap approach, n_samples refers to either number of permutations or bootstraps
+    # Given two laws of RPMs, returns rejection rate for all 4 testing schemes.
+    # Note that for HIPM, WoW and Energy test, we record decisions on same hierarchical samples,
+    # on the other hand, we record seperately decisions for DM. 
 
+    # Note also that here thresholds for HIPM, WoW and Energy are sample dependent,
     
     rates_hipm = 0.0
     rates_wow = 0.0
@@ -201,7 +224,6 @@ function rejection_rate_all(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Floa
     rates_energy /= S
     rates_wow /= S
     rates_hipm /= S
-    rates_dm = 0.0
     rates_dm = rejection_rate_dm(q_1, q_2, n, S, θ, n_samples)
     return rates_hipm,rates_wow,rates_dm,rates_energy
 end
@@ -212,7 +234,10 @@ end
 
 
 function rejection_rate_all_fake(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
-    # if bootstrap is true then do bootstrap approach, n_samples refers to either number of permutations or bootstraps
+    # Given two laws of RPMs, returns rejection rate for all 4 testing schemes.
+    
+    # It is called fake because thresholds for hipm and wow are obtained from some auxiliary hierarchical
+    # samples and then used for each simulated sample.
 
     # firstly we obtain fixed thresholds for HIPM and WoW
     aux_hier_sample_1 = generate_emp(q_1,n,m)
@@ -251,6 +276,7 @@ end
 
 
 
+# up to now more or less everything is fine
 
 
 
@@ -289,36 +315,34 @@ end
 
 
 
-function rejection_rate_wow(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int,
-                     threshold_wow_wrong::Float64)
-    # if bootstrap is true then do bootstrap approach, n_samples refers to either number of permutations or bootstraps
+# function rejection_rate_wow(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int,
+#                      threshold_wow_wrong::Float64)
+#     # if bootstrap is true then do bootstrap approach, n_samples refers to either number of permutations or bootstraps
 
 
 
-    rates_wow = 0.0
+#     rates_wow = 0.0
   
-    @floop ThreadedEx() for s in 1:S
-        # generate samples and set endpoints
-        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+#     @floop ThreadedEx() for s in 1:S
+#         # generate samples and set endpoints
+#         hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
         
 
-        # record decisions from each testing methods
-        @reduce rates_wow += 1.0 * (ww(hier_sample_1, hier_sample_2) > threshold_wow_wrong)
-    end
-    rates_wow /= S
-    return rates_wow
-end
+#         # record decisions from each testing methods
+#         @reduce rates_wow += 1.0 * (ww(hier_sample_1, hier_sample_2) > threshold_wow_wrong)
+#     end
+#     rates_wow /= S
+#     return rates_wow
+# end
 
-function rejection_rate_wow(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int,
-                     θ::Float64, n_samples::Int, bootstrap::Bool)
-    # firstly obtain threshold
-    aux_hier_sample_1 = generate_emp(q_1,n,m)
-    aux_hier_sample_2 = generate_emp(q_2, n, m)
-    threshold_wow_wrong = threshold_wow(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
-    return rejection_rate_wow(q_1, q_2, n, m, S, threshold_wow_wrong)
-end
-
-
+# function rejection_rate_wow(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int,
+#                      θ::Float64, n_samples::Int, bootstrap::Bool)
+#     # firstly obtain threshold
+#     aux_hier_sample_1 = generate_emp(q_1,n,m)
+#     aux_hier_sample_2 = generate_emp(q_2, n, m)
+#     threshold_wow_wrong = threshold_wow(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
+#     return rejection_rate_wow(q_1, q_2, n, m, S, threshold_wow_wrong)
+# end
 
 
 
@@ -327,60 +351,61 @@ end
 
 
 
-function rejection_rate_hipm_wow(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
-    # if bootstrap is true then do bootstrap approach, n_samples refers to either number of permutations or bootstraps
-
-    # firstly we obtain fixed thresholds for HIPM and WoW
-    aux_hier_sample_1 = generate_emp(q_1,n,m)
-    aux_hier_sample_2 = generate_emp(q_2, n, m)
-    threshold_hipm_wrong = threshold_hipm(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
-    threshold_wow_wrong = threshold_wow(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
-
-    rates_hipm = 0.0
-    rates_wow = 0.0
-
-    @floop ThreadedEx() for s in 1:S
-        # generate samples and set endpoints
-        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
-        a = minimum((hier_sample_1.a, hier_sample_2.a))
-        b = maximum((hier_sample_1.b, hier_sample_2.b))
-        hier_sample_1.a = a
-        hier_sample_2.a = a
-        hier_sample_1.b = b
-        hier_sample_2.b = b
-
-        # record decisions from each testing methods
-        @reduce rates_hipm += 1.0*(dlip(hier_sample_1, hier_sample_2) > threshold_hipm_wrong)
-        @reduce rates_wow += 1.0 * (ww(hier_sample_1, hier_sample_2) > threshold_wow_wrong)
-    end
-    rates_wow /= S
-    rates_hipm /= S
-    return rates_hipm,rates_wow
-end
 
 
+# function rejection_rate_hipm_wow(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
+#     # if bootstrap is true then do bootstrap approach, n_samples refers to either number of permutations or bootstraps
 
-function save_fig_hipm_wow(pairs::Vector{<:Tuple{PPM,PPM}}, param_pairs::Vector{Float64}, file_name::String, file_path::String, title::String, xlabel::String, ylabel::String,
-    n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
-    rates_hipm = zeros(length(param_pairs))
-    rates_wow = zeros(length(param_pairs))
-    for i in 1:length(pairs)
-        q_1, q_2 = pairs[i]
-        r_hipm, r_wow = rejection_rate_hipm_wow(q_1,q_2,n,m,S,θ,n_samples,bootstrap)
-        rates_hipm[i] = r_hipm
-        rates_wow[i] = r_wow
-        println(i)
-    end
-    fig = plot(title = title, xlabel = xlabel, ylabel = ylabel, xlims=(minimum(param_pairs) - 0.10, maximum(param_pairs)+ 0.10),
-                         ylims = (-0.1, 1.1))
-    plot!(fig, param_pairs, rates_hipm, label = "hipm", color = "green", marker = (:circle, 4))
-    plot!(fig, param_pairs, rates_wow, label = "wow", color = "brown", marker = (:circle, 4))
-    filepath = joinpath(pwd(), file_path)
-    savefig(fig,joinpath(filepath, file_name))
-end
+#     # firstly we obtain fixed thresholds for HIPM and WoW
+#     aux_hier_sample_1 = generate_emp(q_1,n,m)
+#     aux_hier_sample_2 = generate_emp(q_2, n, m)
+#     threshold_hipm_wrong = threshold_hipm(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
+#     threshold_wow_wrong = threshold_wow(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
+
+#     rates_hipm = 0.0
+#     rates_wow = 0.0
+
+#     @floop ThreadedEx() for s in 1:S
+#         # generate samples and set endpoints
+#         hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+#         a = minimum((hier_sample_1.a, hier_sample_2.a))
+#         b = maximum((hier_sample_1.b, hier_sample_2.b))
+#         hier_sample_1.a = a
+#         hier_sample_2.a = a
+#         hier_sample_1.b = b
+#         hier_sample_2.b = b
+
+#         # record decisions from each testing methods
+#         @reduce rates_hipm += 1.0*(dlip(hier_sample_1, hier_sample_2) > threshold_hipm_wrong)
+#         @reduce rates_wow += 1.0 * (ww(hier_sample_1, hier_sample_2) > threshold_wow_wrong)
+#     end
+#     rates_wow /= S
+#     rates_hipm /= S
+#     return rates_hipm,rates_wow
+# end
 
 
-# up to now more or less everything is fine
+
+# function save_fig_hipm_wow(pairs::Vector{<:Tuple{PPM,PPM}}, param_pairs::Vector{Float64}, file_name::String, file_path::String, title::String, xlabel::String, ylabel::String,
+#     n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
+#     rates_hipm = zeros(length(param_pairs))
+#     rates_wow = zeros(length(param_pairs))
+#     for i in 1:length(pairs)
+#         q_1, q_2 = pairs[i]
+#         r_hipm, r_wow = rejection_rate_hipm_wow(q_1,q_2,n,m,S,θ,n_samples,bootstrap)
+#         rates_hipm[i] = r_hipm
+#         rates_wow[i] = r_wow
+#         println(i)
+#     end
+#     fig = plot(title = title, xlabel = xlabel, ylabel = ylabel, xlims=(minimum(param_pairs) - 0.10, maximum(param_pairs)+ 0.10),
+#                          ylims = (-0.1, 1.1))
+#     plot!(fig, param_pairs, rates_hipm, label = "hipm", color = "green", marker = (:circle, 4))
+#     plot!(fig, param_pairs, rates_wow, label = "wow", color = "brown", marker = (:circle, 4))
+#     filepath = joinpath(pwd(), file_path)
+#     savefig(fig,joinpath(filepath, file_name))
+# end
+
+
 
 
 
