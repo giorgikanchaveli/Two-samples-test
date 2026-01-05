@@ -16,7 +16,7 @@ hier_sample_2 = rand(n, m)
 # To compute WoW, we just give as an input hierarchical samples to the function ww.
 value_wow = ww(hier_sample_1, hier_sample_2)
 
-# On the other hand, HIPM requires in addition the endpoinds of the interval where random variables
+# On the other hand, HIPM requires in addition the endpoints of the interval where random variables
 # in the hierarchical samples take values.
 
 a = minimum((minimum(hier_sample_1), minimum(hier_sample_2)))
@@ -29,8 +29,9 @@ value_dlip = dlip(hier_sample_1, hier_sample_2, a, b)
 # that is a subtype of the PPM struct. Each such struct includes function
 # for generating hierarchical samples. That function returns the struct emp_ppm that 
 # encapsulates all information about hierarchical sample — such as atoms, interval endpoints, 
-# and the parameters 𝑛 n and 𝑚. 
-# Additionally, dlip and WoW are defined for these structs. For convenience, we will continue to refer to any such struct as a hier_sample.
+# and the parameters n and m. 
+# Additionally, dlip and WoW are defined for these structs. For convenience, 
+# we will continue to refer to any such struct as a hier_sample.
 
 # Example: two Dirichlet processes.
 
@@ -48,7 +49,7 @@ value_wow = ww(hier_sample_1, hier_sample_2)
 value_dlip = dlip(hier_sample_1, hier_sample_2, a, b)
 
 
-# distributions.jl file contains definitions for several laws of RPMs and way to generate
+# distributions.jl file contains definitions for several laws of RPMs and ways to generate
 # hierarchical samples from them.
 
 
@@ -72,5 +73,17 @@ n = 5
 m = 50
 rates_hipm,rates_wow,rates_dm,rates_energy = rejection_rate_all(q_1, q_1, n, m, S, 
     θ, n_samples, bootstrap)
+
+
+# Summary of the files:
+
+# structures.jl : defines the composite data type for laws of RPMs and hierarchical samples.
+# distributions.jl : defines generate_emp function for several laws of RPMs which generates
+#                    hierarchical samples.
+# hipm.jl : defines hipm between hierarchical samples.
+# distance_Wasserstein.jl : defines WoW between hierarchical samples.
+# methods.jl : includes functions for obtaining threshold, deciding whether to reject H_0,
+#              estimating rejection rate.
+
 
 
