@@ -94,8 +94,32 @@ end
 
 
 
+function decide_dm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_bootstrap::Int)
+    # Given two vectors containing probability measures, decides whether to reject H_0 or not
+    # according to DM method.
+    n = hier_sample_1.n
+
+    all_samples = vcat(hier_sample_1.atoms, hier_sample_2.atoms)
+    
+    @rput all_samples n n_bootstrap
+    R"""
+
+    library(frechet)
+    n1 <- n
+    n2 <- n
+    
+    group <- c(rep(1, n1), rep(2, n2))
+    res <- DenANOVA(yin = all_samples, group = group, optns = list(boot = TRUE, R = n_bootstrap))
+    pvalue = res$pvalBoot # returns bootstrap pvalue
+    """
+    @rget pvalue  
+    return 1 * (pvalue < θ)
+end
+
+
+
 function rejection_rate_dm(q_1::Union{tnormal_normal,simple_discr_1, simple_discr_2,mixture_ppm},
-                             q_2::Union{tnormal_normal,simple_discr_1, simple_discr_2,mixture_ppm}, n::Int,
+                             q_2::Union{tnormal_normal,simple_discr_1, simple_discr_2,mixture_ppm}, n::Int, m::Int,
                          S::Int, θ::Float64, n_bootstrap::Int)
     # Given two laws of RPMs, returns rate of rejecting H_0 according to DM method.
  
@@ -110,6 +134,19 @@ function rejection_rate_dm(q_1::Union{tnormal_normal,simple_discr_1, simple_disc
     end
     return rate/S
 end
+function rejection_rate_dm(q_1::DP,q_2::DP, n::Int, m::Int,
+                         S::Int, θ::Float64, n_bootstrap::Int)
+    # Given two laws of RPMs, returns rate of rejecting H_0 according to DM method.
+ 
+    rate = 0.0
+    
+    for i in 1:S
+        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+        rate += decide_dm(hier_sample_1, hier_sample_2, θ, n_bootstrap) 
+    end
+    return rate/S
+end
+
 
 
 
@@ -224,7 +261,7 @@ function rejection_rate_all(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Floa
     rates_energy /= S
     rates_wow /= S
     rates_hipm /= S
-    rates_dm = rejection_rate_dm(q_1, q_2, n, S, θ, n_samples)
+    rates_dm = rejection_rate_dm(q_1, q_2, n, m, S, θ, n_samples)
     return rates_hipm,rates_wow,rates_dm,rates_energy
 end
 
