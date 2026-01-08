@@ -3,7 +3,7 @@ using RCall
 using Plots
 using Distributions, Random
 using LinearAlgebra
-
+using HypothesisTests
 
 include("distances/hipm.jl")
 
@@ -54,6 +54,36 @@ function get_matrix(group::Vector{String},group_number::Int, t::Int, gender::Str
     end
     return atoms, weights
 end
+
+
+function child_death_rates(group::Vector{String}, group_number::Int,
+     t::Int, gender::String)
+
+    filepath = "mortality_dataset/group"*string(group_number)*"/$(gender)"
+    atoms = Float64.(repeat(collect(0:1)', length(group)))
+    weights = Matrix{Float64}(undef, length(group), 2)
+
+    for i in 1:length(group)
+        fullpath = joinpath(filepath,group[i]*"_"*gender*".txt")
+        df = open(fullpath) do io
+        readline(io)  # ignore metadata line
+        CSV.read(io, DataFrame;
+                delim=' ',
+                ignorerepeated=true)
+        end
+        start = findfirst(==(t), df[!,:Year])
+        dx = df[start, :dx]
+        lx = df[start, :lx]
+
+        dx = dx isa AbstractString ? parse(Float64, dx) : float(dx)
+        lx = lx isa AbstractString ? parse(Float64, lx) : float(lx)
+
+        weights[i, 2] = dx / lx
+        weights[i, 1] = 1 - weights[i, 2]
+    end
+    return atoms, weights
+end
+
 
 
 function obtain_density_R(weights::Matrix{Float64}; 
@@ -234,58 +264,199 @@ end
 
 
 
+function p_value_ks(x::Vector{Float64}, y::Vector{Float64}, 
+                    n_samples, bootstrap)
+
+    n_1 = length(x)
+    n_2 = length(y)
+    n = n_1 + n_2
+   
+    T_observed = HypothesisTests.ksstats(x, y)[3]
+    
+    samples = zeros(n_samples)
+
+    all_observations = vcat(x, y) # collect all rows
+    if bootstrap
+        for i in 1:n_samples
+            indices_1 = sample(1:n, n_1; replace = true)
+            indices_2 = sample(1:n, n_2; replace = true)
+
+            new_x = all_observations[indices_1] # first rows indexed by n random indices to the weights_1
+            new_y = all_observations[indices_2] # first rows indexed by n random indices to the weights_2
+
+            samples[i] = HypothesisTests.ksstats(new_x, new_y)[3]
+        end
+    else
+        for i in 1:n_samples
+            random_indices = randperm(n) # indices to distribute rows to new hierarchical meausures
+
+            new_x = all_observations[random_indices[1:n_1]] # first rows indexed by n random indices to the atoms_1
+            new_y = all_observations[random_indices[n_1+1:end]] # first rows indexed by n random indices to the atoms_2
+        
+            samples[i] = HypothesisTests.ksstats(new_x, new_y)[3]
+        end
+    end
+    return mean(samples.>=T_observed)
+end
+
+
+function all_pvalues(time_periods::Vector{Int64}, gender::String, max_age::Int,
+        n_samples::Int, bootstrap::Bool, maxTime::Float64)
+    
+    pvalues_dm = zeros(length(time_periods))
+    pvalues_hipm = zeros(length(time_periods))
+
+    for (i, t) in enumerate(time_periods)
+        println("time period: $t")
+        
+        atoms_1, weights_1 = get_matrix(group1, 1, t, gender, max_age)
+        atoms_2, weights_2 = get_matrix(group2, 2, t, gender, max_age)
+
+        pvalue_dm = p_value_dm_smooth(atoms_1, atoms_2, weights_1, weights_2, n_samples)
+        pvalue_hipm = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, 
+                                    n_samples, bootstrap, maxTime)
+        
+        pvalues_dm[i] = pvalue_dm
+        pvalues_hipm[i] = pvalue_hipm
+    end
+    pvalues_dm, pvalues_hipm
+end
+
+
+function all_pvalues_childdeath(time_periods::Vector{Int64}, gender::String, 
+        n_samples::Int, bootstrap::Bool, maxTime::Float64)
+    
+    pvalues_dm = zeros(length(time_periods))
+    pvalues_hipm = zeros(length(time_periods))
+    pvalues_ks = zeros(length(time_periods))
+
+    for (i, t) in enumerate(time_periods)
+        println("time period: $t")
+        
+        atoms_1, weights_1 = child_death_rates(group1, 1, t, gender)
+        atoms_2, weights_2 = child_death_rates(group2, 2, t, gender)
+
+        pvalue_dm = p_value_dm_smooth(atoms_1, atoms_2, weights_1, weights_2, n_samples)
+        pvalue_hipm = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, 
+                                    n_samples, bootstrap, maxTime)
+        pvalue_ks = p_value_ks(weights_1[:,2], weights_2[:,2], 
+                                    n_samples, bootstrap)
+        
+        pvalues_dm[i] = pvalue_dm
+        pvalues_hipm[i] = pvalue_hipm
+        pvalues_ks[i] = pvalue_ks
+    end
+    return pvalues_dm, pvalues_hipm, pvalues_ks
+end
+
+
+function plot_p_values(pvalues_dm::Vector{Float64}, pvalues_hipm::Vector{Float64},
+                        pvalues_ks::Vector{Float64}, time_periods::Vector{Int64}, 
+                        gender::String)
+
+    all_ticks = minimum(time_periods):5:(maximum(time_periods)+1)
+    ymax = maximum((maximum(pvalues_dm), maximum(pvalues_hipm), maximum(pvalues_ks))) + 0.1
+
+    scatterplot = scatter(
+        time_periods,
+        pvalues_dm,
+        xticks = all_ticks,
+        xlabel = "Time Periods (Years)",
+        ylabel = "P-Value", # Updated label to reflect both series
+        ylims = (-0.005,ymax),
+        title = "Scatter Plot of P-Values Over Time, $(gender)",
+        label = "DM"
+    ) 
+
+    # # # Add the second scatterplot to the existing plot object
+    scatter!(
+        scatterplot, 
+        time_periods, # Assuming the x-axis data is the same
+        pvalues_hipm, 
+        label = "HIPM"
+    )
+
+    scatter!(
+        scatterplot, 
+        time_periods, # Assuming the x-axis data is the same
+        pvalues_ks, 
+        label = "KS"
+    )
+    # # # Add the horizontal line to the existing plot object
+    hline!(scatterplot, [0.05], linestyle = :dash, label = "θ = 0.05")
+    return scatterplot
+end
 
 
 
 gender = "females"
-time_periods = collect(1960:2009)
-max_age = 1
-n_bootstrap = 100
+time_periods = collect(1960:1970)
+max_age = 0
+n_samples = 100
 bootstrap = false
 maxTime = 0.5
 
-pvalues_dm = zeros(length(time_periods))
-pvalues_hipm = zeros(length(time_periods))
+t = time()
+pvalues_dm, pvalues_hipm, pvalues_ks = all_pvalues_childdeath(time_periods, gender, n_samples,
+                 bootstrap,maxTime)
+dur = time() - t
+scatterplot = plot_p_values(pvalues_dm, pvalues_hipm, pvalues_ks, time_periods, gender)
 
-for (i, t) in enumerate(time_periods)
-    println("time period: $t")
-    atoms_1, weights_1 = get_matrix(group1, 1, t, gender, max_age)
-    atoms_2, weights_2 = get_matrix(group2, 2, t, gender, max_age)
+# # scatterplot
+# savefig(scatterplot,"females_maxage=1.png")
 
-    pvalue_dm = p_value_dm_smooth(atoms_1, atoms_2, weights_1, weights_2, n_bootstrap)
-    pvalue_hipm = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, n_bootstrap, bootstrap, maxTime)
+# test 
+
+
+# gender = "females"
+# time_periods = collect(1960:2009)
+# max_age = 1
+# n_bootstrap = 100
+# bootstrap = false
+# maxTime = 0.5
+
+# pvalues_dm = zeros(length(time_periods))
+# pvalues_hipm = zeros(length(time_periods))
+
+# for (i, t) in enumerate(time_periods)
+#     println("time period: $t")
+#     atoms_1, weights_1 = get_matrix(group1, 1, t, gender, max_age)
+#     atoms_2, weights_2 = get_matrix(group2, 2, t, gender, max_age)
+
+#     pvalue_dm = p_value_dm_smooth(atoms_1, atoms_2, weights_1, weights_2, n_bootstrap)
+#     pvalue_hipm = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, n_bootstrap, bootstrap, maxTime)
     
-    pvalues_dm[i] = pvalue_dm
-    pvalues_hipm[i] = pvalue_hipm
-end
+#     pvalues_dm[i] = pvalue_dm
+#     pvalues_hipm[i] = pvalue_hipm
+# end
 
 
-all_ticks = minimum(time_periods):5:(maximum(time_periods)+1)
-ymax = maximum((maximum(pvalues_dm), maximum(pvalues_hipm))) + 0.1
+# all_ticks = minimum(time_periods):5:(maximum(time_periods)+1)
+# ymax = maximum((maximum(pvalues_dm), maximum(pvalues_hipm))) + 0.1
 
-scatterplot = scatter(
-    time_periods,
-    pvalues_dm,
-    xticks = all_ticks,
-    xlabel = "Time Periods (Years)",
-    ylabel = "P-Value", # Updated label to reflect both series
-    ylims = (-0.005,ymax),
-    title = "Scatter Plot of P-Values Over Time",
-    label = "DM"
-)
+# scatterplot = scatter(
+#     time_periods,
+#     pvalues_dm,
+#     xticks = all_ticks,
+#     xlabel = "Time Periods (Years)",
+#     ylabel = "P-Value", # Updated label to reflect both series
+#     ylims = (-0.005,ymax),
+#     title = "Scatter Plot of P-Values Over Time",
+#     label = "DM"
+# )
 
-# # Add the second scatterplot to the existing plot object
-scatter!(
-    scatterplot, 
-    time_periods, # Assuming the x-axis data is the same
-    pvalues_hipm, 
-    label = "HIPM"
-)
+# # # Add the second scatterplot to the existing plot object
+# scatter!(
+#     scatterplot, 
+#     time_periods, # Assuming the x-axis data is the same
+#     pvalues_hipm, 
+#     label = "HIPM"
+# )
 
-# # Add the horizontal line to the existing plot object
-hline!(scatterplot, [0.05], linestyle = :dash, label = "θ = 0.05")
-# scatterplot
-savefig(scatterplot,"females_maxage=1.png")
+# # # Add the horizontal line to the existing plot object
+# hline!(scatterplot, [0.05], linestyle = :dash, label = "θ = 0.05")
+# # scatterplot
+# savefig(scatterplot,"females_maxage=1.png")
 
 # test
 
