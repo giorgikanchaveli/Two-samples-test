@@ -2,6 +2,8 @@ using CSV, DataFrames
 using RCall
 using Plots
 using Distributions, Random
+using LinearAlgebra
+
 
 include("distances/hipm.jl")
 
@@ -53,6 +55,108 @@ function get_matrix(group::Vector{String},group_number::Int, t::Int, gender::Str
     return atoms, weights
 end
 
+
+function obtain_density_R(weights::Matrix{Float64}; 
+                           h::Float64 = 2.0, 
+                           grid_step::Float64 = 0.1)
+
+    # Number of countries (rows) and number of age bins (columns)
+    n_countries, n_bins = size(weights)
+
+    # Maximum age (bins correspond to ages 0:max_age)
+    max_age = n_bins - 1
+
+    # Histogram bin midpoints: 0.5, 1.5, ..., max_age + 0.5
+    x = collect(0:max_age) .+ 0.5
+
+    # Grid on which the smoothed density will be evaluated (0 to max_age)
+    grid = collect(0:grid_step:max_age)
+
+    # Transfer Julia objects to the embedded R session
+    @rput weights x grid h
+
+    # Run R code for local least squares smoothing
+    R"""
+    library(KernSmooth)
+
+    # trapezoid integration (more accurate than sum(y*dx))
+    trapz <- function(xx, yy) {
+        sum((yy[-1] + yy[-length(yy)]) * diff(xx) / 2)
+      }
+
+    # Smooth a single country's age-at-death histogram
+    smooth_one <- function(pmf, x, grid, h) {
+
+      # Local linear least squares smoothing with bandwidth h
+      fit <- locpoly(x = x, y = pmf,
+                     bandwidth = h,
+                     degree = 1,
+                     gridsize = length(grid),
+                     range.x = range(grid))
+
+      # Enforce non-negativity of the density
+    y <- approx(x = fit$x, y = fit$y, xout = grid, rule = 2)$y
+    y <- pmax(y, 0)
+
+
+      # Normalize so the density integrates to 1 over the age range
+      area <- trapz(grid, y)
+        if (is.finite(area) && area > 0) y <- y / area
+
+        return(y)
+    }
+
+    # Apply the smoother to each country (row of weights)
+    D <- t(apply(weights, 1, smooth_one, x = x, grid = grid, h = h))
+    
+    """
+
+    # Retrieve the smoothed density matrix from R
+    @rget D
+
+    # Return the age grid and the corresponding smoothed densities
+    return grid, D
+end
+
+
+function p_value_dm_smooth(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64},
+                    weights_1::Matrix{Float64}, weights_2::Matrix{Float64},
+                    n_bootstrap::Int; h::Float64 = 2.0, grid_step::Float64 = 0.1)
+
+    grid1, D1 = obtain_density_R(weights_1; h = h, grid_step = grid_step)
+    grid2, D2 = obtain_density_R(weights_2; h = h, grid_step = grid_step)
+
+    @assert length(grid1) == length(grid2) && all(grid1 .== grid2)
+    
+    n_1 = size(D1, 1)
+    n_2 = size(D2, 1)
+
+    D = vcat(D1, D2)
+    group = vcat(fill(1, n_1), fill(2, n_2))
+
+    @rput D grid1 group n_bootstrap
+
+    R"""
+    
+    library(frechet)
+
+    result <- DenANOVA(
+        din   = D,
+        supin = grid1,
+        group = group,
+        optns = list(boot = TRUE, R = n_bootstrap)
+    )
+
+    pvalue <- result$pvalBoot
+    
+    """
+
+    @rget pvalue
+    return pvalue
+end
+
+
+
 function p_value_dm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64}, 
                     weights_1::Matrix{Float64},weights_2::Matrix{Float64}, n_bootstrap::Int)
     
@@ -101,7 +205,7 @@ function p_value_hipm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64},
     a = 0.0
     b = maximum(atoms_1[1,:])
 
-    T_observed = dlip_diffsize(atoms_1,atoms_2, weights_1, weights_2, a, b, 250, maxTime)
+    T_observed = dlip_diffsize(atoms_1,atoms_2, weights_1, weights_2, a, b, maxTime = maxTime)
    
     samples = zeros(n_samples)
     total_weights = vcat(weights_1, weights_2) # collect all rows
@@ -113,7 +217,7 @@ function p_value_hipm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64},
             new_weights_1 = total_weights[indices_1,:] # first rows indexed by n random indices to the weights_1
             new_weights_2 = total_weights[indices_2,:] # first rows indexed by n random indices to the weights_2
 
-            samples[i] = dlip_diffsize(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b, 250, maxTime)
+            samples[i] = dlip_diffsize(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b, maxTime = maxTime)
         end
     else
         for i in 1:n_samples
@@ -122,7 +226,7 @@ function p_value_hipm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64},
             new_weights_1 = total_weights[random_indices[1:n_1],:] # first rows indexed by n random indices to the atoms_1
             new_weights_2 = total_weights[random_indices[n_1+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-            samples[i] = dlip_diffsize(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b, 250, maxTime)
+            samples[i] = dlip_diffsize(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b, maxTime = maxTime)
         end
     end
     return mean(samples.>=T_observed)
@@ -133,9 +237,9 @@ end
 
 
 
-gender = "males"
-time_periods = collect(1960:2010)
-max_age = 80
+gender = "females"
+time_periods = collect(1960:2009)
+max_age = 1
 n_bootstrap = 100
 bootstrap = false
 maxTime = 0.5
@@ -148,7 +252,7 @@ for (i, t) in enumerate(time_periods)
     atoms_1, weights_1 = get_matrix(group1, 1, t, gender, max_age)
     atoms_2, weights_2 = get_matrix(group2, 2, t, gender, max_age)
 
-    pvalue_dm = p_value_dm(atoms_1, atoms_2, weights_1, weights_2, n_bootstrap)
+    pvalue_dm = p_value_dm_smooth(atoms_1, atoms_2, weights_1, weights_2, n_bootstrap)
     pvalue_hipm = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, n_bootstrap, bootstrap, maxTime)
     
     pvalues_dm[i] = pvalue_dm
@@ -157,6 +261,7 @@ end
 
 
 all_ticks = minimum(time_periods):5:(maximum(time_periods)+1)
+ymax = maximum((maximum(pvalues_dm), maximum(pvalues_hipm))) + 0.1
 
 scatterplot = scatter(
     time_periods,
@@ -164,12 +269,12 @@ scatterplot = scatter(
     xticks = all_ticks,
     xlabel = "Time Periods (Years)",
     ylabel = "P-Value", # Updated label to reflect both series
-    ylims = (-0.005,0.3005),
+    ylims = (-0.005,ymax),
     title = "Scatter Plot of P-Values Over Time",
     label = "DM"
 )
 
-# Add the second scatterplot to the existing plot object
+# # Add the second scatterplot to the existing plot object
 scatter!(
     scatterplot, 
     time_periods, # Assuming the x-axis data is the same
@@ -177,10 +282,10 @@ scatter!(
     label = "HIPM"
 )
 
-# Add the horizontal line to the existing plot object
+# # Add the horizontal line to the existing plot object
 hline!(scatterplot, [0.05], linestyle = :dash, label = "θ = 0.05")
-scatterplot
-savefig(scatterplot, gender)
+# scatterplot
+savefig(scatterplot,"females_maxage=1.png")
 
 # test
 
