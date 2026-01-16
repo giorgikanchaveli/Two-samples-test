@@ -387,10 +387,36 @@ function plot_p_values(pvalues_dm::Vector{Float64}, pvalues_hipm::Vector{Float64
     return scatterplot
 end
 
+function all_pvalues_childdeath_not_smoooth(time_periods::Vector{Int64}, gender::String, 
+        n_samples::Int, bootstrap::Bool, maxTime::Float64)
+    
+    pvalues_dm = zeros(length(time_periods))
+    pvalues_hipm = zeros(length(time_periods))
+    pvalues_ks = zeros(length(time_periods))
+
+    for (i, t) in enumerate(time_periods)
+        println("time period: $t")
+        
+        atoms_1, weights_1 = child_death_rates(group1, 1, t, gender)
+        atoms_2, weights_2 = child_death_rates(group2, 2, t, gender)
+
+        pvalue_dm = p_value_dm(atoms_1, atoms_2, weights_1, weights_2, n_samples)
+        pvalue_hipm = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, 
+                                    n_samples, bootstrap, maxTime)
+        pvalue_ks = p_value_ks(weights_1[:,2], weights_2[:,2], 
+                                    n_samples, bootstrap)
+        
+        pvalues_dm[i] = pvalue_dm
+        pvalues_hipm[i] = pvalue_hipm
+        pvalues_ks[i] = pvalue_ks
+    end
+    return pvalues_dm, pvalues_hipm, pvalues_ks
+end
 
 
-gender = "females"
-time_periods = collect(1960:1970)
+
+gender = "males"
+time_periods = collect(1960:2009)
 max_age = 0
 n_samples = 100
 bootstrap = false
@@ -401,6 +427,20 @@ pvalues_dm, pvalues_hipm, pvalues_ks = all_pvalues_childdeath(time_periods, gend
                  bootstrap,maxTime)
 dur = time() - t
 scatterplot = plot_p_values(pvalues_dm, pvalues_hipm, pvalues_ks, time_periods, gender)
+savefig(scatterplot,"$(gender)_child_birth_death_rate.png")
+
+
+
+pvalues_dm, pvalues_hipm, pvalues_ks = all_pvalues_childdeath_not_smoooth(time_periods, gender, n_samples,
+                 bootstrap,maxTime)
+                 scatterplot = plot_p_values(pvalues_dm, pvalues_hipm, pvalues_ks, time_periods, gender)
+savefig(scatterplot,"$(gender)_child_birth_death_rate_not_smooth.png")
+
+gender = "females"
+pvalues_dm, pvalues_hipm, pvalues_ks = all_pvalues_childdeath_not_smoooth(time_periods, gender, n_samples,
+                 bootstrap,maxTime)
+                 scatterplot = plot_p_values(pvalues_dm, pvalues_hipm, pvalues_ks, time_periods, gender)
+savefig(scatterplot,"$(gender)_child_birth_death_rate_not_smooth.png")
 
 # # scatterplot
 # savefig(scatterplot,"females_maxage=1.png")
