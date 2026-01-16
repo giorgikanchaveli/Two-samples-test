@@ -231,6 +231,24 @@ function decide_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64,
     return 1.0*(ww(hier_sample_1, hier_sample_2) > threshold)
 end
 
+function rejection_rate_hipm_wow(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
+    # Given two laws of RPMs, returns rejection rate for all HIPM and WoW.
+    # Note that here thresholds for HIPM, WoW and Energy are sample dependent,
+    rates_hipm = 0.0
+    rates_wow = 0.0
+    @floop ThreadedEx() for s in 1:S
+        # generate samples
+        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+
+        # record decisions from each testing methods
+        @reduce rates_hipm += decide_hipm(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
+        @reduce rates_wow += decide_wow(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
+    end
+    rates_hipm /= S
+    rates_wow /= S
+    return rates_hipm,rates_wow
+end
+
 
 
 
