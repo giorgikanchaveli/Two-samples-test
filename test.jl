@@ -7,8 +7,7 @@ include("methods.jl")
 # j = 1,...,m.
 
 # Simple example for how to use HIPM and WoW.
-x = 5
-println("giorgi")
+
 n = 50
 m = 10
 hier_sample_1 = rand(n, m)
