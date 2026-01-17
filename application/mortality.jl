@@ -17,7 +17,7 @@ group2 = ["Australia", "Austria", "Belgium", "Canada", "Denmark", "Finland", "Fr
 # 111 * (i - 1) + 1, 111*i i denotes the time periods. 
 
 
-function country_pmf_year(fullpath::String, t::Int, min_age::Int, max_age::Int) 
+function country_pmf_per_year(fullpath::String, t::Int, min_age::Int, max_age::Int) 
     # t : exact year
     df = open(fullpath) do io
     readline(io)  # ignore metadata line
@@ -39,6 +39,7 @@ function country_pmf_year(fullpath::String, t::Int, min_age::Int, max_age::Int)
 
     if max_age == min_age
         lx = df[index_start - min_age, :lx] # hypothetical cohort size
+        lx = lx isa AbstractString ? parse(Float64, lx) : float(lx)
         prob_of_death = dx[1] / lx # probability of death at age = min_age
         pmf_age_of_death = [1 - prob_of_death, prob_of_death]
     else
@@ -70,11 +71,46 @@ function group_pmf_per_year(group::Vector{String},group_number::Int, t::Int,
     
     for i in 1:length(group)
         fullpath = joinpath(filepath,group[i]*"_"*gender*".txt")
-        weights[i,:] .= country_pmf_year(fullpath, t, min_age, max_age)
+        weights[i,:] .= country_pmf_per_year(fullpath, t, min_age, max_age)
         #push!(hier_sample_1,get_row(fullpath, t))
     end
     return atoms, weights
 end
+
+
+# (45-110)
+
+min_age = 18
+max_age = 40
+ages = collect(min_age:max_age)
+t = 1993
+gender = "males"
+
+h_1 = group_pmf_per_year(group1, 1, t, gender, min_age, max_age)
+h_2 = group_pmf_per_year(group2, 2, t, gender, min_age, max_age)
+
+ymax = maximum((maximum(h_1[2]),maximum(h_2[2])))
+
+pmf_plot_1 = plot(xlabel = "ages", ylabel = "mass", title = "PMFs group 1", 
+        xticks = 0:5:110, legend = false, ylims = (-0.001, ymax))
+pmf_plot_2 = plot(xlabel = "ages", ylabel = "mass", title = "PMFs group 2",
+        xticks = 0:5:110, legend = false, ylims = (-0.001, ymax))
+
+for i in 1:length(group1)
+   # plot!(pmf_plot, ages, h_1[2][i,:], seriestype=:stem, color = "blue")
+    scatter!(pmf_plot_1, ages, h_1[2][i,:])
+    
+end
+
+for i in 1:length(group2)
+   # plot!(pmf_plot, ages, h_1[2][i,:], seriestype=:stem, color = "blue")
+    scatter!(pmf_plot_2, ages, h_2[2][i,:])
+    
+end
+
+plot(pmf_plot_1, pmf_plot_2,
+     layout = (1, 2),
+     size = (1400, 450))
 
 
 
