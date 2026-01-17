@@ -78,39 +78,98 @@ function group_pmf_per_year(group::Vector{String},group_number::Int, t::Int,
 end
 
 
-# (45-110)
+function p_value_hipm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64}, 
+                    weights_1::Matrix{Float64},weights_2::Matrix{Float64}, n_samples::Int, bootstrap::Bool, maxTime::Float64)
+    n_1 = size(atoms_1,1)
+    n_2 = size(atoms_2,1)
+    n = n_1 + n_2
+    a = minimum(atoms_1[1,:])
+    b = maximum(atoms_1[1,:])
 
-min_age = 18
-max_age = 40
-ages = collect(min_age:max_age)
-t = 1993
+    T_observed = dlip_diffsize(atoms_1,atoms_2, weights_1, weights_2, a, b, maxTime = maxTime)
+   
+    samples = zeros(n_samples)
+    total_weights = vcat(weights_1, weights_2) # collect all rows
+    if bootstrap
+        for i in 1:n_samples
+            indices_1 = sample(1:n, n_1; replace = true)
+            indices_2 = sample(1:n, n_2; replace = true)
+
+            new_weights_1 = total_weights[indices_1,:] # first rows indexed by n random indices to the weights_1
+            new_weights_2 = total_weights[indices_2,:] # first rows indexed by n random indices to the weights_2
+
+            samples[i] = dlip_diffsize(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b, maxTime = maxTime)
+        end
+    else
+        for i in 1:n_samples
+            random_indices = randperm(n) # indices to distribute rows to new hierarchical meausures
+
+            new_weights_1 = total_weights[random_indices[1:n_1],:] # first rows indexed by n random indices to the atoms_1
+            new_weights_2 = total_weights[random_indices[n_1+1:end],:] # first rows indexed by n random indices to the atoms_2
+        
+            samples[i] = dlip_diffsize(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b, maxTime = maxTime)
+        end
+    end
+    return mean(samples.>=T_observed)
+end
+
+
+
+function all_pvalues(time_periods::Vector{Int64}, gender::String, min_age::Int, 
+        max_age::Int, n_samples::Int, bootstrap::Bool, maxTime::Float64)
+    
+    #pvalues_dm = zeros(length(time_periods))
+    pvalues_hipm = zeros(length(time_periods))
+
+    for (i, t) in enumerate(time_periods)
+        println("time period: $t")
+        
+        atoms_1, weights_1 = group_pmf_per_year(group1, 1, t, gender, min_age, max_age)
+        atoms_2, weights_2 = group_pmf_per_year(group2, 2, t, gender, min_age, max_age)
+
+        #pvalue_dm = p_value_dm_smooth(atoms_1, atoms_2, weights_1, weights_2, n_samples)
+        pvalue_hipm = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, 
+                                    n_samples, bootstrap, maxTime)
+        
+       # pvalues_dm[i] = pvalue_dm
+        pvalues_hipm[i] = pvalue_hipm
+    end
+    #pvalues_dm, pvalues_hipm
+    return pvalues_hipm
+end
+
+
+pvalues_hipm = all_pvalues(collect(1960:2010), "males", 0, 110, 100, false, 0.5)
+time_periods = collect(1960:2010)
 gender = "males"
+function plot_p_values_hipm(pvalues_hipm::Vector{Float64}, time_periods::Vector{Int64}, 
+                        gender::String)
 
-h_1 = group_pmf_per_year(group1, 1, t, gender, min_age, max_age)
-h_2 = group_pmf_per_year(group2, 2, t, gender, min_age, max_age)
-
-ymax = maximum((maximum(h_1[2]),maximum(h_2[2])))
-
-pmf_plot_1 = plot(xlabel = "ages", ylabel = "mass", title = "PMFs group 1", 
-        xticks = 0:5:110, legend = false, ylims = (-0.001, ymax))
-pmf_plot_2 = plot(xlabel = "ages", ylabel = "mass", title = "PMFs group 2",
-        xticks = 0:5:110, legend = false, ylims = (-0.001, ymax))
-
-for i in 1:length(group1)
-   # plot!(pmf_plot, ages, h_1[2][i,:], seriestype=:stem, color = "blue")
-    scatter!(pmf_plot_1, ages, h_1[2][i,:])
-    
+    all_ticks = minimum(time_periods):5:(maximum(time_periods)+1)
+    ymax = maximum(pvalues_hipm) * 1.1
+    scatterplot = scatter(
+        time_periods,
+        pvalues_hipm,
+        xticks = all_ticks,
+        xlabel = "Time Periods (Years)",
+        ylabel = "P-Value", # Updated label to reflect both series
+        ylims = (-0.005,ymax),
+        title = "Scatter Plot of P-Values Over Time, $(gender)",
+        label = "HIPM"
+    )
+    # # # Add the horizontal line to the existing plot object
+    hline!(scatterplot, [0.05], linestyle = :dash, label = "θ = 0.05")
+    return scatterplot
 end
+scatterplot_hipm = plot_p_values_hipm(pvalues_hipm,time_periods,gender)
+savefig(scatterplot_hipm, "allages_males.png")
 
-for i in 1:length(group2)
-   # plot!(pmf_plot, ages, h_1[2][i,:], seriestype=:stem, color = "blue")
-    scatter!(pmf_plot_2, ages, h_2[2][i,:])
-    
-end
+pvalues_hipm = all_pvalues(collect(1960:2010), "females", 0, 110, 100, false, 0.5)
+time_periods = collect(1960:2010)
+gender = "females"
 
-plot(pmf_plot_1, pmf_plot_2,
-     layout = (1, 2),
-     size = (1400, 450))
+scatterplot_hipm = plot_p_values_hipm(pvalues_hipm,time_periods,gender)
+savefig(scatterplot_hipm, "allages_females.png")
 
 
 
@@ -527,6 +586,43 @@ savefig(scatterplot,"$(gender)_child_birth_death_rate_not_smooth.png")
 # savefig(scatterplot,"females_maxage=1.png")
 
 # test
+
+
+
+
+
+min_age = 0
+max_age = 110
+ages = collect(min_age:max_age)
+t = 1965
+gender = "males"
+
+h_1 = group_pmf_per_year(group1, 1, t, gender, min_age, max_age)
+h_2 = group_pmf_per_year(group2, 2, t, gender, min_age, max_age)
+
+ymax = maximum((maximum(h_1[2]),maximum(h_2[2])))
+
+pmf_plot_1 = plot(xlabel = "ages", ylabel = "mass", title = "PMFs group 1", 
+        xticks = 0:5:110, legend = false, ylims = (-0.001, ymax))
+pmf_plot_2 = plot(xlabel = "ages", ylabel = "mass", title = "PMFs group 2",
+        xticks = 0:5:110, legend = false, ylims = (-0.001, ymax))
+
+for i in 1:length(group1)
+   # plot!(pmf_plot, ages, h_1[2][i,:], seriestype=:stem, color = "blue")
+    scatter!(pmf_plot_1, ages, h_1[2][i,:])
+    
+end
+
+for i in 1:length(group2)
+   # plot!(pmf_plot, ages, h_1[2][i,:], seriestype=:stem, color = "blue")
+    scatter!(pmf_plot_2, ages, h_2[2][i,:])
+    
+end
+
+plot(pmf_plot_1, pmf_plot_2,
+     layout = (1, 2),
+     size = (1400, 450))
+
 
 
 # 111 length

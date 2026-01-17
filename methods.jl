@@ -181,6 +181,40 @@ function threshold_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Floa
     return quantile(samples, 1 - θ)
 end
 
+
+function threshold_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Vector{Float64}, n_samples::Int, bootstrap::Bool)
+    # Obtains threshold for HIPM via permutation or bootstrap approach.
+    n = hier_sample_1.n
+    a = minimum((hier_sample_1.a,hier_sample_2.a))
+    b = maximum((hier_sample_1.b,hier_sample_2.b))
+   
+    samples = zeros(n_samples)
+    total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
+    if bootstrap
+        for i in 1:n_samples
+            indices_1 = sample(1:2*n, n; replace = true)
+            indices_2 = sample(1:2*n, n; replace = true)
+
+            new_atoms_1 = total_rows[indices_1,:] # first rows indexed by n random indices to the atoms_1
+            new_atoms_2 = total_rows[indices_2,:] # first rows indexed by n random indices to the atoms_2
+
+            samples[i] = dlip(new_atoms_1, new_atoms_2, a, b)
+        end
+    else
+        for i in 1:n_samples
+            random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
+
+            new_atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
+            new_atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
+        
+            samples[i] = dlip(new_atoms_1, new_atoms_2, a, b)
+        end
+    end
+    
+    return quantile(samples, 1 .- θ)
+end
+
+
 function decide_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
     # Given two hierarchical samples, it decides whether to reject H_0 using HIPM via
     # bootstrap or permutation approach. 
@@ -189,6 +223,16 @@ function decide_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64
     b = maximum((hier_sample_1.b, hier_sample_2.b))
 
     return 1.0*(dlip(hier_sample_1, hier_sample_2, a, b) > threshold)
+end
+
+function decide_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Vector{Float64}, n_samples::Int, bootstrap::Bool)
+    # Given two hierarchical samples, it decides whether to reject H_0 using HIPM via
+    # bootstrap or permutation approach. 
+    threshold = threshold_hipm(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
+    a = minimum((hier_sample_1.a, hier_sample_2.a))
+    b = maximum((hier_sample_1.b, hier_sample_2.b))
+
+    return 1.0.*(dlip(hier_sample_1, hier_sample_2, a, b) .> threshold)
 end
 
 function threshold_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
@@ -221,6 +265,47 @@ function threshold_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float
         end
     end
     return quantile(samples, 1 - θ)
+end
+
+
+function threshold_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Vector{Float64}, n_samples::Int, bootstrap::Bool)
+    # Obtains threshold for WoW via permutation or bootstrap approach.
+    n = hier_sample_1.n
+    atoms_1 = hier_sample_1.atoms
+    atoms_2 = hier_sample_2.atoms
+    
+    samples = zeros(n_samples)
+    total_rows = vcat(atoms_1, atoms_2) # collect all rows
+    if bootstrap
+        for i in 1:n_samples
+            indices_1 = sample(1:2*n, n; replace = true)
+            indices_2 = sample(1:2*n, n; replace = true)
+
+            new_atoms_1 = total_rows[indices_1,:] # first rows indexed by n random indices to the atoms_1
+            new_atoms_2 = total_rows[indices_2,:] # first rows indexed by n random indices to the atoms_2
+
+            samples[i] = ww(new_atoms_1, new_atoms_2) # sorted = true
+        end
+    else
+        for i in 1:n_samples
+            random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
+
+            new_atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
+            new_atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
+        
+         
+            samples[i] = ww(new_atoms_1, new_atoms_2) # sorted = true
+        end
+    end
+    return quantile(samples, 1 .- θ)
+end
+
+function decide_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Vector{Float64}, n_samples::Int, bootstrap::Bool)
+    # Given two hierarchical samples, it decides whether to reject H_0 using WoW via
+    # bootstrap or permutation approach. 
+    threshold = threshold_wow(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
+
+    return 1.0.*(ww(hier_sample_1, hier_sample_2) .> threshold)
 end
 
 function decide_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
