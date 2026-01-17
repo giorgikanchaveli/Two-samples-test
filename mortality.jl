@@ -17,7 +17,7 @@ group2 = ["Australia", "Austria", "Belgium", "Canada", "Denmark", "Finland", "Fr
 # 111 * (i - 1) + 1, 111*i i denotes the time periods. 
 
 
-function get_weights(fullpath::String, t::Int, max_age::Int) 
+function country_pmf_year(fullpath::String, t::Int, min_age::Int, max_age::Int) 
     # t : exact year
     df = open(fullpath) do io
     readline(io)  # ignore metadata line
@@ -26,60 +26,48 @@ function get_weights(fullpath::String, t::Int, max_age::Int)
              ignorerepeated=true)
     end
     # find first index where we start year
-    start = findfirst(==(t), df[!,:Year])
-
+    index_start = findfirst(==(t), df[!,:Year]) + min_age
+    index_end = index_start - min_age + max_age
     # we truncate age interval to [0, 80], so we have to renormalize death counts.
 
     column_type = eltype(df[!, "dx"])
     if column_type <: AbstractString 
-        dx = parse.(Int, df[start:(start + max_age), "dx"])
+        dx = parse.(Int, df[index_start:(index_end), "dx"])
     else
-        dx = df[start:(start + max_age), "dx"]
+        dx = df[index_start:(index_end), "dx"]
     end
-    pmf_age_of_death = dx ./ sum(dx)
+
+    if max_age == min_age
+        lx = df[index_start - min_age, :lx] # hypothetical cohort size
+        prob_of_death = dx[1] / lx # probability of death at age = min_age
+        pmf_age_of_death = [1 - prob_of_death, prob_of_death]
+    else
+        pmf_age_of_death = dx ./ sum(dx)
+    end
     return pmf_age_of_death
 end
 
-function get_matrix(group::Vector{String},group_number::Int, t::Int, gender::String, max_age::Int)
+function group_pmf_per_year(group::Vector{String},group_number::Int, t::Int, 
+                gender::String, min_age::Int, max_age::Int)
     # t : exact year
+    @assert max_age <= 110 "maximum age must be less than or equal to 110."
+    @assert min_age >= 0 "minimum age must be higher than or equal to 0."
+    @assert min_age <= max_age "minimum age must be smaller or equal to maximum age."
 
     filepath = "mortality_dataset/group"*string(group_number)*"/$(gender)"
-    atoms = Float64.(repeat(collect(0:max_age)', length(group)))
-    weights = Matrix{Float64}(undef, length(group), max_age + 1)
+    
+    if max_age == min_age
+        atoms = Float64.(repeat(collect(0:1)', length(group)))
+    else
+        atoms = Float64.(repeat(collect(min_age:max_age)', length(group)))
+    end
+    weights = Matrix{Float64}(undef, size(atoms))
+
     
     for i in 1:length(group)
         fullpath = joinpath(filepath,group[i]*"_"*gender*".txt")
-        weights[i,:] .= get_weights(fullpath, t, max_age)
+        weights[i,:] .= country_pmf_year(fullpath, t, min_age, max_age)
         #push!(hier_sample_1,get_row(fullpath, t))
-    end
-    return atoms, weights
-end
-
-
-function child_death_rates(group::Vector{String}, group_number::Int,
-     t::Int, gender::String)
-
-    filepath = "mortality_dataset/group"*string(group_number)*"/$(gender)"
-    atoms = Float64.(repeat(collect(0:1)', length(group)))
-    weights = Matrix{Float64}(undef, length(group), 2)
-
-    for i in 1:length(group)
-        fullpath = joinpath(filepath,group[i]*"_"*gender*".txt")
-        df = open(fullpath) do io
-        readline(io)  # ignore metadata line
-        CSV.read(io, DataFrame;
-                delim=' ',
-                ignorerepeated=true)
-        end
-        start = findfirst(==(t), df[!,:Year])
-        dx = df[start, :dx]
-        lx = df[start, :lx]
-
-        dx = dx isa AbstractString ? parse(Float64, dx) : float(dx)
-        lx = lx isa AbstractString ? parse(Float64, lx) : float(lx)
-
-        weights[i, 2] = dx / lx
-        weights[i, 1] = 1 - weights[i, 2]
     end
     return atoms, weights
 end
@@ -521,3 +509,34 @@ savefig(scatterplot,"$(gender)_child_birth_death_rate_not_smooth.png")
 
 
 
+
+
+
+
+# function child_death_rates(group::Vector{String}, group_number::Int,
+#      t::Int, gender::String)
+
+#     filepath = "mortality_dataset/group"*string(group_number)*"/$(gender)"
+#     atoms = Float64.(repeat(collect(0:1)', length(group)))
+#     weights = Matrix{Float64}(undef, length(group), 2)
+
+#     for i in 1:length(group)
+#         fullpath = joinpath(filepath,group[i]*"_"*gender*".txt")
+#         df = open(fullpath) do io
+#         readline(io)  # ignore metadata line
+#         CSV.read(io, DataFrame;
+#                 delim=' ',
+#                 ignorerepeated=true)
+#         end
+#         start = findfirst(==(t), df[!,:Year])
+#         dx = df[start, :dx]
+#         lx = df[start, :lx]
+
+#         dx = dx isa AbstractString ? parse(Float64, dx) : float(dx)
+#         lx = lx isa AbstractString ? parse(Float64, lx) : float(lx)
+
+#         weights[i, 2] = dx / lx
+#         weights[i, 1] = 1 - weights[i, 2]
+#     end
+#     return atoms, weights
+# end
