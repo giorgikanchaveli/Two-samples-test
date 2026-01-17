@@ -5,7 +5,7 @@ using Distributions, Random
 using LinearAlgebra
 using HypothesisTests
 
-include("distances/hipm.jl")
+include("../distances/hipm.jl")
 
 
 group1 = ["belarus", "Bulgaria", "Czechia", "Estonia", "Hungary", "Latvia", "Poland", "Lithuania", "Russia", "Slovakia", "Ukraine"]
@@ -49,12 +49,16 @@ end
 
 function group_pmf_per_year(group::Vector{String},group_number::Int, t::Int, 
                 gender::String, min_age::Int, max_age::Int)
+    
+    # If max_age = min_age, then it atoms are 0-1 valued where 1 means death at that age.
+    # Otherwise, atoms are min_age, min_age + 1,..., max_age.
+    
     # t : exact year
     @assert max_age <= 110 "maximum age must be less than or equal to 110."
     @assert min_age >= 0 "minimum age must be higher than or equal to 0."
     @assert min_age <= max_age "minimum age must be smaller or equal to maximum age."
 
-    filepath = "mortality_dataset/group"*string(group_number)*"/$(gender)"
+    filepath = "application/mortality_dataset/group"*string(group_number)*"/$(gender)"
     
     if max_age == min_age
         atoms = Float64.(repeat(collect(0:1)', length(group)))
