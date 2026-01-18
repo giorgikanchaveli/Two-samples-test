@@ -19,6 +19,7 @@ group2 = ["Australia", "Austria", "Belgium", "Canada", "Denmark", "Finland", "Fr
 
 function country_pmf_per_year(fullpath::String, t::Int, min_age::Int, max_age::Int) 
     # t : exact year
+    @assert min_age < max_age "Minimum age must be smaller than maximum age."
     df = open(fullpath) do io
     readline(io)  # ignore metadata line
     CSV.read(io, DataFrame;
@@ -26,49 +27,43 @@ function country_pmf_per_year(fullpath::String, t::Int, min_age::Int, max_age::I
              ignorerepeated=true)
     end
     # find first index where we start year
-    index_start = findfirst(==(t), df[!,:Year]) + min_age
-    index_end = index_start - min_age + max_age
-    # we truncate age interval to [0, 80], so we have to renormalize death counts.
+    index_base_start = findfirst(==(t), df[!,:Year])
+    @assert index_base_start !== nothing "Year $t not found in file."
+
+    index_base_end = index_base_start + 90
+
+
+
+    # we truncate age interval to [0, 90], so we have to renormalize death counts.
 
     column_type = eltype(df[!, "dx"])
     if column_type <: AbstractString 
-        dx = parse.(Int, df[index_start:(index_end), "dx"])
+        dx_base = parse.(Float64, df[index_base_start:(index_base_end), "dx"])
     else
-        dx = df[index_start:(index_end), "dx"]
+        dx_base = df[index_base_start:(index_base_end), "dx"]
     end
-
-    if max_age == min_age
-        lx = df[index_start - min_age, :lx] # hypothetical cohort size
-        lx = lx isa AbstractString ? parse(Float64, lx) : float(lx)
-        prob_of_death = dx[1] / lx # probability of death at age = min_age
-        pmf_age_of_death = [1 - prob_of_death, prob_of_death]
-    else
-        pmf_age_of_death = dx ./ sum(dx)
-    end
-    return pmf_age_of_death
+    
+    dx_band = dx_base[min_age+1:max_age+1]
+    pmf_band = dx_band ./ sum(dx_band)
+    return pmf_band
 end
 
 function group_pmf_per_year(group::Vector{String},group_number::Int, t::Int, 
                 gender::String, min_age::Int, max_age::Int)
     
-    # If max_age = min_age, then it atoms are 0-1 valued where 1 means death at that age.
-    # Otherwise, atoms are min_age, min_age + 1,..., max_age.
+    # atoms are min_age, min_age + 1,..., max_age.
     
     # t : exact year
-    @assert max_age <= 110 "maximum age must be less than or equal to 110."
+    @assert max_age <= 90 "maximum age must be less than or equal to 90."
     @assert min_age >= 0 "minimum age must be higher than or equal to 0."
-    @assert min_age <= max_age "minimum age must be smaller or equal to maximum age."
-
+    @assert min_age < max_age "Minimum age must be smaller than maximum age."
+    
     filepath = "application/mortality_dataset/group"*string(group_number)*"/$(gender)"
     
-    if max_age == min_age
-        atoms = Float64.(repeat(collect(0:1)', length(group)))
-    else
-        atoms = Float64.(repeat(collect(min_age:max_age)', length(group)))
-    end
+    
+    atoms = Float64.(repeat(collect(min_age:max_age)', length(group)))
     weights = Matrix{Float64}(undef, size(atoms))
 
-    
     for i in 1:length(group)
         fullpath = joinpath(filepath,group[i]*"_"*gender*".txt")
         weights[i,:] .= country_pmf_per_year(fullpath, t, min_age, max_age)
@@ -76,6 +71,40 @@ function group_pmf_per_year(group::Vector{String},group_number::Int, t::Int,
     end
     return atoms, weights
 end
+
+
+
+function child_death_rates(group::Vector{String}, group_number::Int,
+     t::Int, gender::String)
+
+    filepath = "application/mortality_dataset/group"*string(group_number)*"/$(gender)"
+    atoms = Float64.(repeat(collect(0:1)', length(group)))
+    weights = Matrix{Float64}(undef, length(group), 2)
+
+    for i in 1:length(group)
+        fullpath = joinpath(filepath,group[i]*"_"*gender*".txt")
+        df = open(fullpath) do io
+        readline(io)  # ignore metadata line
+        CSV.read(io, DataFrame;
+                delim=' ',
+                ignorerepeated=true)
+        end
+        start = findfirst(==(t), df[!,:Year])
+        @assert start !== nothing "Year $t not found in $(group[i])."
+
+        column_type = eltype(df[!, "dx"])
+        if column_type <: AbstractString 
+            dx = parse.(Float64, df[start:start+90, :dx])
+        else
+            dx = df[start:start+90, :dx]
+        end
+        weights[i, 2] = dx[1] / sum(dx)
+        weights[i, 1] = 1 - weights[i, 2]
+    end
+    return atoms, weights
+end
+
+
 
 
 function p_value_hipm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64}, 
@@ -139,9 +168,6 @@ function all_pvalues(time_periods::Vector{Int64}, gender::String, min_age::Int,
 end
 
 
-pvalues_hipm = all_pvalues(collect(1960:2010), "males", 0, 110, 100, false, 0.5)
-time_periods = collect(1960:2010)
-gender = "males"
 function plot_p_values_hipm(pvalues_hipm::Vector{Float64}, time_periods::Vector{Int64}, 
                         gender::String)
 
@@ -161,12 +187,17 @@ function plot_p_values_hipm(pvalues_hipm::Vector{Float64}, time_periods::Vector{
     hline!(scatterplot, [0.05], linestyle = :dash, label = "θ = 0.05")
     return scatterplot
 end
+
+gender = "males"
+time_periods = collect(1960:2010)
+pvalues_hipm = all_pvalues(time_periods, gender, 0, 110, 100, false, 0.5)
+
+
 scatterplot_hipm = plot_p_values_hipm(pvalues_hipm,time_periods,gender)
 savefig(scatterplot_hipm, "allages_males.png")
 
-pvalues_hipm = all_pvalues(collect(1960:2010), "females", 0, 110, 100, false, 0.5)
-time_periods = collect(1960:2010)
 gender = "females"
+pvalues_hipm = all_pvalues(time_periods, "females", 0, 110, 100, false, 0.5)
 
 scatterplot_hipm = plot_p_values_hipm(pvalues_hipm,time_periods,gender)
 savefig(scatterplot_hipm, "allages_females.png")

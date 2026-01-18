@@ -87,7 +87,7 @@ function run_experiment_and_save(n::Int, m::Int, b::Float64)
     mkpath(output_path)
 
     # Identify the file by its parameters
-    file_id = "n=$(n)_m=$(m)_n_sims=$(n_sims)_b=$(b)"
+    file_id = "n=$(n)_m=$(m)_b=$(b)"
 
     savefig(fp_plot,  joinpath(output_path, "fp_$(file_id).png"))
     savefig(tp_plot,  joinpath(output_path, "tp_$(file_id).png"))
