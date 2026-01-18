@@ -26,7 +26,7 @@ echo "Running from: $(pwd)"                    # print the current working direc
 # --- Simulation parameter configuration ---
 configs=(
 
-    "40 100 1.4"
+    "50 100 1.4"
     "100 100 1.4"
 )
 
