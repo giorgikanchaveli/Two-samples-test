@@ -1,7 +1,6 @@
 include("methods.jl")
 using Plots
 
-
 # define q_1, q_2
 # function for plot rej rate. This one function includes fp,tp,roc because we will input title and two vectors.
 # e.g. fp is θs and fps, roc is fps and tps. you also input x axis y axis. 
@@ -80,15 +79,15 @@ function run_experiment_and_save(n::Int, m::Int, b::Float64)
     tp_hipm, tp_wow = compute_rej_rates(q_1, q_2, n, m, n_sims, n_samples, bootstrap)
 
 
-    fp_plot = plot_rej_rate(fp_hipm, fp_wow, "Type I error", "Significance level", "Rejection rate")
-    tp_plot = plot_rej_rate(tp_hipm, tp_wow, "Power", "Significance level", "Rejection rate")
+    fp_plot = plot_rej_rate(fp_hipm, fp_wow, "Type I error", "Significance level", "Type I error")
+    tp_plot = plot_rej_rate(tp_hipm, tp_wow, "Power", "Significance level", "Power")
     roc_plot = plot_roc(fp_hipm, tp_hipm, fp_wow, tp_wow, "ROC", "Type I error", "Power")
     
     output_path = "plots/ch5"
     mkpath(output_path)
 
     # Identify the file by its parameters
-    file_id = "n$(n)_m$(m)_n_sims$(n_sims)_b$(b)"
+    file_id = "n=$(n)_m=$(m)_n_sims=$(n_sims)_b=$(b)"
 
     savefig(fp_plot,  joinpath(output_path, "fp_$(file_id).png"))
     savefig(tp_plot,  joinpath(output_path, "tp_$(file_id).png"))
@@ -102,28 +101,3 @@ run_experiment_and_save(n, m, b)
 @info "Total duration: $(round(time() - t_start, digits=2)) seconds"
 
 
-# t_start = time()
-# run_experiment_and_save(n_val, m_val, sims_val, beta_val)
-# @info "Total duration: $(round(time() - t_start, digits=2)) seconds"
-
-# q_1 = DP(1.0, Beta(1,1), 0.0, 1.0)
-# q_2 = DP(1.0, Beta(1,1.1), 0.0, 1.0)
-# n = 25
-# m = 100
-# n_sims = 50
-# n_samples = 100
-# bootstrap = false
-
-# t = time()
-# run_experiment_and_save(q_1, q_2, n, m, n_sims, n_samples, bootstrap)
-# dur = time() - t
-# fp_hipm, fp_wow  = compute_rej_rates(q_1, q_1, n, m, n_sims, n_samples, bootstrap)
-# tp_hipm, tp_wow = compute_rej_rates(q_1, q_2, n, m, n_sims, n_samples, bootstrap)
-
-
-# fp_plot = plot_rej_rate(fp_hipm, fp_wow, "Type I error", "Significance level", "Rejection rate")
-# tp_plot = plot_rej_rate(tp_hipm, tp_wow, "Power", "Significance level", "Rejection rate")
-# roc_plot = plot_roc(fp_hipm, tp_hipm, fp_wow, tp_wow, "ROC", "Type I error", "Power")
-# savefig(fp_plot, "plots/ch5/fp_n=$(n)_m=$(m)_n_sims=$(n_sims)_n_samples=$(n_samples).png")
-# savefig(tp_plot, "plots/ch5/tp_n=$(n)_m=$(m)_n_sims=$(n_sims)_n_samples=$(n_samples).png")
-# savefig(roc_plot, "plots/ch5/roc_n=$(n)_m=$(m)_n_sims=$(n_sims)_n_samples=$(n_samples).png")
