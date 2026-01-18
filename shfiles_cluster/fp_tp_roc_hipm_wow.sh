@@ -25,12 +25,8 @@ echo "Running from: $(pwd)"                    # print the current working direc
 
 # --- Simulation parameter configuration ---
 configs=(
-    "25 100 1.2"
-    "50 100 1.2"
-    "100 100 1.2"
-    "25 100 1.3"
-    "50 100 1.3"
-    "100 100 1.3"
+    "50 100 1.4"
+    "100 100 1.4"
 )
 
 # Extract parameters for the current task
