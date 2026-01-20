@@ -307,8 +307,7 @@ bootstrap = false
 
 # 3. Run all analysis tasks
 settings = [
-    (19, 35),
-    (36, 70)
+    (0, 70)
 ]
 # settings = [
 #     (0, 0),
