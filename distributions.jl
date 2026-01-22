@@ -6,7 +6,7 @@ include("structures.jl")
 using Distributions, Random
 
 
-struct normal_tnormal<:PPM
+struct normal_tnormal<:LawRPM
     # random probability measure is truncated gaussian distributions on [a,b] with mean generated from normal(μ, σ)
     # sample space is [a,b]
 
@@ -17,7 +17,7 @@ struct normal_tnormal<:PPM
 end
 
 
-struct tnormal_normal<:PPM
+struct tnormal_normal<:LawRPM
     # random probability measure is gaussian distributions on R with mean generated from truncated normal(μ, σ) on [a,b]
     # and variance is 1.
     # sample space is R
@@ -29,7 +29,7 @@ end
 
 
 
-struct DP<:PPM # Dirichlet process
+struct DP<:LawRPM # Dirichlet process
     α::Float64
     p_0::Distribution # function generating observations from p_0
     a::Float64 
@@ -37,7 +37,7 @@ struct DP<:PPM # Dirichlet process
     # [a,b] is the observation space
 end
 
-struct normal_normal<:PPM 
+struct normal_normal<:LawRPM 
     # random probability measure is gaussian distributions with variance equal to 1 and 
     # mean generated from normal(μ, σ) 
     
@@ -49,7 +49,7 @@ end
 
 
 
-struct uniform_normal<:PPM
+struct uniform_normal<:LawRPM
     # random probability measure is normal distribution with variance 1 and with mean generated from uniform(a,b)
     
     # Note that sample space for exhangeable sequences is R
@@ -57,19 +57,19 @@ struct uniform_normal<:PPM
     b::Float64 
 end
 
-struct mixture_ppm<:PPM
+struct mixture_ppm<:LawRPM
     # mixture of two laws of random probability measures with mixing parameter λ
-    ppm1::PPM
-    ppm2::PPM
+    ppm1::LawRPM
+    ppm2::LawRPM
     λ::Float64 # mixing parameter
 end
 
-struct simple_discr_1<:PPM
+struct simple_discr_1<:LawRPM
     # RPM which equals N(-1, 1) with probability 1/2 and N(1,1) with probability 1/2
 
     # Note that sample space for exhangeable sequences is R
 end
-struct simple_discr_2<:PPM
+struct simple_discr_2<:LawRPM
     # RPM which equals N(-2, 1) with probability 1/8, N(0,1) with probability 3/4 and N(2,1) with probability 1/8
     
     # Note that sample space for exhangeable sequences is R
@@ -296,7 +296,7 @@ end
 # These structures encapsulate all the parameters needed to generated hierarchical samples from given laws of RPM.
 
 
-# struct discrrpm<:PPM
+# struct discrrpm<:LawRPM
 #     # discrete random probability measure
 #     # sample space is [a,b]
 #     atoms::Matrix{Float64} # n_top x n_bottom matrix of atoms
@@ -317,7 +317,7 @@ end
 # end
 
 
-# struct discr_tnormal<:PPM
+# struct discr_tnormal<:LawRPM
 #     # discrete measure over n_1 truncated gaussian distributions on [a,b]
 #     # sample space is [a,b]
 
@@ -332,7 +332,7 @@ end
 
 
 
-# struct discrete_normal<:PPM
+# struct discrete_normal<:LawRPM
 #     # law of RPM is a discrete measure over normal distributions with varying mean but variance equal to 1.
 
 #     μs::Vector{Float64} # Vector of means of normal distributions
@@ -483,7 +483,7 @@ end
 
 
 
-# function generate_emp(ppm::PPM, n_top::Int, n_bottom::Int)
+# function generate_emp(ppm::LawRPM, n_top::Int, n_bottom::Int)
 #     # given law of random probability measure, instead of directly generating hierarchical samples, we firstly
 #     # generate probability meassures and then observations from them.
 #     pms = generate_prob_measures(ppm, n_top)

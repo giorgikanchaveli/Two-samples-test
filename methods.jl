@@ -316,7 +316,7 @@ function decide_wow(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Fl
     return 1.0*(ww(hier_sample_1, hier_sample_2) > threshold)
 end
 
-function rejection_rate_hipm_wow(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
+function rejection_rate_hipm_wow(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
     # Given two laws of RPMs, returns rejection rate for all HIPM and WoW.
     # Note that here thresholds for HIPM, WoW and Energy are sample dependent,
     rates_hipm = 0.0
@@ -337,7 +337,7 @@ end
 
 
 
-function rejection_rate_all(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
+function rejection_rate_all(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
     # Given two laws of RPMs, returns rejection rate for all 4 testing schemes.
     # Note that for HIPM, WoW and Energy test, we record decisions on same hierarchical samples,
     # on the other hand, we record seperately decisions for DM. 
@@ -373,7 +373,7 @@ end
 
 
 
-function rejection_rate_all_fake(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
+function rejection_rate_all_fake(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
     # Given two laws of RPMs, returns rejection rate for all 4 testing schemes.
     
     # It is called fake because thresholds for hipm and wow are obtained from some auxiliary hierarchical
@@ -455,7 +455,7 @@ end
 
 
 
-# function rejection_rate_wow(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int,
+# function rejection_rate_wow(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int,
 #                      threshold_wow_wrong::Float64)
 #     # if bootstrap is true then do bootstrap approach, n_samples refers to either number of permutations or bootstraps
 
@@ -475,7 +475,7 @@ end
 #     return rates_wow
 # end
 
-# function rejection_rate_wow(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int,
+# function rejection_rate_wow(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int,
 #                      θ::Float64, n_samples::Int, bootstrap::Bool)
 #     # firstly obtain threshold
 #     aux_hier_sample_1 = generate_emp(q_1,n,m)
@@ -493,7 +493,7 @@ end
 
 
 
-# function rejection_rate_hipm_wow(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
+# function rejection_rate_hipm_wow(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
 #     # if bootstrap is true then do bootstrap approach, n_samples refers to either number of permutations or bootstraps
 
 #     # firstly we obtain fixed thresholds for HIPM and WoW
@@ -526,7 +526,7 @@ end
 
 
 
-# function save_fig_hipm_wow(pairs::Vector{<:Tuple{PPM,PPM}}, param_pairs::Vector{Float64}, file_name::String, file_path::String, title::String, xlabel::String, ylabel::String,
+# function save_fig_hipm_wow(pairs::Vector{<:Tuple{LawRPM,LawRPM}}, param_pairs::Vector{Float64}, file_name::String, file_path::String, title::String, xlabel::String, ylabel::String,
 #     n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
 #     rates_hipm = zeros(length(param_pairs))
 #     rates_wow = zeros(length(param_pairs))
@@ -549,7 +549,7 @@ end
 
 
 
-# function rejection_rate_energy_boostrap_parallel(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
+# function rejection_rate_energy_boostrap_parallel(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
 #     rej_rate = 0.0
 
 #     @floop ThreadedEx() for s in 1:S
@@ -611,7 +611,7 @@ end
 
 
 
-# function rejection_rate_dm_boostrap(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
+# function rejection_rate_dm_boostrap(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
 
 #     rej_rate = 0.0
 #     for s in 1:S
@@ -645,7 +645,7 @@ end
 
 
 
-# function rejection_rate_hipm_boostrap_parallel(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
+# function rejection_rate_hipm_boostrap_parallel(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
 #     rej_rate = 0.0
 
 #     @floop ThreadedEx() for s in 1:S
@@ -682,7 +682,7 @@ end
 # end
 
 
-# function rejection_rate_hipm_permutation_wrong(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
+# function rejection_rate_hipm_permutation_wrong(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
 
 #     # firstly we obtain threshold
 #     hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
@@ -728,7 +728,7 @@ end
 
 
 
-# function rejection_rate_hipm_permutation_parallel(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
+# function rejection_rate_hipm_permutation_parallel(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
 #     rej_rate = 0.0
 
 #     @floop ThreadedEx() for s in 1:S
@@ -765,7 +765,7 @@ end
 
 
 
-# function rejection_rate_wow_boostrap_parallel(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
+# function rejection_rate_wow_boostrap_parallel(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_boostrap::Int)
 #     rej_rate = 0.0
 
 #     @floop ThreadedEx() for s in 1:S
@@ -802,7 +802,7 @@ end
 # end
 
 
-# function rejection_rate_wow_permutation_wrong(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
+# function rejection_rate_wow_permutation_wrong(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
 
 #     # firstly we obtain threshold
 #     hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
@@ -848,7 +848,7 @@ end
 
 
 
-# function rejection_rate_wow_permutation_parallel(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
+# function rejection_rate_wow_permutation_parallel(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
 #     rej_rate = 0.0
 
 #     @floop ThreadedEx() for s in 1:S

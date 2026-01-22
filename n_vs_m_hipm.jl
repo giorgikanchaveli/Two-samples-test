@@ -10,7 +10,7 @@ using CSV
 using FLoops
 using QuadGK
 
-function rejection_rate_hipm_permutation_parallel(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
+function rejection_rate_hipm_permutation_parallel(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
     rej_rate = 0.0
 
     @floop ThreadedEx() for s in 1:S
@@ -45,7 +45,7 @@ function rejection_rate_hipm_permutation_parallel(q_1::PPM, q_2::PPM, n::Int, m:
     return rej_rate / S
 end
 
-function rejection_rate_hipm_permutation_wrong(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
+function rejection_rate_hipm_permutation_wrong(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
 
     # firstly we obtain threshold
     hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)

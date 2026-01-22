@@ -38,7 +38,7 @@ function permutation_threshold_hipm(hier_sample_1::HierSample, hier_sample_2::Hi
     return quantile(permutation_samples, 1 - θ)
 end
 
-function rejection_rate_hipm(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_permutations::Int)
+function rejection_rate_hipm(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_permutations::Int)
     # firstly we obtain threshold for wrong approach
 
     threshold_wrong = permutation_threshold_hipm(generate_emp(q_1,n,m), generate_emp(q_2, n, m), θ, n_permutations)
@@ -126,7 +126,7 @@ function permutation_threshold_wow(hier_sample_1::HierSample, hier_sample_2::Hie
     return quantile(permutation_samples, 1 - θ)
 end
 
-function rejection_rate_wow(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int, θ::Float64, n_permutations::Int)
+function rejection_rate_wow(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_permutations::Int)
     # firstly we obtain threshold for wrong approach
 
     threshold_wrong = permutation_threshold_wow(generate_emp(q_1,n,m), generate_emp(q_2, n, m), θ, n_permutations)

@@ -28,7 +28,7 @@ const bootstrap = false
 
 
 
-compute_rej_rates = function(q_1::PPM, q_2::PPM, n::Int, 
+compute_rej_rates = function(q_1::LawRPM, q_2::LawRPM, n::Int, 
             m::Int, n_sims::Int, n_samples::Int, bootstrap::Bool)
     θs = collect(0.0:0.01:1.0)
     rej_rates_hipm = zeros(length(θs))

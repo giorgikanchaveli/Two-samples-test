@@ -5,7 +5,7 @@ using Plots
 
 
 
-function save_fig_hipm_wow(pairs::Vector{<:Tuple{PPM,PPM}}, param_pairs::Vector{Float64}, file_name::String, file_path::String, title::String, xlabel::String, ylabel::String,
+function save_fig_hipm_wow(pairs::Vector{<:Tuple{LawRPM,LawRPM}}, param_pairs::Vector{Float64}, file_name::String, file_path::String, title::String, xlabel::String, ylabel::String,
     n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
     rates_hipm = zeros(length(param_pairs))
     rates_wow = zeros(length(param_pairs))

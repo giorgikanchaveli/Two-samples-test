@@ -73,7 +73,7 @@ end
 
 
 
-function rejection_rate_wow_correct(q_1::PPM, q_2::PPM, n::Int, m::Int, S::Int,
+function rejection_rate_wow_correct(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int,
                      θ::Float64, n_samples::Int, bootstrap::Bool)
     # if bootstrap is true then do bootstrap approach, n_samples refers to either number of permutations or bootstraps
 
@@ -96,7 +96,7 @@ end
 
 
 
-function save_fig(pairs::Vector{<:Tuple{PPM,PPM}}, param_pairs::Vector{Float64}, file_name::String, file_path::String, title::String, xlabel::String, ylabel::String,
+function save_fig(pairs::Vector{<:Tuple{LawRPM,LawRPM}}, param_pairs::Vector{Float64}, file_name::String, file_path::String, title::String, xlabel::String, ylabel::String,
     n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
 
     rates_wow = zeros(length(param_pairs))
