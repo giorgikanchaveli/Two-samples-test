@@ -1,78 +1,117 @@
-#  In this file we define structures for several types of laws of random probability measures. 
-#  Each law of RPM has function generate_emp which generates hierarhical sample and wraps it into the struct HierSample.
+#  In this file, we define structures and a way to generate Hierarchical sample for several types of laws of random probability measures.
+#  In addition, we define functions to generate probability (actually parameters for it) measures directly from given laws of RPMs.
+
+
+# Notes:
+#        1) We are sorting rows after generating to speed up permutation test using WoW. 
+#        2) generate_prob measures function generates one parameter which completely characterizes the probability measure.   
+#           In the case of DM method, instead of doing the test on hierarchical samples, we do the test on quantiles obtained
+#           from the vectors of probability measures, because this way their method is much faster. 
+
 
 include("structures.jl")
 
-using Distributions, Random
+using Distributions, Random, StatsBase
 
 
-struct normal_tnormal<:LawRPM
-    # random probability measure is truncated gaussian distributions on [a,b] with mean generated from normal(μ, σ)
-    # sample space is [a,b]
+"""
+    tnormal_normal
 
-    μ::Float64 # mean of normal distribution from which we generate mean of inner normal distribution
-    σ::Float64 # standard deviation of normal distribution from which we generate mean of inner normal distribution
-    a::Float64 # interval [a,b] from which atoms are drawn
-    b::Float64 # interval [a,b] from which atoms are drawn
-end
+struct for Q, law of RPM, where random probability measure is Gaussian(δ, 1) and δ has truncated normal distribution on
+interval [a,b] with standard deviation σ and mean μ.     
 
+# Arguments:
+    μ::Float64  :  mean of truncated normal distribution from which we generate mean of inner normal distribution
+    σ::Float64  :  standard deviation of truncated normal distribution from which we generate mean of inner normal distribution
+    a::Float64  :  left end of truncation interval
+    b::Float64  :  right end of truncation interval 
 
+"""
 struct tnormal_normal<:LawRPM
-    # random probability measure is gaussian distributions on R with mean generated from truncated normal(μ, σ) on [a,b]
-    # and variance is 1.
-    # sample space is R
-    μ::Float64 # mean of truncated normal distribution from which we generate mean of inner normal distribution
-    σ::Float64 # standard deviation of truncated normal distribution from which we generate mean of inner normal distribution
-    a::Float64 # left end of truncation interval
-    b::Float64 # right end of truncation interval
-end
-
-
-
-struct DP<:LawRPM # Dirichlet process
-    α::Float64
-    p_0::Distribution # function generating observations from p_0
-    a::Float64 
-    b::Float64
-    # [a,b] is the observation space
-end
-
-struct normal_normal<:LawRPM 
-    # random probability measure is gaussian distributions with variance equal to 1 and 
-    # mean generated from normal(μ, σ) 
-    
-    # Note that sample space for exhangeable sequences is R
-
-    μ::Float64 # mean of normal distribution from which we generate mean of inner normal distribution
-    σ::Float64 # standard deviation of normal distribution from which we generate mean of inner normal distribution
-end
-
-
-
-struct uniform_normal<:LawRPM
-    # random probability measure is normal distribution with variance 1 and with mean generated from uniform(a,b)
-    
-    # Note that sample space for exhangeable sequences is R
+    μ::Float64 
+    σ::Float64 
     a::Float64 
     b::Float64 
+    function tnormal_normal(μ, σ, a, b)
+        
+        a <= b || throw(ArgumentError("a must be less than b (got a=$a, b=$b)"))
+
+
+        σ > 0 || throw(ArgumentError("Standard deviation σ must be positive (got σ=$σ)"))
+        return new(Float64(μ), Float64(σ), Float64(a), Float64(b))
+    end
 end
 
-struct mixture_ppm<:LawRPM
-    # mixture of two laws of random probability measures with mixing parameter λ
-    ppm1::LawRPM
-    ppm2::LawRPM
-    λ::Float64 # mixing parameter
+
+
+"""
+    DP
+
+struct for the Dirichlet Process DP(α, P_0).
+
+# Arguments:
+    α::Float64         :  concentration parameter.
+    p_0::Distribution  :  Base distribution.
+    a::Float64         :  left end of an interval where p_0 is defined
+    b::Float64         :  right end of an interval where p_0 is defined
+
+"""
+struct DP<:LawRPM 
+    α::Float64
+    p_0::Distribution 
+    a::Float64 
+    b::Float64
+    function DP(α, p_0::Distribution, a::Float64, b::Float64)
+        a <= b || throw(ArgumentError("a must be less than b (got a=$a, b=$b)"))
+        α > 0 || throw(ArgumentError("Concentration parameter α must be positive (got α=$α)"))
+        return new(Float64(α), p_0, Float64(a), Float64(b))
+    end
 end
 
-struct simple_discr_1<:LawRPM
-    # RPM which equals N(-1, 1) with probability 1/2 and N(1,1) with probability 1/2
 
-    # Note that sample space for exhangeable sequences is R
-end
-struct simple_discr_2<:LawRPM
-    # RPM which equals N(-2, 1) with probability 1/8, N(0,1) with probability 3/4 and N(2,1) with probability 1/8
+"""
+    discr_normal
     
-    # Note that sample space for exhangeable sequences is R
+struct for Q, law of RPM, where random probability measure is Gaussian(δ, 1) and δ has discrete distribution 
+on some atoms in with specified weights.
+
+# Arguments:
+    atoms::Vector{Float64}    :  concentration parameter.
+    weights::Vector{Float64}  :  Base distribution.
+"""
+struct discr_normal<:LawRPM
+    atoms::Vector{Float64}
+    weights::Vector{Float64}
+    function discr_normal(atoms::Vector{Float64}, weights::Vector{Float64})
+        length(atoms) == length(weights) || throw(ArgumentError("Length of atoms and weights must be equal. Got $(length(atoms)) and $(length(weights))."))
+        all(w -> w >= 0, weights) || throw(ArgumentError("All weights must be non-negative. Got weights = $weights."))
+        sum_weights = sum(weights)
+        abs(sum_weights - 1.0) < 1e-8 || throw(ArgumentError("Weights must sum to 1. Got sum = $sum_weights."))
+        return new(atoms, weights)
+    end
+end
+
+
+"""
+    mixture
+    
+struct for Q, law of RPM, defined as Q = λQ_1 + (1 - λ)Q_2 where Q_1,Q_2 are another laws of RPM.
+
+# Arguments:
+    lawrpm1::LawRPM  :  Law of RPM
+    lawrpm2::LawRPM  :  Law of RPM
+    λ::Float64       :  mixing parameter
+
+"""
+struct mixture<:LawRPM
+    # mixture of two laws of random probability measures with mixing parameter λ
+    lawrpm1::LawRPM
+    lawrpm2::LawRPM
+    λ::Float64 # mixing parameter
+    function mixture(lawrpm1::LawRPM, lawrpm2::LawRPM, λ::Float64)
+        (0.0 <= λ <= 1.0) || throw(ArgumentError("Mixing parameter λ must be in [0,1]. Got λ = $λ."))
+        return new(lawrpm1, lawrpm2, Float64(λ))
+    end
 end
 
 
@@ -82,201 +121,200 @@ end
 
 
 
+"""
+    sample_dirichlet_process
+Function to generate m samples from Dirichlet process DP(α, P_0). Start with a sample from base distribution P_0. Then, 
+At each step i, with probability α / (α + i - 1) we generate a new sample 
+from base distribution P_0, otherwise we choose uniformly from the previous samples.
 
+# Arguments:
+    m::Int  :          number of samples to generate from DP
+    α::Float64         :  concentration parameter
+    p_0::Distribution  :  base distribution
 
- function dirichlet_process_without_weight_new(n, α, p_0::Distribution)
-    # this is auxiliary function.
-    # Given function p_0 that returns sample from p_0
-    # we generate a n-sample from a Dirichlet process with parameter α and p_0
-
-    @assert n > 0 "n must be positive integer"
-    samples = Vector{Float64}(undef, n)
-    samples[1] = rand(p_0)
-    for i in 2:n
+"""
+ function sample_dirichlet_process(m, α, p_0::Distribution)
+    samples = Vector{Float64}(undef, m) # to store samples from DP
+    samples[1] = rand(p_0) # first sample from base distribution
+    for i in 2:m
         if rand() <= α / (α + i - 1)
-            samples[i] = rand(p_0)
+            samples[i] = rand(p_0) # new sample from base distribution
         else
-            index = rand(1:(i-1))
-            samples[i] = samples[index]
+            index = rand(1:(i-1)) # choose uniformly from the previous samples
+            samples[i] = samples[index] 
         end
     end
     return samples
 end
 
-# Note that each time we generate row of atoms, we sort them. This is This is done to avoid sorting during the
-# computation of WoW.
-
-    
 
 
-function generate_emp(ppm::DP, n_top::Int, n_bottom::Int)
-    # given random probability measure from Dirichlet process, generates empirical measure struct
-    # n is the number of random probability measures we want to sample
-    # m is the number of atoms from each random probability measure
-    atoms = zeros(n_top,n_bottom)
-    for i in 1:n_top
-        atoms[i,:] = sort(dirichlet_process_without_weight_new(n_bottom, ppm.α, ppm.p_0))
+"""
+    generate_emp
+
+Function to generate HierSample using Dirichlet process.
+# Arguments:
+    lawppm::DP
+    n::Int  :  number of rows in a hierarchical sample.
+    m::Int  :  number of columns in a hierarchical sample.
+"""
+
+function generate_emp(lawppm::DP, n::Int, m::Int)
+    atoms = zeros(n,m)
+    for i in 1:n
+        atoms[i,:] = sort(sample_dirichlet_process(m, lawppm.α, lawppm.p_0)) # generate row from DP
     end
-    return HierSample(atoms, ppm.a, ppm.b)
+    return HierSample(atoms, lawppm.a, lawppm.b)
 end
 
 
 
+"""
+    generate_emp
 
-function generate_emp(ppm::tnormal_normal, n_top::Int, n_bottom::Int)
+Function to generate HierSample using tnormal_normal as a law of RPM. For each n row in a resulting hierarchical sample,
+δ is generated from truncated normal distribution on [a,b] with standard deviation σ and mean μ, and 
+then m observations are generated from Gaussian(δ, 1).
 
-    atoms = zeros(n_top,n_bottom)
-    for i in 1:n_top
-        truncated_normal = truncated(Normal(ppm.μ, ppm.σ), ppm.a, ppm.b)
-        μ_inner = rand(truncated_normal)
-        
-        atoms[i,:] = sort(rand(Normal(μ_inner, 1.0), n_bottom))
+# Arguments:
+    lawrpm::tnormal_normal
+    n::Int  :  number of rows in a hierarchical sample.
+    m::Int  :  number of columns in a hierarchical sample.
+"""
+function generate_emp(lawrpm::tnormal_normal, n::Int, m::Int)
+    atoms = zeros(n,m)
+    for i in 1:n
+        truncated_normal = truncated(Normal(lawrpm.μ, lawrpm.σ), lawrpm.a, lawrpm.b) 
+        δ = rand(truncated_normal) # generate mean for latent Gaussian(δ, 1).
+
+        atoms[i,:] = sort(rand(Normal(δ, 1.0), m)) # generate obseravtions from Gaussian(δ, 1).
     end
-    a = @views minimum(atoms[:,1])
-    b = @views maximum(atoms[:,end])
+    a = @views minimum(atoms[:,1]) # left end point of interval containing hierarchical sample
+    b = @views maximum(atoms[:,end]) # right end point of interval containing hierarchical sample
     return HierSample(atoms, a, b)
 end
 
 
-function generate_emp(ppm::normal_tnormal, n_top::Int, n_bottom::Int)
-    # given random probability measure which takes values as trunacted normal distributions where mean is random variable from normal(μ,σ), 
-    # we generate hieraarchical measure
-    # which is used for estimating law of rpm.
 
-    # n is the number of random probability measures we want to sample
-    # m is the number of atoms from each random probability measure
-    a,b = ppm.a, ppm.b
-    atoms = zeros(n_top,n_bottom)
-    for i in 1:n_top
-        μ_inner = rand(Normal(ppm.μ, ppm.σ))
-        truncated_normal = truncated(Normal(μ_inner, ppm.σ), a, b)
-        atoms[i,:] = sort(rand(truncated_normal, n_bottom))
-    end
-    return HierSample(atoms, a, b)
-end
+"""
+    generate_emp
 
+Function to generate HierSample using mixture of two laws of RPM. Each latent probability measure is generated from either lawrpm1
+or lawrpm2 with probabilities λ and 1 - λ respectively.
 
-function issorted(m::Matrix{Float64})
-    # Checks if each row of matrix m is sorted.
-    flag = true
-    for i in m.size[1]
-        row = m[i,:]
-        for i in 1:(length(row)-1)
-            if row[i] > row[i + 1]
-                flag = false
-                return flag
-            end
-        end
-    end
-    return flag
-end
-
-
-
-function generate_emp(ppm::mixture_ppm, n_top::Int, n_bottom::Int)
-    # Given mixture of two laws of RPM, generate hierarchical sample from it.
-    atoms = zeros(n_top,n_bottom)
-    λ = ppm.λ
-    for i in 1:n_top
+# Arguments:
+    lawrpm::mixture  :  mixture of two laws of RPM.
+    n::Int           :  number of rows in a hierarchical sample.
+    m::Int           :  number of columns in a hierarchical sample.
+"""
+function generate_emp(lawrpm::mixture, n::Int, m::Int)
+    atoms = zeros(n,m) # to store hierarchical sample.
+    λ = lawrpm.λ
+    for i in 1:n
         if rand() <= λ
-            atoms[i,:] = generate_emp(ppm.ppm1, 1, n_bottom).atoms[1,:]
+            atoms[i,:] = generate_emp(lawrpm.lawrpm1, 1, m).atoms[1,:] # generate one row from lawrpm1
         else
-            atoms[i,:] = generate_emp(ppm.ppm2, 1, n_bottom).atoms[1,:]
+            atoms[i,:] = generate_emp(lawrpm.lawrpm2, 1, m).atoms[1,:] # generate one row from lawrpm2
         end
     end
-    a = @views minimum(atoms[:,1])
-    b = @views maximum(atoms[:,end])
-    # @assert issorted(atoms)
+    a = @views minimum(atoms[:,1]) # left end point of interval containing hierarchical sample
+    b = @views maximum(atoms[:,end]) # right end point of interval containing hierarchical sample
     return HierSample(atoms, a, b)
 end
 
 
+"""
+    generate_emp
 
+Function to generate HierSample using discr_normal as a law of RPM. For each n row in a resulting hierarchical sample,
+δ is generated from discrete measure and then m observations are generated from Gaussian(δ, 1).
 
-function generate_emp(ppm::simple_discr_1, n_top::Int, n_bottom::Int)
-    atoms = zeros(n_top,n_bottom)
+# Arguments:
+    lawrpm::discr_normal
+    n::Int  :  number of rows in a hierarchical sample.
+    m::Int  :  number of columns in a hierarchical sample.
+"""
+
+function generate_emp(lawrpm::discr_normal, n::Int, m::Int)
+    atoms = zeros(n, m) # to store hierarchical sample.
+
+    δs = sample(lawrpm.atoms, Weights(lawrpm.weights), n)  # generate means for latent Gaussians with parameters (δ, 1).
     for i in 1:n_top
-        if rand() <= 0.5
-            atoms[i,:] = sort(rand(Normal(-1.0,1.0), n_bottom))
-        else
-            atoms[i,:] = sort(rand(Normal(1.0,1.0), n_bottom))
-        end
+        atoms[i, :] = sort(rand(Normal(δs[i], 1.0), m)) # generate obseravtions from Gaussian(δ, 1).
     end
-    a = @views minimum(atoms[:,1])
-    b = @views maximum(atoms[:,end])
-    return HierSample(atoms, a, b)
-end
 
-function generate_emp(ppm::simple_discr_2, n_top::Int, n_bottom::Int)
-    atoms = zeros(n_top,n_bottom)
-    for i in 1:n_top
-        r = rand()
-        if r <= 1/8
-            atoms[i,:] = sort(rand(Normal(-2.0,1.0), n_bottom))
-        elseif r <= 7/8
-            atoms[i,:] = sort(rand(Normal(0.0,1.0), n_bottom))
-        else
-            atoms[i,:] = sort(rand(Normal(2.0,1.0), n_bottom))
-        end
-    end
-    a = @views minimum(atoms[:,1])
-    b = @views maximum(atoms[:,end])
+    a = @views minimum(atoms[:,1]) # left end point of interval containing hierarchical sample
+    b = @views maximum(atoms[:,end]) # right end point of interval containing hierarchical sample
     return HierSample(atoms, a, b)
 end
 
 
-# generate_prob measures function generates one parameter which completely characterizes the probability measure.
-# In the case of DM method,instead of doing the test on hierarchical samples, we do the test on vectors of probability
-# measures, because this way their method is much faster. This gives DM method advantage because we estimate probability
-# measures from the sample generatad by them.
 
-function generate_prob_measures(ppm::tnormal_normal, n::Int)
-    truncated_normal = truncated(Normal(ppm.μ, ppm.σ), ppm.a, ppm.b)
+
+
+"""
+    generate_prob_measures
+Function to generate n values for δ tnormal_normal law of RPM which completely characterizes the probability measure Gaussian(δ, 1).
+# Arguments:
+    lawppm::tnormal_normal
+    n::Int  :  number of probability measures to generate.
+"""
+
+function generate_prob_measures(lawppm::tnormal_normal, n::Int)
+    truncated_normal = truncated(Normal(lawppm.μ, lawppm.σ), lawppm.a, lawppm.b)
     return rand(truncated_normal, n)
 end
 
-function generate_prob_measures(ppm::simple_discr_1, n::Int)
-    means = zeros(n)
-    for i in 1:n
-        if rand() <= 0.5
-            means[i] = -1.0
-        else
-            means[i] = 1.0
-        end
-    end 
-    return means
+"""
+    generate_prob_measures
+Function to generate n values for δ from discr_normal that completely characterizes the probability measure Gaussian(δ, 1).
+As discr_normal is discrete measure, we sample n values from its atoms with respect to its weights (without replacement).
+
+# Arguments:
+    lawppm::discr_normal
+    n::Int  :  number of probability measures to generate.
+"""
+function generate_prob_measures(lawppm::discr_normal, n::Int)
+    return sample(lawppm.atoms, Weights(lawppm.weights), n)
 end
 
-function generate_prob_measures(ppm::simple_discr_2, n::Int)
-    means = zeros(n)
-    for i in 1:n
-        r = rand()
-        if r <= 1/8
-            means[i] = -2.0
-        elseif r <= 7/8
-            means[i] = 0.0
-        else
-            means[i] = 2.0
-        end
-    end 
-    return means
-end
+"""
+    generate_prob_measures
 
+Function to generate n values for δ from mixture of two laws of RPM that completely characterizes the probability measure Gaussian(δ, 1).
+Each δ is generated from either lawppm1 or lawppm2 with probabilities λ and 1 - λ respectively. 
 
-function generate_prob_measures(ppm::mixture_ppm, n::Int)
-    means = zeros(n)
-    λ = ppm.λ
+# Arguments:
+    lawppm::mixture
+    n::Int  :  number of probability measures to generate.
+"""
+function generate_prob_measures(lawppm::mixture, n::Int)
+    δs = zeros(n)
+    λ = lawppm.λ # mixing parameter
     for i in 1:n
         if rand() <= λ
-            means[i] = generate_prob_measures(ppm.ppm1, 1)[1]
+            δs[i] = generate_prob_measures(lawppm.ppm1, 1)[1]
         else
-            means[i] = generate_prob_measures(ppm.ppm2, 1)[1]
+            δs[i] = generate_prob_measures(lawppm.ppm2, 1)[1]
         end
     end
-    return means
+    return δs
 end
 
-
+# function issorted(m::Matrix{Float64})
+#     # Checks if each row of matrix m is sorted.
+#     flag = true
+#     for i in m.size[1]
+#         row = m[i,:]
+#         for i in 1:(length(row)-1)
+#             if row[i] > row[i + 1]
+#                 flag = false
+#                 return flag
+#             end
+#         end
+#     end
+#     return flag
+# end
 
 
 # function probability(baseMeasure::String)
@@ -490,6 +528,37 @@ end
 #     return generate_emp(pms, n_top, n_bottom)
 # end
 
+# struct normal_tnormal<:LawRPM
+#     # random probability measure is truncated gaussian distributions on [a,b] with mean generated from normal(μ, σ)
+#     # sample space is [a,b]
+
+#     μ::Float64 # mean of normal distribution from which we generate mean of inner normal distribution
+#     σ::Float64 # standard deviation of normal distribution from which we generate mean of inner normal distribution
+#     a::Float64 # interval [a,b] from which atoms are drawn
+#     b::Float64 # interval [a,b] from which atoms are drawn
+# end
+
+
+
+# struct normal_normal<:LawRPM 
+#     # random probability measure is gaussian distributions with variance equal to 1 and 
+#     # mean generated from normal(μ, σ) 
+    
+#     # Note that sample space for exhangeable sequences is R
+
+#     μ::Float64 # mean of normal distribution from which we generate mean of inner normal distribution
+#     σ::Float64 # standard deviation of normal distribution from which we generate mean of inner normal distribution
+# end
+
+
+
+# struct uniform_normal<:LawRPM
+#     # random probability measure is normal distribution with variance 1 and with mean generated from uniform(a,b)
+    
+#     # Note that sample space for exhangeable sequences is R
+#     a::Float64 
+#     b::Float64 
+# end
 
 
 
@@ -497,3 +566,20 @@ end
 
 
 
+
+# function generate_emp(ppm::normal_tnormal, n_top::Int, n_bottom::Int)
+#     # given random probability measure which takes values as trunacted normal distributions where mean is random variable from normal(μ,σ), 
+#     # we generate hieraarchical measure
+#     # which is used for estimating law of rpm.
+
+#     # n is the number of random probability measures we want to sample
+#     # m is the number of atoms from each random probability measure
+#     a,b = ppm.a, ppm.b
+#     atoms = zeros(n_top,n_bottom)
+#     for i in 1:n_top
+#         μ_inner = rand(Normal(ppm.μ, ppm.σ))
+#         truncated_normal = truncated(Normal(μ_inner, ppm.σ), a, b)
+#         atoms[i,:] = sort(rand(truncated_normal, n_bottom))
+#     end
+#     return HierSample(atoms, a, b)
+# end
