@@ -34,7 +34,7 @@ function test_statistic_energy(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64
     return distance * n / 2
 end
 
-function decide_energy(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int)
+function decide_energy(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_samples::Int)
     # Given two hierarchical samples, it decides whether to reject H_0 using 
     # bootstrap or permutation approach.
 
@@ -94,7 +94,7 @@ end
 
 
 
-function decide_dm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_bootstrap::Int)
+function decide_dm(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_bootstrap::Int)
     # Given two vectors containing probability measures, decides whether to reject H_0 or not
     # according to DM method.
     n = hier_sample_1.n
@@ -150,7 +150,7 @@ end
 
 
 
-function threshold_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
+function threshold_hipm(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_samples::Int, bootstrap::Bool)
     # Obtains threshold for HIPM via permutation or bootstrap approach.
     n = hier_sample_1.n
     a = minimum((hier_sample_1.a,hier_sample_2.a))
@@ -182,7 +182,7 @@ function threshold_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Floa
 end
 
 
-function threshold_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Vector{Float64}, n_samples::Int, bootstrap::Bool)
+function threshold_hipm(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Vector{Float64}, n_samples::Int, bootstrap::Bool)
     # Obtains threshold for HIPM via permutation or bootstrap approach.
     n = hier_sample_1.n
     a = minimum((hier_sample_1.a,hier_sample_2.a))
@@ -215,7 +215,7 @@ function threshold_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Vect
 end
 
 
-function decide_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
+function decide_hipm(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_samples::Int, bootstrap::Bool)
     # Given two hierarchical samples, it decides whether to reject H_0 using HIPM via
     # bootstrap or permutation approach. 
     threshold = threshold_hipm(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
@@ -225,7 +225,7 @@ function decide_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64
     return 1.0*(dlip(hier_sample_1, hier_sample_2, a, b) > threshold)
 end
 
-function decide_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Vector{Float64}, n_samples::Int, bootstrap::Bool)
+function decide_hipm(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Vector{Float64}, n_samples::Int, bootstrap::Bool)
     # Given two hierarchical samples, it decides whether to reject H_0 using HIPM via
     # bootstrap or permutation approach. 
     threshold = threshold_hipm(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
@@ -235,7 +235,7 @@ function decide_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Vector{
     return 1.0.*(dlip(hier_sample_1, hier_sample_2, a, b) .> threshold)
 end
 
-function threshold_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
+function threshold_wow(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_samples::Int, bootstrap::Bool)
     # Obtains threshold for WoW via permutation or bootstrap approach.
     n = hier_sample_1.n
     atoms_1 = hier_sample_1.atoms
@@ -268,7 +268,7 @@ function threshold_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float
 end
 
 
-function threshold_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Vector{Float64}, n_samples::Int, bootstrap::Bool)
+function threshold_wow(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Vector{Float64}, n_samples::Int, bootstrap::Bool)
     # Obtains threshold for WoW via permutation or bootstrap approach.
     n = hier_sample_1.n
     atoms_1 = hier_sample_1.atoms
@@ -300,7 +300,7 @@ function threshold_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Vecto
     return quantile(samples, 1 .- θ)
 end
 
-function decide_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Vector{Float64}, n_samples::Int, bootstrap::Bool)
+function decide_wow(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Vector{Float64}, n_samples::Int, bootstrap::Bool)
     # Given two hierarchical samples, it decides whether to reject H_0 using WoW via
     # bootstrap or permutation approach. 
     threshold = threshold_wow(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
@@ -308,7 +308,7 @@ function decide_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Vector{F
     return 1.0.*(ww(hier_sample_1, hier_sample_2) .> threshold)
 end
 
-function decide_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
+function decide_wow(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_samples::Int, bootstrap::Bool)
     # Given two hierarchical samples, it decides whether to reject H_0 using WoW via
     # bootstrap or permutation approach. 
     threshold = threshold_wow(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
@@ -568,8 +568,8 @@ end
 #             atoms_2 = total_rows[indices_2,:]  # resample from pooled hierarchical sample
             
         
-#             hier_sample_1_boostrap = emp_ppm(atoms_1, n, m, a, b)
-#             hier_sample_2_boostrap = emp_ppm(atoms_2, n, m, a, b)
+#             hier_sample_1_boostrap = HierSample(atoms_1, n, m, a, b)
+#             hier_sample_2_boostrap = HierSample(atoms_2, n, m, a, b)
 
 #             boostrap_samples[i] = test_statistic_energy(hier_sample_1_boostrap, hier_sample_2_boostrap)
 #         end
@@ -582,7 +582,7 @@ end
 
 
 
-# function decide_dm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int)
+# function decide_dm(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_samples::Int)
 #     atoms_1 = copy(hier_sample_1.atoms)
 #     atoms_2 = copy(hier_sample_2.atoms)
 #     n = hier_sample_1.n     
@@ -669,8 +669,8 @@ end
 #             atoms_2 = total_rows[indices_2,:]  # resample from pooled hierarchical sample
             
         
-#             hier_sample_1_boostrap = emp_ppm(atoms_1, n, m, a, b)
-#             hier_sample_2_boostrap = emp_ppm(atoms_2, n, m, a, b)
+#             hier_sample_1_boostrap = HierSample(atoms_1, n, m, a, b)
+#             hier_sample_2_boostrap = HierSample(atoms_2, n, m, a, b)
 
 #             boostrap_samples[i] = dlip(hier_sample_1_boostrap, hier_sample_2_boostrap)
 #         end
@@ -701,8 +701,8 @@ end
 #             atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
 #             atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-#             hier_sample_1_permutation = emp_ppm(atoms_1, n, m, a, b)
-#             hier_sample_2_permutation = emp_ppm(atoms_2, n, m, a, b)
+#             hier_sample_1_permutation = HierSample(atoms_1, n, m, a, b)
+#             hier_sample_2_permutation = HierSample(atoms_2, n, m, a, b)
 
 #             permutation_samples[i] = dlip(hier_sample_1_permutation, hier_sample_2_permutation)
 #         end
@@ -751,8 +751,8 @@ end
 #             atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
 #             atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-#             hier_sample_1_permutation = emp_ppm(atoms_1, n, m, a, b)
-#             hier_sample_2_permutation = emp_ppm(atoms_2, n, m, a, b)
+#             hier_sample_1_permutation = HierSample(atoms_1, n, m, a, b)
+#             hier_sample_2_permutation = HierSample(atoms_2, n, m, a, b)
 
 #             permutation_samples[i] = dlip(hier_sample_1_permutation, hier_sample_2_permutation)
 #         end
@@ -789,8 +789,8 @@ end
 #             atoms_2 = total_rows[indices_2,:]  # resample from pooled hierarchical sample
             
         
-#             hier_sample_1_boostrap = emp_ppm(atoms_1, n, m, a, b)
-#             hier_sample_2_boostrap = emp_ppm(atoms_2, n, m, a, b)
+#             hier_sample_1_boostrap = HierSample(atoms_1, n, m, a, b)
+#             hier_sample_2_boostrap = HierSample(atoms_2, n, m, a, b)
 
 #             boostrap_samples[i] = ww(hier_sample_1_boostrap, hier_sample_2_boostrap)
 #         end
@@ -821,8 +821,8 @@ end
 #             atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
 #             atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-#             hier_sample_1_permutation = emp_ppm(atoms_1, n, m, a, b)
-#             hier_sample_2_permutation = emp_ppm(atoms_2, n, m, a, b)
+#             hier_sample_1_permutation = HierSample(atoms_1, n, m, a, b)
+#             hier_sample_2_permutation = HierSample(atoms_2, n, m, a, b)
 
 #             permutation_samples[i] = ww(hier_sample_1_permutation, hier_sample_2_permutation)
 #         end
@@ -871,8 +871,8 @@ end
 #             atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
 #             atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-#             hier_sample_1_permutation = emp_ppm(atoms_1, n, m, a, b)
-#             hier_sample_2_permutation = emp_ppm(atoms_2, n, m, a, b)
+#             hier_sample_1_permutation = HierSample(atoms_1, n, m, a, b)
+#             hier_sample_2_permutation = HierSample(atoms_2, n, m, a, b)
 
 #             permutation_samples[i] = ww(hier_sample_1_permutation, hier_sample_2_permutation)
 #         end

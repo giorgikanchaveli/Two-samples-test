@@ -328,7 +328,7 @@ function dlip(atoms_1::AbstractArray{Float64,2}, atoms_2::AbstractArray{Float64,
 end 
 
 
-function dlip(h_1::emp_ppm, h_2::emp_ppm, a::Float64, b::Float64, nGrid::Int = 250)
+function dlip(h_1::HierSample, h_2::HierSample, a::Float64, b::Float64, nGrid::Int = 250)
     return dlip(h_1.atoms, h_2.atoms, a, b, nGrid)
 end
 

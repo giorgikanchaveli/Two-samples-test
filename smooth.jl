@@ -8,7 +8,7 @@ include("distances/new_distance.jl")
 include("distances/distance_Wasserstein.jl")
 
 
-function threshold_wow_nothread(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
+function threshold_wow_nothread(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_samples::Int, bootstrap::Bool)
     n = hier_sample_1.n
     atoms_1 = hier_sample_1.atoms
     atoms_2 = hier_sample_2.atoms
@@ -40,7 +40,7 @@ function threshold_wow_nothread(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, 
 end
 
 
-function threshold_wow_thread(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
+function threshold_wow_thread(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_samples::Int, bootstrap::Bool)
     n = hier_sample_1.n
     atoms_1 = hier_sample_1.atoms
     atoms_2 = hier_sample_2.atoms

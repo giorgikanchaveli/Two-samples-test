@@ -317,7 +317,7 @@ function dlip_new(atoms_1::AbstractArray{Float64,2}, atoms_2::AbstractArray{Floa
 end 
 
 
-function dlip_new(h_1::emp_ppm, h_2::emp_ppm, a::Float64, b::Float64, nGrid::Int = 250)
+function dlip_new(h_1::HierSample, h_2::HierSample, a::Float64, b::Float64, nGrid::Int = 250)
     return dlip_new(h_1.atoms, h_2.atoms, a, b, nGrid)
 end
 
@@ -358,8 +358,8 @@ q_2 = DP(1.0, Beta(1, 1),0.0,1.0)
 h_1 = generate_emp(q_1, n, m)
 h_2 = generate_emp(q_2, n, m)
 
-# h_1 = emp_ppm(atoms_1, n, m, a, b)
-# h_2 = emp_ppm(atoms_2, n, m, a, b)
+# h_1 = HierSample(atoms_1, n, m, a, b)
+# h_2 = HierSample(atoms_2, n, m, a, b)
 
 
 new = @btime dlip_new(h_1, h_2, 0.0, 1.0)

@@ -27,7 +27,7 @@ value_dlip = dlip(hier_sample_1, hier_sample_2, a, b)
 
 # In the simulations, I first define the law of the RPM as a struct 
 # that is a subtype of the PPM struct. Each such struct includes function
-# for generating hierarchical samples. That function returns the struct emp_ppm that 
+# for generating hierarchical samples. That function returns the struct HierSample that 
 # encapsulates all information about hierarchical sample — such as atoms, interval endpoints, 
 # and the parameters n and m. 
 # Additionally, dlip and WoW are defined for these structs. For convenience, 

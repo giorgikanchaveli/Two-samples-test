@@ -39,7 +39,7 @@ using Plots
     return distance * n / 2
 end
 
-# @everywhere function threshold_energy(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int)
+# @everywhere function threshold_energy(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_samples::Int)
 #     n = hier_sample_1.n
 #     atoms_1 = sort(hier_sample_1.atoms, dims = 2)
 #     atoms_2 = sort(hier_sample_2.atoms, dims = 2)
@@ -73,7 +73,7 @@ end
     return bootstrap_samples
 end
 
-function threshold_energy(hier_sample_1::emp_ppm,hier_sample_2::emp_ppm,θ::Float64, n_samples::Int)
+function threshold_energy(hier_sample_1::HierSample,hier_sample_2::HierSample,θ::Float64, n_samples::Int)
 
     n = hier_sample_1.n
     atoms_1 = sort(hier_sample_1.atoms, dims = 2)
@@ -160,8 +160,8 @@ end
             atoms_1 = total_rows[indices_1, :]      # n×m
             atoms_2 = total_rows[indices_2, :]      # n×m
 
-            hier_1 = emp_ppm(atoms_1, n, m, a, b)
-            hier_2 = emp_ppm(atoms_2, n, m, a, b)
+            hier_1 = HierSample(atoms_1, n, m, a, b)
+            hier_2 = HierSample(atoms_2, n, m, a, b)
 
             samples[i] = dlip(hier_1, hier_2)
         end
@@ -172,8 +172,8 @@ end
             atoms_1 = total_rows[random_indices[1:n],     :]
             atoms_2 = total_rows[random_indices[n+1:end], :]
 
-            hier_1 = emp_ppm(atoms_1, n, m, a, b)
-            hier_2 = emp_ppm(atoms_2, n, m, a, b)
+            hier_1 = HierSample(atoms_1, n, m, a, b)
+            hier_2 = HierSample(atoms_2, n, m, a, b)
 
             samples[i] = dlip(hier_1, hier_2)
         end
@@ -183,8 +183,8 @@ end
 end
 
 
-function threshold_hipm(hier_sample_1::emp_ppm,
-                        hier_sample_2::emp_ppm,
+function threshold_hipm(hier_sample_1::HierSample,
+                        hier_sample_2::HierSample,
                         θ::Float64,
                         n_samples::Int,
                         bootstrap::Bool)
@@ -221,7 +221,7 @@ end
 
 
 
-# @everywhere function threshold_hipm(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
+# @everywhere function threshold_hipm(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_samples::Int, bootstrap::Bool)
 #     n = hier_sample_1.n
 #     m = hier_sample_1.m
 #     # set endpoints
@@ -242,8 +242,8 @@ end
 #             atoms_1 = total_rows[indices_1,:] # first rows indexed by n random indices to the atoms_1
 #             atoms_2 = total_rows[indices_2,:] # first rows indexed by n random indices to the atoms_2
 
-#             hier_sample_1_bootstrap = emp_ppm(atoms_1, n, m, a, b)
-#             hier_sample_2_bootstrap = emp_ppm(atoms_2, n, m, a, b)
+#             hier_sample_1_bootstrap = HierSample(atoms_1, n, m, a, b)
+#             hier_sample_2_bootstrap = HierSample(atoms_2, n, m, a, b)
 
 #             samples[i] = dlip(hier_sample_1_bootstrap, hier_sample_2_bootstrap)
            
@@ -255,8 +255,8 @@ end
 #             atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
 #             atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-#             hier_sample_1_permutation = emp_ppm(atoms_1, n, m, a, b)
-#             hier_sample_2_permutation = emp_ppm(atoms_2, n, m, a, b)
+#             hier_sample_1_permutation = HierSample(atoms_1, n, m, a, b)
+#             hier_sample_2_permutation = HierSample(atoms_2, n, m, a, b)
 #             samples[i] = dlip(hier_sample_1_permutation, hier_sample_2_permutation)
             
 #         end
@@ -265,7 +265,7 @@ end
 # end
 
 
-# @everywhere function threshold_wow(hier_sample_1::emp_ppm, hier_sample_2::emp_ppm, θ::Float64, n_samples::Int, bootstrap::Bool)
+# @everywhere function threshold_wow(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_samples::Int, bootstrap::Bool)
 #     n = hier_sample_1.n
 
 #     atoms_1 = sort(hier_sample_1.atoms, dims = 2)
@@ -325,8 +325,8 @@ end
 
     return samples
 end
-function threshold_wow(hier_sample_1::emp_ppm,
-                       hier_sample_2::emp_ppm,
+function threshold_wow(hier_sample_1::HierSample,
+                       hier_sample_2::HierSample,
                        θ::Float64,
                        n_samples::Int,
                        bootstrap::Bool)

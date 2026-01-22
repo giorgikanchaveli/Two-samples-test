@@ -87,7 +87,7 @@ end
 
 
 
-function ww(q_1::emp_ppm, q_2::emp_ppm)
+function ww(q_1::HierSample, q_2::HierSample)
     # Assuming that the number of atoms at the lower level is the same in each measure and atoms are have sorted rows
     return ww(q_1.atoms, q_2.atoms)
 end 
@@ -95,7 +95,7 @@ end
 
 
 
-# function ww(q_1::emp_ppm, q_2::emp_ppm, p = 1)
+# function ww(q_1::HierSample, q_2::HierSample, p = 1)
 #     # Assuming that the number of atoms at the lower level is the same in each measure 
     
 #     measure1, measure2 = q_1.atoms[:,:], q_2.atoms[:,:]

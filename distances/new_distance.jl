@@ -297,7 +297,7 @@ function dlip(measure1::AbstractArray{Float64, 3}, measure2::AbstractArray{Float
 end 
 
 
-function dlip(q_1::emp_ppm, q_2::emp_ppm, a::Float64, b::Float64; nGrid::Int=150, nSteps::Int=1000, nRerun::Int=5, tol::Float64=1e-4)
+function dlip(q_1::HierSample, q_2::HierSample, a::Float64, b::Float64; nGrid::Int=150, nSteps::Int=1000, nRerun::Int=5, tol::Float64=1e-4)
    
     measure1 = similar(q_1.atoms, eltype(q_1.atoms), q_1.n, q_1.m, 2)
     measure2 = similar(q_2.atoms, eltype(q_2.atoms), q_2.n, q_2.m, 2)
@@ -313,7 +313,7 @@ function dlip(q_1::emp_ppm, q_2::emp_ppm, a::Float64, b::Float64; nGrid::Int=150
 end
 
 
-function lower_bound(q_1::emp_ppm, q_2::emp_ppm)
+function lower_bound(q_1::HierSample, q_2::HierSample)
     a, b = q_1.a, q_1.b
     
     measure1 = similar(q_1.atoms, eltype(q_1.atoms), q_1.n, q_1.m, 2)
