@@ -33,8 +33,8 @@ function rejection_rate_hipm_permutation_parallel(q_1::LawRPM, q_2::LawRPM, n::I
             atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
             atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-            hier_sample_1_permutation = HierSample(atoms_1, n, m, a, b)
-            hier_sample_2_permutation = HierSample(atoms_2, n, m, a, b)
+            hier_sample_1_permutation = HierSample(atoms_1, a, b)
+            hier_sample_2_permutation = HierSample(atoms_2, a, b)
 
             permutation_samples[i] = dlip(hier_sample_1_permutation, hier_sample_2_permutation)
         end
@@ -64,8 +64,8 @@ function rejection_rate_hipm_permutation_wrong(q_1::LawRPM, q_2::LawRPM, n::Int,
             atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
             atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-            hier_sample_1_permutation = HierSample(atoms_1, n, m, a, b)
-            hier_sample_2_permutation = HierSample(atoms_2, n, m, a, b)
+            hier_sample_1_permutation = HierSample(atoms_1, a, b)
+            hier_sample_2_permutation = HierSample(atoms_2, a, b)
 
             permutation_samples[i] = dlip(hier_sample_1_permutation, hier_sample_2_permutation)
         end

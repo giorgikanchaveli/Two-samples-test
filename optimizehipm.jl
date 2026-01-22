@@ -358,8 +358,8 @@ q_2 = DP(1.0, Beta(1, 1),0.0,1.0)
 h_1 = generate_emp(q_1, n, m)
 h_2 = generate_emp(q_2, n, m)
 
-# h_1 = HierSample(atoms_1, n, m, a, b)
-# h_2 = HierSample(atoms_2, n, m, a, b)
+# h_1 = HierSample(atoms_1, a, b)
+# h_2 = HierSample(atoms_2, a, b)
 
 
 new = @btime dlip_new(h_1, h_2, 0.0, 1.0)

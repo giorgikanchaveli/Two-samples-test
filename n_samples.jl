@@ -24,8 +24,8 @@ function threshold_hipm_nothread(hier_sample_1::HierSample, hier_sample_2::HierS
             new_atoms_1 = total_rows[indices_1,:] # first rows indexed by n random indices to the atoms_1
             new_atoms_2 = total_rows[indices_2,:] # first rows indexed by n random indices to the atoms_2
 
-            new_h_1 = HierSample(new_atoms_1, n, m, a, b)
-            new_h_2 = HierSample(new_atoms_2, n, m, a, b)
+            new_h_1 = HierSample(new_atoms_1, a, b)
+            new_h_2 = HierSample(new_atoms_2, a, b)
 
             samples[i] = dlip(new_h_1, new_h_2, a, b)
         end
@@ -36,8 +36,8 @@ function threshold_hipm_nothread(hier_sample_1::HierSample, hier_sample_2::HierS
             new_atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
             new_atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-            new_h_1 = HierSample(new_atoms_1, n, m, a, b)
-            new_h_2 = HierSample(new_atoms_2, n, m, a, b)
+            new_h_1 = HierSample(new_atoms_1,  a, b)
+            new_h_2 = HierSample(new_atoms_2,  a, b)
 
             samples[i] = dlip(new_h_1, new_h_2, a, b)
         end

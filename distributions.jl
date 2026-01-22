@@ -117,7 +117,7 @@ function generate_emp(ppm::DP, n_top::Int, n_bottom::Int)
     for i in 1:n_top
         atoms[i,:] = sort(dirichlet_process_without_weight_new(n_bottom, ppm.α, ppm.p_0))
     end
-    return HierSample(atoms, n_top, n_bottom, ppm.a, ppm.b)
+    return HierSample(atoms, ppm.a, ppm.b)
 end
 
 
@@ -134,7 +134,7 @@ function generate_emp(ppm::tnormal_normal, n_top::Int, n_bottom::Int)
     end
     a = @views minimum(atoms[:,1])
     b = @views maximum(atoms[:,end])
-    return HierSample(atoms, n_top, n_bottom, a, b)
+    return HierSample(atoms, a, b)
 end
 
 
@@ -152,7 +152,7 @@ function generate_emp(ppm::normal_tnormal, n_top::Int, n_bottom::Int)
         truncated_normal = truncated(Normal(μ_inner, ppm.σ), a, b)
         atoms[i,:] = sort(rand(truncated_normal, n_bottom))
     end
-    return HierSample(atoms, n_top, n_bottom, a, b)
+    return HierSample(atoms, a, b)
 end
 
 
@@ -187,7 +187,7 @@ function generate_emp(ppm::mixture_ppm, n_top::Int, n_bottom::Int)
     a = @views minimum(atoms[:,1])
     b = @views maximum(atoms[:,end])
     # @assert issorted(atoms)
-    return HierSample(atoms, n_top, n_bottom, a, b)
+    return HierSample(atoms, a, b)
 end
 
 
@@ -204,7 +204,7 @@ function generate_emp(ppm::simple_discr_1, n_top::Int, n_bottom::Int)
     end
     a = @views minimum(atoms[:,1])
     b = @views maximum(atoms[:,end])
-    return HierSample(atoms, n_top, n_bottom, a, b)
+    return HierSample(atoms, a, b)
 end
 
 function generate_emp(ppm::simple_discr_2, n_top::Int, n_bottom::Int)
@@ -221,7 +221,7 @@ function generate_emp(ppm::simple_discr_2, n_top::Int, n_bottom::Int)
     end
     a = @views minimum(atoms[:,1])
     b = @views maximum(atoms[:,end])
-    return HierSample(atoms, n_top, n_bottom, a, b)
+    return HierSample(atoms, a, b)
 end
 
 
@@ -370,7 +370,7 @@ end
 #         truncated_normal = truncated(Normal(ppm.μ[r], ppm.σ[r]), a, b)
 #         atoms[i,:] = rand(truncated_normal, n_bottom)
 #     end
-#     return HierSample(atoms, n_top, n_bottom, a, b)
+#     return HierSample(atoms, a, b)
 # end
 
 
@@ -385,7 +385,7 @@ end
 #     end
 #     a = minimum(atoms) # left end of an interaval where observations take values
 #     b = maximum(atoms) # right end of an interaval where observations take values
-#     return HierSample(atoms, n_top, n_bottom, a, b)
+#     return HierSample(atoms, a, b)
 # end
 
 # function generate_emp(pms::Vector{Any}, n_top::Int, n_bottom::Int)
@@ -400,7 +400,7 @@ end
 #     end
 #     a = minimum(atoms) # left end of an interaval where observations take values
 #     b = maximum(atoms) # right end of an interaval where observations take values
-#     return HierSample(atoms, n_top, n_bottom, a, b)
+#     return HierSample(atoms, a, b)
 # end
 
 

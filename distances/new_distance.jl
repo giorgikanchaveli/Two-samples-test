@@ -298,15 +298,15 @@ end
 
 
 function dlip(q_1::HierSample, q_2::HierSample, a::Float64, b::Float64; nGrid::Int=150, nSteps::Int=1000, nRerun::Int=5, tol::Float64=1e-4)
-   
-    measure1 = similar(q_1.atoms, eltype(q_1.atoms), q_1.n, q_1.m, 2)
-    measure2 = similar(q_2.atoms, eltype(q_2.atoms), q_2.n, q_2.m, 2)
+    n, m = size(q_1.atoms)
+    measure1 = similar(q_1.atoms, eltype(q_1.atoms), n, m, 2)
+    measure2 = similar(q_2.atoms, eltype(q_2.atoms), n, m, 2)
 
     @views begin
         copyto!(measure1[:, :, 1], q_1.atoms)
         copyto!(measure2[:, :, 1], q_2.atoms)
-        measure1[:, :, 2] .= 1.0 / q_1.m
-        measure2[:, :, 2] .= 1.0 / q_2.m
+        measure1[:, :, 2] .= 1.0 / m
+        measure2[:, :, 2] .= 1.0 / m
     end
 
     return dlip(measure1, measure2, a, b, nGrid, nSteps, nRerun, tol)
@@ -315,15 +315,16 @@ end
 
 function lower_bound(q_1::HierSample, q_2::HierSample)
     a, b = q_1.a, q_1.b
+    n, m = size(q_1)
     
-    measure1 = similar(q_1.atoms, eltype(q_1.atoms), q_1.n, q_1.m, 2)
-    measure2 = similar(q_2.atoms, eltype(q_2.atoms), q_2.n, q_2.m, 2)
+    measure1 = similar(q_1.atoms, eltype(q_1.atoms), n, m, 2)
+    measure2 = similar(q_2.atoms, eltype(q_2.atoms), n, m, 2)
 
     @views begin
         copyto!(measure1[:, :, 1], q_1.atoms)
         copyto!(measure2[:, :, 1], q_2.atoms)
-        measure1[:, :, 2] .= one(eltype(q_1.atoms)) / q_1.m
-        measure2[:, :, 2] .= one(eltype(q_2.atoms)) / q_2.m
+        measure1[:, :, 2] .= one(eltype(q_1.atoms)) / m
+        measure2[:, :, 2] .= one(eltype(q_2.atoms)) / m
     end
     return lowerBound(measure1, measure2)
 end
