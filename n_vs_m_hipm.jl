@@ -14,7 +14,7 @@ function rejection_rate_hipm_permutation_parallel(q_1::LawRPM, q_2::LawRPM, n::I
     rej_rate = 0.0
 
     @floop ThreadedEx() for s in 1:S
-        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+        hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
         a = minimum([hier_sample_1.a, hier_sample_2.a])
         b = maximum([hier_sample_1.b, hier_sample_2.b])
         hier_sample_1.a = a
@@ -48,7 +48,7 @@ end
 function rejection_rate_hipm_permutation_wrong(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
 
     # firstly we obtain threshold
-    hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+    hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
     a = minimum((hier_sample_1.a, hier_sample_2.a))
     b = maximum((hier_sample_1.b, hier_sample_2.b))
     hier_sample_1.a = a
@@ -74,8 +74,8 @@ function rejection_rate_hipm_permutation_wrong(q_1::LawRPM, q_2::LawRPM, n::Int,
     rej_rate = 0.0
 
     @floop ThreadedEx() for s in 1:S
-        local hier_sample_1 = generate_emp(q_1, n, m)
-        local hier_sample_2 = generate_emp(q_2, n, m)
+        local hier_sample_1 = generate_hiersample(q_1, n, m)
+        local hier_sample_2 = generate_hiersample(q_2, n, m)
         local a = minimum([hier_sample_1.a, hier_sample_2.a])
         local b = maximum([hier_sample_1.b, hier_sample_2.b])
         hier_sample_1.a = a

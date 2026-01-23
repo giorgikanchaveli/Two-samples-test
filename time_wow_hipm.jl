@@ -143,7 +143,7 @@ S = 1
 θ = 0.05
 bootstrap = false
 
-h_1, h_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+h_1, h_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
 
 #@btime threshold_wow_nothread(h_1, h_2, θ, n_samples, bootstrap)
 @btime threshold_hipm_nothread(h_1, h_2, θ, n_samples, bootstrap)
@@ -162,7 +162,7 @@ b = maximum((h_1.b, h_2.b))
 
 # t= time()
 # for i in 1:S
-#     h_1, h_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+#     h_1, h_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
 #     threshold_wow_nothread(h_1, h_2, θ, n_samples, bootstrap)
 # end
 # dur_wass = time() - t
@@ -170,7 +170,7 @@ b = maximum((h_1.b, h_2.b))
 # # @floop ThreadedEx() 
 # t= time()
 # for i in 1:S
-#     h_1, h_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+#     h_1, h_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
 #     threshold_hipm_nothread(h_1, h_2, θ, n_samples, bootstrap)
 # end
 # dur_dlip = time() - t

@@ -35,7 +35,7 @@ compute_rej_rates = function(q_1::LawRPM, q_2::LawRPM, n::Int,
     rej_rates_wow = zeros(length(θs))
 
     @floop ThreadedEx() for s in 1:n_sims
-        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+        hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
         @reduce rej_rates_hipm .+= decide_hipm(hier_sample_1, hier_sample_2, θs, n_samples, bootstrap)
         @reduce rej_rates_wow .+= decide_wow(hier_sample_1, hier_sample_2, θs, n_samples, bootstrap)
     end

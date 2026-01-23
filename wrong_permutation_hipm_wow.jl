@@ -41,14 +41,14 @@ end
 function rejection_rate_hipm(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_permutations::Int)
     # firstly we obtain threshold for wrong approach
 
-    threshold_wrong = permutation_threshold_hipm(generate_emp(q_1,n,m), generate_emp(q_2, n, m), θ, n_permutations)
+    threshold_wrong = permutation_threshold_hipm(generate_hiersample(q_1,n,m), generate_hiersample(q_2, n, m), θ, n_permutations)
     
     rej_rate_wrong = 0.0
     rej_rate_proper = 0.0
 
     @floop ThreadedEx() for s in 1:S
-        hier_sample_1 = generate_emp(q_1, n, m)
-        hier_sample_2 = generate_emp(q_2, n, m)
+        hier_sample_1 = generate_hiersample(q_1, n, m)
+        hier_sample_2 = generate_hiersample(q_2, n, m)
 
         threshold_proper = permutation_threshold_hipm(hier_sample_1, hier_sample_2, θ, n_permutations) # obtain proper threshold
         # note that a and b for those samples are set by permutation_threshold_hipm function.
@@ -129,14 +129,14 @@ end
 function rejection_rate_wow(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_permutations::Int)
     # firstly we obtain threshold for wrong approach
 
-    threshold_wrong = permutation_threshold_wow(generate_emp(q_1,n,m), generate_emp(q_2, n, m), θ, n_permutations)
+    threshold_wrong = permutation_threshold_wow(generate_hiersample(q_1,n,m), generate_hiersample(q_2, n, m), θ, n_permutations)
     
     rej_rate_wrong = 0.0
     rej_rate_proper = 0.0
 
     @floop ThreadedEx() for s in 1:S
-        hier_sample_1 = generate_emp(q_1, n, m)
-        hier_sample_2 = generate_emp(q_2, n, m)
+        hier_sample_1 = generate_hiersample(q_1, n, m)
+        hier_sample_2 = generate_hiersample(q_2, n, m)
 
         threshold_proper = permutation_threshold_wow(hier_sample_1, hier_sample_2, θ, n_permutations) # obtain proper threshold
         # note that a and b for those samples are set by permutation_threshold_wow function.

@@ -40,8 +40,8 @@ b = 1.0
 q_1 = DP(1.0, Beta(1, 1), a, b)
 q_2 = DP(1.0, Beta(2, 3), a, b)
 
-hier_sample_1 = generate_emp(q_1, n, m)
-hier_sample_2 = generate_emp(q_2, n, m)
+hier_sample_1 = generate_hiersample(q_1, n, m)
+hier_sample_2 = generate_hiersample(q_2, n, m)
 
 
 value_wow = ww(hier_sample_1, hier_sample_2)
@@ -78,7 +78,7 @@ rates_hipm,rates_wow,rates_dm,rates_energy = rejection_rate_all(q_1, q_1, n, m, 
 # Summary of the files:
 
 # structures.jl : defines the composite data type for laws of RPMs and hierarchical samples.
-# distributions.jl : defines generate_emp function for several laws of RPMs which generates
+# distributions.jl : defines generate_hiersample function for several laws of RPMs which generates
 #                    hierarchical samples.
 # hipm.jl : defines hipm between hierarchical samples.
 # distance_Wasserstein.jl : defines WoW between hierarchical samples.

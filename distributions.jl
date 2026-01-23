@@ -113,7 +113,7 @@ end
 # methods to generate hierarhical samples
 
 """
-    gen_HierSample
+    generate_hiersample
 
 Function to generate HierSample using given law of RPM.
 # Arguments:
@@ -121,7 +121,7 @@ Function to generate HierSample using given law of RPM.
     n::Int  :  number of rows in a hierarchical sample.
     m::Int  :  number of columns in a hierarchical sample.
 """
-function gen_HierSample(lawrpm::LawRPM, n::Int, m::Int)
+function generate_hiersample(lawrpm::LawRPM, n::Int, m::Int)
     atoms = Matrix{Float64}(undef, n, m)
     for i in 1:n
         atoms[i, :] = sort(sample_exch_seq(lawrpm, m)) # generate row of exchangeable sequences from law of RPM
@@ -220,7 +220,7 @@ end
 
 
 # """
-#     generate_emp
+#     generate_hiersample
 
 # Function to generate HierSample using tnormal_normal as a law of RPM. For each n row in a resulting hierarchical sample,
 # δ is generated from truncated normal distribution on [a,b] with standard deviation σ and mean μ, and 
@@ -231,7 +231,7 @@ end
 #     n::Int  :  number of rows in a hierarchical sample.
 #     m::Int  :  number of columns in a hierarchical sample.
 # """
-# function generate_emp(lawrpm::tnormal_normal, n::Int, m::Int)
+# function generate_hiersample(lawrpm::tnormal_normal, n::Int, m::Int)
 #     atoms = zeros(n,m)
 #     for i in 1:n
 #         truncated_normal = truncated(Normal(lawrpm.μ, lawrpm.σ), lawrpm.a, lawrpm.b) 
@@ -247,7 +247,7 @@ end
 
 
 # """
-#     generate_emp
+#     generate_hiersample
 
 # Function to generate HierSample using mixture of two laws of RPM. Each latent probability measure is generated from either lawrpm1
 # or lawrpm2 with probabilities λ and 1 - λ respectively.
@@ -257,14 +257,14 @@ end
 #     n::Int           :  number of rows in a hierarchical sample.
 #     m::Int           :  number of columns in a hierarchical sample.
 # """
-# function generate_emp(lawrpm::mixture, n::Int, m::Int)
+# function generate_hiersample(lawrpm::mixture, n::Int, m::Int)
 #     atoms = zeros(n,m) # to store hierarchical sample.
 #     λ = lawrpm.λ
 #     for i in 1:n
 #         if rand() <= λ
-#             atoms[i,:] = generate_emp(lawrpm.lawrpm1, 1, m).atoms[1,:] # generate one row from lawrpm1
+#             atoms[i,:] = generate_hiersample(lawrpm.lawrpm1, 1, m).atoms[1,:] # generate one row from lawrpm1
 #         else
-#             atoms[i,:] = generate_emp(lawrpm.lawrpm2, 1, m).atoms[1,:] # generate one row from lawrpm2
+#             atoms[i,:] = generate_hiersample(lawrpm.lawrpm2, 1, m).atoms[1,:] # generate one row from lawrpm2
 #         end
 #     end
 #     a = @views minimum(atoms[:,1]) # left end point of interval containing hierarchical sample
@@ -274,7 +274,7 @@ end
 
 
 # """
-#     generate_emp
+#     generate_hiersample
 
 # Function to generate HierSample using discr_normal as a law of RPM. For each n row in a resulting hierarchical sample,
 # δ is generated from discrete measure and then m observations are generated from Gaussian(δ, 1).
@@ -285,7 +285,7 @@ end
 #     m::Int  :  number of columns in a hierarchical sample.
 # """
 
-# function generate_emp(lawrpm::discr_normal, n::Int, m::Int)
+# function generate_hiersample(lawrpm::discr_normal, n::Int, m::Int)
 #     atoms = zeros(n, m) # to store hierarchical sample.
 
 #     δs = sample(lawrpm.atoms, Weights(lawrpm.weights), n)  # generate means for latent Gaussians with parameters (δ, 1).
@@ -430,7 +430,7 @@ end
 
 
 
-# function generate_emp(ppm::discrrpm, n_top::Int, n_bottom::Int)
+# function generate_hiersample(ppm::discrrpm, n_top::Int, n_bottom::Int)
 #     # given discrete random probability measure, generates empirical measure struct
 #     # n is the number of random probability measures we want to sample
 #     # m is the number of atoms from each random probability measure
@@ -446,7 +446,7 @@ end
 # end
 
 
-# function generate_emp(ppm::discr_tnormal, n_top::Int, n_bottom::Int)
+# function generate_hiersample(ppm::discr_tnormal, n_top::Int, n_bottom::Int)
 #     # given discrete random probability measure over truncated normal distributions, generates empirical measure struct
 #     # which is used for estimating law of rpm.
 #     # n is the number of random probability measures we want to sample
@@ -463,7 +463,7 @@ end
 
 
 
-# function generate_emp(pms::Vector{Normal}, n_top::Int, n_bottom::Int)
+# function generate_hiersample(pms::Vector{Normal}, n_top::Int, n_bottom::Int)
 #     # given vector of n_top normal distributions, we generate n_bottom observations from each of them.
 #     # length sequence of observations. 
 #     @assert length(pms) == n_top "n and length of vector of probability measures are not equal"
@@ -476,7 +476,7 @@ end
 #     return HierSample(atoms, a, b)
 # end
 
-# function generate_emp(pms::Vector{Any}, n_top::Int, n_bottom::Int)
+# function generate_hiersample(pms::Vector{Any}, n_top::Int, n_bottom::Int)
 #     # given vector of n_top any probability measures, we generate n_bottom observations from each of them.
 
 #     # Each element in pms vector must be of type distributino ? 
@@ -571,11 +571,11 @@ end
 
 
 
-# function generate_emp(ppm::LawRPM, n_top::Int, n_bottom::Int)
+# function generate_hiersample(ppm::LawRPM, n_top::Int, n_bottom::Int)
 #     # given law of random probability measure, instead of directly generating hierarchical samples, we firstly
 #     # generate probability meassures and then observations from them.
 #     pms = generate_prob_measures(ppm, n_top)
-#     return generate_emp(pms, n_top, n_bottom)
+#     return generate_hiersample(pms, n_top, n_bottom)
 # end
 
 # struct normal_tnormal<:LawRPM
@@ -617,7 +617,7 @@ end
 
 
 
-# function generate_emp(ppm::normal_tnormal, n_top::Int, n_bottom::Int)
+# function generate_hiersample(ppm::normal_tnormal, n_top::Int, n_bottom::Int)
 #     # given random probability measure which takes values as trunacted normal distributions where mean is random variable from normal(μ,σ), 
 #     # we generate hieraarchical measure
 #     # which is used for estimating law of rpm.

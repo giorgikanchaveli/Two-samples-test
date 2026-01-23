@@ -62,7 +62,7 @@ q_2 = tnormal_normal(1.0, 1.4, -10.0, 10.0)
 
 
 for i in 1:K
-    h_1, h_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+    h_1, h_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
     threshold_1 = threshold_hipm_nothread(h_1, h_2, n_samples[1], bootstrap)
     threshold_2 = threshold_hipm_nothread(h_1, h_2, n_samples[2], bootstrap)
 

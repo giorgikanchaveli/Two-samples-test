@@ -141,7 +141,7 @@ function rejection_rate_dm(q_1::DP,q_2::DP, n::Int, m::Int,
     rate = 0.0
     
     for i in 1:S
-        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+        hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
         rate += decide_dm(hier_sample_1, hier_sample_2, θ, n_bootstrap) 
     end
     return rate/S
@@ -323,7 +323,7 @@ function rejection_rate_hipm_wow(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::In
     rates_wow = 0.0
     @floop ThreadedEx() for s in 1:S
         # generate samples
-        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+        hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
 
         # record decisions from each testing methods
         @reduce rates_hipm += decide_hipm(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
@@ -350,7 +350,7 @@ function rejection_rate_all(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ
 
     @floop ThreadedEx() for s in 1:S
         # generate samples and set endpoints
-        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+        hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
 
         # record decisions from each testing methods
         @reduce rates_hipm += decide_hipm(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
@@ -380,8 +380,8 @@ function rejection_rate_all_fake(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::In
     # samples and then used for each simulated sample.
 
     # firstly we obtain fixed thresholds for HIPM and WoW
-    aux_hier_sample_1 = generate_emp(q_1,n,m)
-    aux_hier_sample_2 = generate_emp(q_2, n, m)
+    aux_hier_sample_1 = generate_hiersample(q_1,n,m)
+    aux_hier_sample_2 = generate_hiersample(q_2, n, m)
     threshold_hipm_wrong = threshold_hipm(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
     threshold_wow_wrong = threshold_wow(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
 
@@ -391,7 +391,7 @@ function rejection_rate_all_fake(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::In
 
     @floop ThreadedEx() for s in 1:S
         # generate samples and set endpoints
-        hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+        hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
         a = minimum((hier_sample_1.a, hier_sample_2.a))
         b = maximum((hier_sample_1.b, hier_sample_2.b))
         hier_sample_1.a = a
@@ -465,7 +465,7 @@ end
   
 #     @floop ThreadedEx() for s in 1:S
 #         # generate samples and set endpoints
-#         hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+#         hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
         
 
 #         # record decisions from each testing methods
@@ -478,8 +478,8 @@ end
 # function rejection_rate_wow(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int,
 #                      θ::Float64, n_samples::Int, bootstrap::Bool)
 #     # firstly obtain threshold
-#     aux_hier_sample_1 = generate_emp(q_1,n,m)
-#     aux_hier_sample_2 = generate_emp(q_2, n, m)
+#     aux_hier_sample_1 = generate_hiersample(q_1,n,m)
+#     aux_hier_sample_2 = generate_hiersample(q_2, n, m)
 #     threshold_wow_wrong = threshold_wow(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
 #     return rejection_rate_wow(q_1, q_2, n, m, S, threshold_wow_wrong)
 # end
@@ -497,8 +497,8 @@ end
 #     # if bootstrap is true then do bootstrap approach, n_samples refers to either number of permutations or bootstraps
 
 #     # firstly we obtain fixed thresholds for HIPM and WoW
-#     aux_hier_sample_1 = generate_emp(q_1,n,m)
-#     aux_hier_sample_2 = generate_emp(q_2, n, m)
+#     aux_hier_sample_1 = generate_hiersample(q_1,n,m)
+#     aux_hier_sample_2 = generate_hiersample(q_2, n, m)
 #     threshold_hipm_wrong = threshold_hipm(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
 #     threshold_wow_wrong = threshold_wow(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
 
@@ -507,7 +507,7 @@ end
 
 #     @floop ThreadedEx() for s in 1:S
 #         # generate samples and set endpoints
-#         hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+#         hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
 #         a = minimum((hier_sample_1.a, hier_sample_2.a))
 #         b = maximum((hier_sample_1.b, hier_sample_2.b))
 #         hier_sample_1.a = a
@@ -553,7 +553,7 @@ end
 #     rej_rate = 0.0
 
 #     @floop ThreadedEx() for s in 1:S
-#         hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+#         hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
 #         observed_test_stat = test_statistic_energy(hier_sample_1, hier_sample_2)
         
 #         # obtain quantile using bootstrap approach
@@ -616,7 +616,7 @@ end
 #     rej_rate = 0.0
 #     for s in 1:S
      
-#         hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+#         hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
 #         atoms_1, atoms_2 = hier_sample_1.atoms, hier_sample_2.atoms
 
 #         @rput atoms_1 atoms_2 n n_boostrap
@@ -649,7 +649,7 @@ end
 #     rej_rate = 0.0
 
 #     @floop ThreadedEx() for s in 1:S
-#         hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+#         hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
 #         a = minimum([hier_sample_1.a, hier_sample_2.a])
 #         b = maximum([hier_sample_1.b, hier_sample_2.b])
 #         hier_sample_1.a = a
@@ -685,7 +685,7 @@ end
 # function rejection_rate_hipm_permutation_wrong(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
 
 #     # firstly we obtain threshold
-#     hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+#     hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
 #     a = minimum([hier_sample_1.a, hier_sample_2.a])
 #     b = maximum([hier_sample_1.b, hier_sample_2.b])
 #     hier_sample_1.a = a
@@ -711,8 +711,8 @@ end
 #     rej_rate = 0.0
 
 #     @floop ThreadedEx() for s in 1:S
-#         local hier_sample_1 = generate_emp(q_1, n, m)
-#         local hier_sample_2 = generate_emp(q_2, n, m)
+#         local hier_sample_1 = generate_hiersample(q_1, n, m)
+#         local hier_sample_2 = generate_hiersample(q_2, n, m)
 #         local a = minimum([hier_sample_1.a, hier_sample_2.a])
 #         local b = maximum([hier_sample_1.b, hier_sample_2.b])
 #         hier_sample_1.a = a
@@ -732,7 +732,7 @@ end
 #     rej_rate = 0.0
 
 #     @floop ThreadedEx() for s in 1:S
-#         hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+#         hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
 #         a = minimum([hier_sample_1.a, hier_sample_2.a])
 #         b = maximum([hier_sample_1.b, hier_sample_2.b])
 #         hier_sample_1.a = a
@@ -769,7 +769,7 @@ end
 #     rej_rate = 0.0
 
 #     @floop ThreadedEx() for s in 1:S
-#         hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+#         hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
 #         a = minimum([hier_sample_1.a, hier_sample_2.a])
 #         b = maximum([hier_sample_1.b, hier_sample_2.b])
 #         hier_sample_1.a = a
@@ -805,7 +805,7 @@ end
 # function rejection_rate_wow_permutation_wrong(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
 
 #     # firstly we obtain threshold
-#     hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+#     hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
 #     a = minimum([hier_sample_1.a, hier_sample_2.a])
 #     b = maximum([hier_sample_1.b, hier_sample_2.b])
 #     hier_sample_1.a = a
@@ -831,8 +831,8 @@ end
 #     rej_rate = 0.0
 
 #     @floop ThreadedEx() for s in 1:S
-#         local hier_sample_1 = generate_emp(q_1, n, m)
-#         local hier_sample_2 = generate_emp(q_2, n, m)
+#         local hier_sample_1 = generate_hiersample(q_1, n, m)
+#         local hier_sample_2 = generate_hiersample(q_2, n, m)
 #         local a = minimum([hier_sample_1.a, hier_sample_2.a])
 #         local b = maximum([hier_sample_1.b, hier_sample_2.b])
 #         hier_sample_1.a = a
@@ -852,7 +852,7 @@ end
 #     rej_rate = 0.0
 
 #     @floop ThreadedEx() for s in 1:S
-#         hier_sample_1, hier_sample_2 = generate_emp(q_1, n, m), generate_emp(q_2, n, m)
+#         hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
 #         a = minimum([hier_sample_1.a, hier_sample_2.a])
 #         b = maximum([hier_sample_1.b, hier_sample_2.b])
 #         hier_sample_1.a = a
