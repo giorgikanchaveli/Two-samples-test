@@ -7,7 +7,7 @@ include("distributions.jl")
 include("distances/new_distance.jl")
 using LinearAlgebra 
 using BenchmarkTools
-include("distances/distance_Wasserstein.jl")
+include("distances/wow.jl")
 # Measures are given as a nTop x nBottom x 2 array
 # nTop = n in the article 
 # nBottom = m in the article 

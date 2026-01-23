@@ -1,5 +1,5 @@
 include("distributions.jl")
-include("distances/distance_Wasserstein.jl")
+include("distances/wow.jl")
 include("distances/hipm.jl")
 
 using BenchmarkTools

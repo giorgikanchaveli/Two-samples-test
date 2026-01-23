@@ -81,7 +81,7 @@ rates_hipm,rates_wow,rates_dm,rates_energy = rejection_rate_all(q_1, q_1, n, m, 
 # distributions.jl : defines generate_hiersample function for several laws of RPMs which generates
 #                    hierarchical samples.
 # hipm.jl : defines hipm between hierarchical samples.
-# distance_Wasserstein.jl : defines WoW between hierarchical samples.
+# wow.jl : defines WoW between hierarchical samples.
 # methods.jl : includes functions for obtaining threshold, deciding whether to reject H_0,
 #              estimating rejection rate.
 

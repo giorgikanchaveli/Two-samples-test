@@ -16,7 +16,7 @@ using Plots
 @everywhere include("distributions.jl")
 
 @everywhere include("distances/new_distance.jl")
-@everywhere include("distances/distance_Wasserstein.jl")
+@everywhere include("distances/wow.jl")
 
 @everywhere function test_statistic_energy(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64})
     # we assume that rows in each atoms are sorted.

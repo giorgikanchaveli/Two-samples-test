@@ -5,7 +5,7 @@ using FLoops # for parallel computing
 include("distributions.jl")
 
 include("distances/new_distance.jl")
-include("distances/distance_Wasserstein.jl")
+include("distances/wow.jl")
 
 
 function threshold_wow_nothread(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_samples::Int, bootstrap::Bool)

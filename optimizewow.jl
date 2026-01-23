@@ -2,7 +2,7 @@
 # The main function of this code is 
 # wassersteinOverWasserstein
 include("structures.jl")
-include("distances/distance_Wasserstein.jl")
+include("distances/wow.jl")
 include("distributions.jl")
 using ExactOptimalTransport
 using Tulip

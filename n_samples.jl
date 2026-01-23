@@ -4,7 +4,7 @@ using FLoops # for parallel computing
 include("distributions.jl")
 
 include("distances/new_distance.jl")
-include("distances/distance_Wasserstein.jl")
+include("distances/wow.jl")
 
 
 

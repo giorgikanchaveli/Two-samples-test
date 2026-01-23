@@ -8,7 +8,7 @@ using FLoops # for parallel computing
 include("distributions.jl")
 
 include("distances/hipm.jl")
-include("distances/distance_Wasserstein.jl")
+include("distances/wow.jl")
 
 function test_statistic_energy(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64})
     # Given two hierarchical samples, computes test statistic

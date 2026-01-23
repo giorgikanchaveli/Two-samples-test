@@ -6,7 +6,7 @@
 
 include("structures.jl")
 include("distances/hipm.jl")
-include("distances/distance_Wasserstein.jl")
+include("distances/wow.jl")
 using Random
 
 
