@@ -32,13 +32,13 @@ struct tnormal_normal<:LawRPM
     σ::Float64 
     a::Float64 
     b::Float64 
-    function tnormal_normal(μ, σ, a, b)
+    function tnormal_normal(μ::Float64, σ::Float64, a::Float64, b::Float64)
         
         a <= b || throw(ArgumentError("a must be less than b (got a=$a, b=$b)"))
 
 
         σ > 0 || throw(ArgumentError("Standard deviation σ must be positive (got σ=$σ)"))
-        return new(Float64(μ), Float64(σ), Float64(a), Float64(b))
+        return new(μ, σ, a, b)
     end
 end
 
@@ -57,9 +57,9 @@ struct for the Dirichlet Process DP(α, P_0).
 struct DP<:LawRPM 
     α::Float64
     p_0::Distribution 
-    function DP(α, p_0::Distribution)
+    function DP(α::Float64, p_0::Distribution)
         α > 0 || throw(ArgumentError("Concentration parameter α must be positive (got α=$α)"))
-        return new(Float64(α), p_0)
+        return new(α, p_0)
     end
 end
 
@@ -97,13 +97,13 @@ struct for Q, law of RPM, defined as Q = λQ_1 + (1 - λ)Q_2 where Q_1,Q_2 are a
     λ::Float64       :  mixing parameter
 
 """
-struct mixture{Q1<:LawRPM, Q2<:LawRPM} <: LawRPM
-    lawrpm1::Q1
-    lawrpm2::Q2
+struct mixture{T1<:LawRPM, T2<:LawRPM} <: LawRPM
+    lawrpm1::T1
+    lawrpm2::T2
     λ::Float64
-    function mixture(lawrpm1::Q1, lawrpm2::Q2, λ::Float64) where {Q1<:LawRPM, Q2<:LawRPM}
+    function mixture(lawrpm1::T1, lawrpm2::T2, λ::Float64) where {T1<:LawRPM, T2<:LawRPM}
         (0.0 <= λ <= 1.0) || throw(ArgumentError("Mixing parameter λ must be in [0,1]. Got λ = $λ."))
-        return new(lawrpm1, lawrpm2, Float64(λ))
+        return new{T1,T2}(lawrpm1, lawrpm2, λ)
     end
 end
 
