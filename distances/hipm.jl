@@ -47,7 +47,7 @@ end
 """
     project_weights
 
-Projects uniform weights of atoms on the grid on [a,b]. Firstly, we obtain the closest point on the grid from atom and then
+Projects weights of atoms on the grid on [a,b]. Firstly, we obtain the closest point on the grid from atom and then
 associate its weight for it.
 
 # Arguments:
@@ -57,7 +57,7 @@ associate its weight for it.
     b::Float64                :  right end of interval
     n_grid::Int               :  number of grid points on [a,b].
 """
-function project_weights(atoms::Vector{Float64}, weights::Vector{Float64}, a, b, n_grid)
+function project_weights(atoms::Vector{Float64}, weights::Vector{Float64}, a::Float64, b::Float64, n_grid::Int)
     # We provide specific weights to each atom.
     weights_on_grid = zeros(n_grid+1)
 
@@ -70,6 +70,51 @@ function project_weights(atoms::Vector{Float64}, weights::Vector{Float64}, a, b,
 end 
 
 
+
+"""
+    project_weights_atoms
+As we have matrix of atoms, each uniform weights are projected.
+
+# Arguments:
+    atoms::AbstractArray{Float64,2}
+    a::Float64
+    b::Float64
+    n_grid::Int
+"""
+function project_weights_atoms(atoms::AbstractArray{Float64,2},
+                a::Float64, b::Float64, n_grid::Int)
+    n = size(atoms)[1]
+    
+    weights_atoms = zeros(n, n_grid + 1)
+    for i in 1:n
+        weights_atoms[i, :] .= project_weights(atoms[i, :], a, b, n_grid)
+    end
+    return weights_atoms
+end
+
+
+
+"""
+    project_weights_atoms
+As we have matrices of weights and atoms, each weight is projected.
+
+# Arguments:
+    atoms::AbstractArray{Float64,2}
+    weights::AbstractArray{Float64,2}
+    a::Float64
+    b::Float64
+    n_grid::Int
+"""
+function project_weights_atoms(atoms::AbstractArray{Float64,2}, weights::AbstractArray{Float64,2},
+                a::Float64, b::Float64, n_grid::Int)
+    n = size(atoms)[1]
+    
+    weights_atoms = zeros(n, n_grid + 1)
+    for i in 1:n
+        weights_atoms[i, :] .= project_weights(atoms[i, :], weights[i,:], a, b, n_grid)
+    end
+    return weights_atoms
+end
 
 function build_eval_matrix_grid(a::Float64, b::Float64, n_grid::Int)
 
@@ -165,7 +210,7 @@ Function to compute HIPM after all the weights are projected on the grid.
     max_time::Float64 = 10.0                   :  maximum amount of time to run optimization algorithm when n_1 != n_2.
 """
 function dlip_projected_measures(weights_atoms_1::AbstractArray{Float64,2}, weights_atoms_2::AbstractArray{Float64,2},
-         a::Float64, b::Float64, 
+         a::Float64, b::Float64; 
          n_grid::Int = 250, n_steps::Int=1000, n_rerun::Int = 5,tol::Float64 = 1e-4,
          max_time::Float64 = 10.0)
     size_1 = size(weights_atoms_1)
@@ -301,8 +346,8 @@ function dlip_projected_measures(weights_atoms_1::AbstractArray{Float64,2}, weig
             f = delta_x .* vcat([0.0], cumsum(g))
     
         
-            atoms_1 = weights_atoms_1 * f
-            atoms_2 = weights_atoms_2 * f
+            atoms_1 = sort(weights_atoms_1 * f)
+            atoms_2 = sort(weights_atoms_2 * f)
 
             return -1.0 * wasserstein_1d_general(atoms_1, atoms_2)
         end
@@ -314,7 +359,7 @@ end
 
 
 """
-    dlip_projected_measures
+    dlip
 
 Function to compute HIPM when only atoms are given. 
 
@@ -329,28 +374,30 @@ Function to compute HIPM when only atoms are given.
     tol::Float64 = 1e-4                        :  tolerance level to stop optimization process when n_1 = n_2.
     max_time::Float64 = 10.0                   :  maximum amount of time to run optimization algorithm when n_1 != n_2.
 """
-function dlip(atoms_1::AbstractArray{Float64,2}, atoms_2::AbstractArray{Float64,2}, a::Float64, b::Float64, n_grid::Int = 250,
+function dlip(atoms_1::AbstractArray{Float64,2}, atoms_2::AbstractArray{Float64,2}, a::Float64, b::Float64; n_grid::Int = 250,
                 n_steps::Int=1000, n_rerun::Int = 5,tol::Float64 = 1e-4, max_time::Float64 = 0.5)
     
-    n_1 = size(atoms_1)[1]
-    n_2 = size(atoms_2)[1]
-    # Project weights on a grid
-    weights_atoms_1 = zeros(n_1, n_grid + 1)
-    weights_atoms_2 = zeros(n_2, n_grid + 1)
+    # n_1 = size(atoms_1)[1]
+    # n_2 = size(atoms_2)[1]
+    # # Project weights on a grid
+    # weights_atoms_1 = zeros(n_1, n_grid + 1)
+    # weights_atoms_2 = zeros(n_2, n_grid + 1)
 
-    for i in 1:n_1
-        weights_atoms_1[i, :] .= project_weights(atoms_1[i, :], a, b, n_grid)
-    end
+    # for i in 1:n_1
+    #     weights_atoms_1[i, :] .= project_weights(atoms_1[i, :], a, b, n_grid)
+    # end
 
-    for i in 1:n_2
-        weights_atoms_2[i, :] .= project_weights(atoms_2[i, :], a, b, n_grid)
-    end
+    # for i in 1:n_2
+    #     weights_atoms_2[i, :] .= project_weights(atoms_2[i, :], a, b, n_grid)
+    # end
+    weights_atoms_1 = project_weights_atoms(atoms_1, a, b, n_grid)
+    weights_atoms_2 = project_weights_atoms(atoms_2, a, b, n_grid)
 
-    return dlip_projected_measures(weights_atoms_1, weights_atoms_2, a, b, n_grid, n_steps, n_rerun, tol, max_time)
+    return dlip_projected_measures(weights_atoms_1, weights_atoms_2, a, b; n_grid, n_steps, n_rerun, tol, max_time)
 end
 
 """
-    dlip_projected_measures
+    dlip
 
 Function to compute HIPM when only hierarchical sample objects are given. 
 
@@ -365,15 +412,15 @@ Function to compute HIPM when only hierarchical sample objects are given.
     tol::Float64 = 1e-4                        :  tolerance level to stop optimization process when n_1 = n_2.
     max_time::Float64 = 10.0                   :  maximum amount of time to run optimization algorithm when n_1 != n_2.
 """
-function dlip(h_1::HierSample, h_2::HierSample, a::Float64, b::Float64, n_grid::Int = 250,
-                n_steps::Int=1000, n_rerun::Int = 5,tol::Float64 = 1e-4)
-    return dlip(h_1.atoms, h_2.atoms, a, b, n_grid, n_steps, n_rerun, tol)
+function dlip(h_1::HierSample, h_2::HierSample, a::Float64, b::Float64; n_grid::Int = 250,
+                n_steps::Int=1000, n_rerun::Int = 5,tol::Float64 = 1e-4, max_time::Float64 = 0.5)
+    return dlip(h_1.atoms, h_2.atoms, a, b; n_grid, n_steps, n_rerun, tol, max_time)
 end
 
 
 
 """
-    dlip_projected_measures
+    dlip
 
 Function to compute HIPM when weights are general.
 
@@ -395,18 +442,7 @@ function dlip(atoms_1::AbstractArray{Float64,2}, atoms_2::AbstractArray{Float64,
               a::Float64, b::Float64; n_grid::Int = 250,
                 n_steps::Int=1000, n_rerun::Int = 5,tol::Float64 = 1e-4, max_time::Float64 = 0.5)
     
-    n_1 = size(atoms_1)[1]
-    n_2 = size(atoms_2)[1]
-    # Project atoms on a grid
-    weights_atoms_1 = zeros(n_1, n_grid + 1)
-    weights_atoms_2 = zeros(n_2, n_grid + 1)
-
-    for i in 1:n_1
-        weights_atoms_1[i, :] .= project_weights(atoms_1[i, :], weights_1[i,:], a, b, n_grid)
-    end
-    for i in 1:n_2
-        weights_atoms_2[i, :] .= project_weights(atoms_2[i, :], weights_2[i,:], a, b, n_grid)
-    end
-
-    return dlip_projected_measures(weights_atoms_1, weights_atoms_2, a, b, n_grid, n_steps, n_rerun, tol, max_time)
+    weights_atoms_1 = project_weights_atoms(atoms_1, weights_1, a, b, n_grid)
+    weights_atoms_2 = project_weights_atoms(atoms_2, weights_2, a, b, n_grid)
+    return dlip_projected_measures(weights_atoms_1, weights_atoms_2, a, b; n_grid, n_steps, n_rerun, tol, max_time)
 end
