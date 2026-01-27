@@ -7,24 +7,24 @@ using Tulip
 """
     project_atom
 
-Projects atom x into the closest point on the grid on [a,b]. Grid is equally spaced.
+Projects atom into the closest point on the grid on [a,b]. Grid is equally spaced.
 
 # Arguments:
-    x::Float64   :  point to project
+    atom::Float64   :  point to project
     a::Float64   :  left end of interval
     b::Float64   :  right end of interval
     n_grid::Int  :  number of grid points on [a,b].
 """
-function project_atom(x::Float64, a::Float64, b::Float64, n_grid::Int)
+function project_atom(atom::Float64, a::Float64, b::Float64, n_grid::Int)
 
-    x>=a && x <= b || throw(ArgumentError("PROBLEM with the projection: Atom location $x is outside of bounds [$a, $b]"))
-    return round(Int,(x - a) / (b-a) * n_grid)+1
+    atom>=a && atom <= b || throw(ArgumentError("PROBLEM with the projection: Atom location $(atom) is outside of bounds [$a, $b]"))
+    return round(Int,(atom - a) / (b-a) * n_grid)+1
 end
 
 """
     project_weights
 
-Projects uniform weights of atoms on the grid on [a,b]. Firstly, we obtain the closest point on the grid from atom and then
+Projects uniform weights of atoms on the grid on [a,b]. Firstly, we obtain the point on the grid that is closest to given atom and then
 associate uniform weight for it.
 
 # Arguments:
@@ -34,8 +34,8 @@ associate uniform weight for it.
     n_grid::Int             :  number of grid points on [a,b].
 """
 function project_weights(atoms::Vector{Float64}, a::Float64, b::Float64, n_grid::Int)
+    
     weights_on_grid = zeros(n_grid+1)
-
     m = length(atoms)
     for i=1:m 
         weights_on_grid[project_atom(atoms[i],a,b,n_grid)] += 1.0 / m
@@ -47,7 +47,7 @@ end
 """
     project_weights
 
-Projects weights of atoms on the grid on [a,b]. Firstly, we obtain the closest point on the grid from atom and then
+Projects weights of atoms on the grid on [a,b]. Firstly, we obtain the point on the grid that is closest to given atom and then
 associate its weight for it.
 
 # Arguments:
@@ -73,7 +73,8 @@ end
 
 """
     project_weights_atoms
-As we have matrix of atoms, each uniform weights are projected.
+
+Projects set of atoms and uniform weights on the grid.
 
 # Arguments:
     atoms::AbstractArray{Float64,2}
@@ -96,7 +97,8 @@ end
 
 """
     project_weights_atoms
-As we have matrices of weights and atoms, each weight is projected.
+
+Projects set of atoms and specified weights on the grid.
 
 # Arguments:
     atoms::AbstractArray{Float64,2}
@@ -107,12 +109,14 @@ As we have matrices of weights and atoms, each weight is projected.
 """
 function project_weights_atoms(atoms::AbstractArray{Float64,2}, weights::AbstractArray{Float64,2},
                 a::Float64, b::Float64, n_grid::Int)
-    n = size(atoms)[1]
     
+    n = size(atoms)[1]
     weights_atoms = zeros(n, n_grid + 1)
+
     for i in 1:n
         weights_atoms[i, :] .= project_weights(atoms[i, :], weights[i,:], a, b, n_grid)
     end
+
     return weights_atoms
 end
 
@@ -185,8 +189,8 @@ function eval_objective_grid(unknown::Vector{Float64}, weights_atoms_1::Abstract
             w2 = view(weights_atoms_2, permutation_2[i], :)
             tempsum .+= s.* (w1 .- w2)
         end 
-        # Q' is upper triangular matrice of delta_x with first column equal to 0's. So matrix multiplication is almost reverse of cumsum.
-        # When tasted, it didn't make it faster so I don't do it.
+        # Q' is upper triangular matrix of delta_x with first column equal to 0's. So matrix multiplication is almost reverse of cumsum.
+        # When tested, it didn't make it faster so I didn't do it.
         output_derivative = (1.0 / n) .* (Q' * tempsum)
         return output, output_derivative
     end
@@ -196,7 +200,7 @@ end
 """
     dlip_projected_measures
 
-Function to compute HIPM after all the weights are projected on the grid.
+Function to compute HIPM after all the weights and atoms are projected on the grid.
 
 # Arguments:
     weights_atoms_1::AbstractArray{Float64,2}    
@@ -372,24 +376,11 @@ Function to compute HIPM when only atoms are given.
     n_steps::Int=1000                          :  number of steps for Gradient ascent.
     n_rerun::Int = 5                           :  number of times to do optimization algorithm when n_1 = n_2.
     tol::Float64 = 1e-4                        :  tolerance level to stop optimization process when n_1 = n_2.
-    max_time::Float64 = 10.0                   :  maximum amount of time to run optimization algorithm when n_1 != n_2.
+    max_time::Float64 = 0.5                   :  maximum amount of time to run optimization algorithm when n_1 != n_2.
 """
 function dlip(atoms_1::AbstractArray{Float64,2}, atoms_2::AbstractArray{Float64,2}, a::Float64, b::Float64; n_grid::Int = 250,
                 n_steps::Int=1000, n_rerun::Int = 5,tol::Float64 = 1e-4, max_time::Float64 = 0.5)
     
-    # n_1 = size(atoms_1)[1]
-    # n_2 = size(atoms_2)[1]
-    # # Project weights on a grid
-    # weights_atoms_1 = zeros(n_1, n_grid + 1)
-    # weights_atoms_2 = zeros(n_2, n_grid + 1)
-
-    # for i in 1:n_1
-    #     weights_atoms_1[i, :] .= project_weights(atoms_1[i, :], a, b, n_grid)
-    # end
-
-    # for i in 1:n_2
-    #     weights_atoms_2[i, :] .= project_weights(atoms_2[i, :], a, b, n_grid)
-    # end
     weights_atoms_1 = project_weights_atoms(atoms_1, a, b, n_grid)
     weights_atoms_2 = project_weights_atoms(atoms_2, a, b, n_grid)
 
@@ -422,7 +413,7 @@ end
 """
     dlip
 
-Function to compute HIPM when weights are general.
+Function to compute HIPM when weights are specified.
 
 # Arguments:
     atoms_1::AbstractArray{Float64,2}   
