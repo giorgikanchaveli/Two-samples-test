@@ -1,226 +1,205 @@
-# This is modified dlip computation code
-
-
-# We have 3 main functions for dlip: 
-#   -  between hierarchical samples with equal sizes and uniform weights
-#   -  between hierarchical samples with equal sizes and general weights
-#   -  between hierarchical samples with general sizes and general weights
-
-
-include("../structures.jl")
+include("wow.jl")
 using LinearAlgebra 
 using BlackBoxOptim
 using ExactOptimalTransport
 using Tulip
 
+"""
+    project_atom
 
-# # -----------------------------------------------------------------------------------
-# # Auxilliary functions new distance 
-# # -----------------------------------------------------------------------------------
+Projects atom x into the closest point on the grid on [a,b]. Grid is equally spaced.
 
-function projectionGrid_new(x,a,b,nGrid)
-    # this is same function although in the name it has "new".
+# Arguments:
+    x::Float64   :  point to project
+    a::Float64   :  left end of interval
+    b::Float64   :  right end of interval
+    n_grid::Int  :  number of grid points on [a,b].
+"""
+function project_atom(x::Float64, a::Float64, b::Float64, n_grid::Int)
 
-    if (x <a) | (x > b) 
-        error("PROBLEM with the projection: Atom location $x is outside of bounds [$a, $b]")
-    else
-        return round(Int,(x - a) / (b-a) * nGrid)+1
-    end 
-
+    x>=a && x <= b || throw(ArgumentError("PROBLEM with the projection: Atom location $x is outside of bounds [$a, $b]"))
+    return round(Int,(x - a) / (b-a) * n_grid)+1
 end
 
+"""
+    project_weights
 
+Projects uniform weights of atoms on the grid on [a,b]. Firstly, we obtain the closest point on the grid from atom and then
+associate uniform weight for it.
 
-function projectionGridMeasure_new(atoms::Vector{Float64},a,b,nGrid)
-    # This function assumes that weights are uniform accross atoms. 
-    output = zeros(nGrid+1)
+# Arguments:
+    atoms::Vector{Float64}  :  atoms to project
+    a::Float64              :  left end of interval
+    b::Float64              :  right end of interval
+    n_grid::Int             :  number of grid points on [a,b].
+"""
+function project_weights(atoms::Vector{Float64}, a::Float64, b::Float64, n_grid::Int)
+    weights_on_grid = zeros(n_grid+1)
 
-    nBottom = length(atoms)
-    for i=1:nBottom 
-        output[projectionGrid_new(atoms[i],a,b,nGrid)] += 1.0 / nBottom
+    m = length(atoms)
+    for i=1:m 
+        weights_on_grid[project_atom(atoms[i],a,b,n_grid)] += 1.0 / m
     end
 
-    return output
+    return weights_on_grid
 end 
-function projectionGridMeasure_new(atoms::Vector{Float64}, weights::Vector{Float64}, a, b, nGrid)
+
+"""
+    project_weights
+
+Projects uniform weights of atoms on the grid on [a,b]. Firstly, we obtain the closest point on the grid from atom and then
+associate its weight for it.
+
+# Arguments:
+    atoms::Vector{Float64}    :  atoms to project
+    weights::Vector{Float64}  :  weights for each atom
+    a::Float64                :  left end of interval
+    b::Float64                :  right end of interval
+    n_grid::Int               :  number of grid points on [a,b].
+"""
+function project_weights(atoms::Vector{Float64}, weights::Vector{Float64}, a, b, n_grid)
     # We provide specific weights to each atom.
-    output = zeros(nGrid+1)
+    weights_on_grid = zeros(n_grid+1)
 
-    nBottom = length(atoms)
-    for i=1:nBottom 
-        output[projectionGrid_new(atoms[i],a,b,nGrid)] += weights[i]
+    m = length(atoms)
+    for i=1:m 
+        weights_on_grid[project_atom(atoms[i],a,b,n_grid)] += weights[i]
     end
 
-    return output
+    return weights_on_grid
 end 
 
 
-function buildEvaluationMatrixGrid_new(a,b,nGrid)
+
+function build_eval_matrix_grid(a::Float64, b::Float64, n_grid::Int)
 
     # Step size 
-    deltaX = (b-a) / nGrid
+    delta_x = (b-a) / n_grid
 
-    output = zeros(nGrid+1,nGrid)
+    output = zeros(n_grid+1,n_grid)
     
     # Build via a loop 
-    for i=1:nGrid
-        output[i+1,1:i] = fill(deltaX,i) 
+    for i=1:n_grid
+        output[i+1,1:i] = fill(delta_x,i) 
     end
 
     return output
-     
-
 end 
 
-function suffix_sum(tempsum::Vector{Float64})
-    # this is not needed because it didn't speed up the function.
-    n = length(tempsum)
-    s = sum(tempsum) - tempsum[end]
-
-    output = Vector{Float64}(undef, n - 1)
-    
-    for i in 1:(n-1)
-        output[i] = s
-        s = s - tempsum[n - i] 
-    end
-    return output
-end
 
 
-
-function evaluationObjectiveGrid_new(unknown::Vector{Float64},weights::AbstractArray{Float64, 3},Q::Matrix{Float64},derivative::Bool)
+function eval_objective_grid(unknown::Vector{Float64}, weights_atoms_1::AbstractArray{Float64, 2},
+                weights_atoms_2::AbstractArray{Float64, 2}, Q::Matrix{Float64},derivative::Bool)
     # derivative: true or false, to decide if to output the derivative
-
-    nTop = size(weights)[2]
-    nGrid = size(Q)[2]
+    # assumes that number of rows in weights_atoms_1 and weights_atoms_1 are the same.
+    
+    n = size(weights_atoms_1)[1]
+    n_grid = size(Q)[2]
 
     # Value of the function f on grid point 
-    # f = Q * unknown
-    # Alternative formula
-    #f = vcat(0., cumsum(unknown)) * Q[2,1]
-
-    # Change: avoid new allocations
-    f = Vector{Float64}(undef, length(unknown) + 1) 
-    f[1] = 0.0
-    cumsum!(view(f, 2:(nGrid+1)), unknown) # compute cumsum in place
-    f .*= Q[2,1]
+    
+    f = vcat(0., cumsum(unknown)) * Q[2,1]
+    # f = Vector{Float64}(undef, length(unknown) + 1) 
+    # f[1] = 0.0
+    # cumsum!(@view(f[2:end]), unknown)
+    # f = vcat(0., cumsum(unknown)) * Q[2,1]
 
 
     # Compute the value of the integral of f 
-    integralF = zeros(2,nTop)    
-    for k = 1:2
-        Wk = view(weights, k, :, :) # Matrix (nTop x nGrid)
-        I_k = view(integralF, k, :) # Destination vector (nTop)
-        # I_k = Wk * f
-        mul!(I_k, Wk, f)           
-    end
-    #integralF[k,:] = weights[k,:,:] * f
+    integral_f = zeros(2,n)  
+    w_1 = view(weights_atoms_1, :, :) # Matrix (n x n_grid)
+    mul!(view(integral_f, 1, :), w_1, f)
+    w_2 = view(weights_atoms_2, :, :)
+    mul!(view(integral_f, 2, :), w_2, f)
 
-    # Change: Avoid allocations and sorting two times in addition.
-    permutation1 = sortperm(integralF[1,:])
-    permutation2 = sortperm(integralF[2,:])
+    
+    permutation_1 = sortperm(integral_f[1,:])
+    permutation_2 = sortperm(integral_f[2,:])
+    sorted_f_1 = view(integral_f, 1, :)[permutation_1] 
+    sorted_f_2 = view(integral_f, 2, :)[permutation_2]
 
-    sortedF1 = view(integralF, 1, :)[permutation1] 
-    sortedF2 = view(integralF, 2, :)[permutation2]
+    output = sum(abs.(sorted_f_1 .- sorted_f_2)) * (1.0/n)
 
-    output = sum(abs.(sortedF1 .- sortedF2)) * (1.0/nTop)
-
-    #output = sum( abs.( sort(integralF[1,:]) - sort(integralF[2,:] ) )) * 1/nTop
 
     if !derivative 
         return output, 0.
     else
-
-        # Find the increasing permutation for each 
         
-        # First compute the value of the function 
-       
-        # Then output the derivative 
+        
+        # compute derivative: sum_{i = 1}^n s * 1/n * Q' * (weights_atoms_1[permutation_1[i],:] - weights_atoms_2[permutation_2[i],:] )
 
-        # Change: Factor out matrix Q' to avoid matrix multiplication nTop times.
-        outputderivative = zeros(nGrid)
-
-        tempsum = zeros(size(weights, 3))
-        for i=1:nTop 
+        output_derivative = zeros(n_grid)
+        tempsum = zeros(size(weights_atoms_1)[2])
+        for i=1:n 
             
             # Find the sign of the block
-            s = sign(integralF[1,permutation1[i]] - integralF[2,permutation2[i]] )
+            s = sign(integral_f[1,permutation_1[i]] - integral_f[2,permutation_2[i]] )
+            
             # Add the right weighted column of the matrix Q, with a sign 
-
-            
-            w1 = view(weights, 1, permutation1[i], :)
-            w2 = view(weights, 2, permutation2[i], :)
-            @. tempsum .+= s.* (w1 .- w2)
-            #outputderivative += s * 1/nTop * Q' * (weights[1,permutation1[i],:] - weights[2,permutation2[i],:] )
+            w1 = view(weights_atoms_1, permutation_1[i], :)
+            w2 = view(weights_atoms_2, permutation_2[i], :)
+            tempsum .+= s.* (w1 .- w2)
         end 
-        # Change: Q' is upper triangular matrice of deltaX with first column equal to 0's. So matrix multiplication is almost reverse of cumsum.
-        # Actually it doesn't make it faster so I don't do it.
-        outputderivative = (1.0 / nTop) .* (Q' * tempsum)
-        #outputderivative = (1.0 / nTop) * ((b-a) / nGrid) .* optimized_suffix_sum_original_logic(tempsum)
-        
-
-
-        return output, outputderivative
-    
+        # Q' is upper triangular matrice of delta_x with first column equal to 0's. So matrix multiplication is almost reverse of cumsum.
+        # When tasted, it didn't make it faster so I don't do it.
+        output_derivative = (1.0 / n) .* (Q' * tempsum)
+        return output, output_derivative
     end
-
-
 end
 
-# -----------------------------------------------------------------------------------
-# Function for the new HIPM distance 
-# -----------------------------------------------------------------------------------
 
-function dlip(atoms_1::AbstractArray{Float64,2}, atoms_2::AbstractArray{Float64,2}, a::Float64, b::Float64, nGrid::Int = 250,nSteps::Int=1000,
-                                            nRerun::Int = 5,tol::Float64 = 1e-4)
+"""
+    dlip_projected_measures
 
-    # This function computes HIPM between two hierarchical samples. It assumes that each atom in the 
-    # hierarchical sample has same weight, i.e. weight matrix is 1/m on each entry.
-    s1 = size(atoms_1)
-    s2 = size(atoms_2)
+Function to compute HIPM after all the weights are projected on the grid.
 
-    if s1[1] != s2[1] 
+# Arguments:
+    weights_atoms_1::AbstractArray{Float64,2}    
+    weights_atoms_2::AbstractArray{Float64,2}  
+    b::Float64                                 
+    a::Float64                                       
+    n_grid::Int = 250                                     
+    n_steps::Int=1000                          :  number of steps for Gradient ascent.
+    n_rerun::Int = 5                           :  number of times to do optimization algorithm when n_1 = n_2.
+    tol::Float64 = 1e-4                        :  tolerance level to stop optimization process when n_1 = n_2.
+    max_time::Float64 = 10.0                   :  maximum amount of time to run optimization algorithm when n_1 != n_2.
+"""
+function dlip_projected_measures(weights_atoms_1::AbstractArray{Float64,2}, weights_atoms_2::AbstractArray{Float64,2},
+         a::Float64, b::Float64, 
+         n_grid::Int = 250, n_steps::Int=1000, n_rerun::Int = 5,tol::Float64 = 1e-4,
+         max_time::Float64 = 10.0)
+    size_1 = size(weights_atoms_1)
+    size_2 = size(weights_atoms_2)
 
-        println("PROBLEM OF DIMENSION: should have measures with the same dimensions")
-        return -1. 
+    n_1 = size_1[1]
+    n_2 = size_2[1]
+
+    delta_x = (b-a) / n_grid
     
-    else
-        
-        # Extract dimensions
-        nTop = s1[1]
-        
-        # Time step 
-        deltaX = (b-a) / nGrid
-
-        # Project the atoms of each measure on the grid 
-
-        # First coordinate is for measure1/measure2, second for the m index and third is the point of the grid
-        weightsAtoms = zeros(2,nTop,nGrid+1)
-
-        for i=1:nTop 
-            weightsAtoms[1,i,:] = projectionGridMeasure_new(atoms_1[i, :],a,b,nGrid)
-            weightsAtoms[2,i,:] = projectionGridMeasure_new(atoms_2[i, :],a,b,nGrid)
-        end
-        
+    if n_1 == n_2
+        # weights_atoms_1/2 are of size n_1xn_grid matrix where each row represents the weights on the grid.
+           
         # Build the matrix 
-        Q = buildEvaluationMatrixGrid_new(a,b,nGrid)
+        
+        Q = build_eval_matrix_grid(a, b, n_grid)
 
         # Gradient ascent loop 
         # Rerun every time with 5 initial conditions
-        # nRerun = 5
-        valueFunction = zeros(nRerun,nSteps)
-        unknownArray = zeros(nRerun,nGrid)
+        # n_rerun = 5
+        valueFunction = zeros(n_rerun,n_steps)
+        unknownArray = zeros(n_rerun,n_grid)
 
-        for k=1:nRerun 
-            
+        for k=1:n_rerun 
+    
             # Initial condition 
             # For the first try identity  
             if k==1
-                unknown = ones(nGrid)
+                unknown = ones(n_grid)
             else 
                 # Random guess via the first few Fourier coefficients
                 coeff = 2*rand(3) .- 1.
-                unknown = coeff[1]/2 * cos.( LinRange(0,pi,nGrid) ) .+ coeff[2]/4 * cos.( 2 .* LinRange(0,pi,nGrid) ) .+ coeff[3]/8 * cos.( 3 .* LinRange(0,pi,nGrid) ) 
+                unknown = coeff[1]/2 * cos.( LinRange(0,pi,n_grid) ) .+ coeff[2]/4 * cos.( 2 .* LinRange(0,pi,n_grid) ) 
+                                    .+ coeff[3]/8 * cos.( 3 .* LinRange(0,pi,n_grid) ) 
                 unknown = clamp.(unknown,-1,1)
             end
 
@@ -228,16 +207,16 @@ function dlip(atoms_1::AbstractArray{Float64,2}, atoms_2::AbstractArray{Float64,
             i = 1
             continueLoop = true 
 
-            while (i <= nSteps) & continueLoop
+            while (i <= n_steps) & continueLoop
 
                 # Evaluation of the function and ascent direction 
-                f, df = evaluationObjectiveGrid_new(unknown,weightsAtoms, Q,true)
+                f, df = eval_objective_grid(unknown, weights_atoms_1, weights_atoms_2, Q,true)
                 
                 # Project the ascent direction on the admissible set and find how luch we can advance 
                 ascentDirection = df
                 t_max = 1. /tol 
 
-                for j =1:nGrid
+                for j =1:n_grid
 
                     if unknown[j] > 1. - tol
                         unknown[j] = 1.
@@ -259,176 +238,13 @@ function dlip(atoms_1::AbstractArray{Float64,2}, atoms_2::AbstractArray{Float64,
                         elseif ascentDirection[j] < - tol 
                             t_max = min((-1 - unknown[j]) / ascentDirection[j] ,t_max)
                         end  
-                             
+                                
                     end
                 
                 end
-        
-                # Only move if the predicted ascent is large enough in this direction
-                if dot(df, ascentDirection) * deltaX  < 1e-8 
-                    # Then don't move and exit the loop 
-                    candidateUnknown = unknown
-                    newf = f
-                    continueLoop = false
-                else 
-                    # Do a backtracking line search 
-                    expectedIncrease = dot(df, ascentDirection) 
-                    t = t_max 
-                    candidateUnknown = unknown + t * ascentDirection 
-                    newf = evaluationObjectiveGrid_new(candidateUnknown,weightsAtoms, Q,false)[1]
-                    while (newf < f + 0.5 * t * expectedIncrease) & (t > 1/128) 
-                        t *= 0.5 
-                        candidateUnknown = unknown + t * ascentDirection
-                        newf = evaluationObjectiveGrid_new(candidateUnknown,weightsAtoms, Q,false)[1]
-                    end 
-
-                    # Stop also the loop if the increase is too small 
-                    if newf -f <= norm(df) * sqrt(deltaX) * tol^2
-                        continueLoop = false 
-                    end 
-
-                end
-
-                # Update the variables 
-                unknown = candidateUnknown
-                valueFunction[k,i] = newf
-
-                # Increase counter 
-                i += 1
-
-                # End of loop 
-
-            end
-
-            # At the end of the loop: fill the remaining value with the last one 
-
-            if i < nSteps +1
-                valueFunction[k,i:nSteps] = fill( valueFunction[k,i-1], nSteps -i +1 )
-            end
-
-            # Store the final function 
-            unknownArray[k,:] = unknown
-
-            
-
-        end 
-        
-        # Return the maximal value that has been reached, 
-        # together with the optimal function
-        
-        # Best run 
-        index = argmax(valueFunction[:,end])
-        # Change only return best run
-        return valueFunction[index]
-        #return maximum(valueFunction[index,end]), Q *unknownArray[index,:] 
-
-
-    end
-
-end 
-
-
-function dlip(h_1::HierSample, h_2::HierSample, a::Float64, b::Float64, nGrid::Int = 250)
-    return dlip(h_1.atoms, h_2.atoms, a, b, nGrid)
-end
-
-
-function dlip(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64}, 
-              weights_1::Matrix{Float64}, weights_2::Matrix{Float64}, a::Float64, b::Float64, nGrid::Int = 250,nSteps::Int=1000,
-                                            nRerun::Int = 5,tol::Float64 = 1e-4)
-    # This function does not assume that weights are uniform on atoms of hierarchical samples.
-    # Difference compared to the dlip above is how it projects atoms on a grid. In particular,
-    # it adds weights[i,j] to the projected atom [i,j].
-    s1 = size(atoms_1)
-    s2 = size(atoms_2)
-
-    if s1[1] != s2[1] 
-
-        println("PROBLEM OF DIMENSION: should have measures with the same dimensions")
-        return -1. 
     
-    else
-        
-        # Extract dimensions
-        nTop = s1[1]
-        
-        # Time step 
-        deltaX = (b-a) / nGrid
-
-        # Project the atoms of each measure on the grid 
-
-        # First coordinate is for measure1/measure2, second for the m index and third is the point of the grid
-        weightsAtoms = zeros(2,nTop,nGrid+1)
-
-        for i=1:nTop 
-            weightsAtoms[1,i,:] = projectionGridMeasure_new(atoms_1[i, :], weights_1[i,:], a,b,nGrid)
-            weightsAtoms[2,i,:] = projectionGridMeasure_new(atoms_2[i, :], weights_2[i,:], a,b,nGrid)
-        end
-        
-        # Build the matrix 
-        Q = buildEvaluationMatrixGrid_new(a,b,nGrid)
-
-        # Gradient ascent loop 
-        # Rerun every time with 5 initial conditions
-        # nRerun = 5
-        valueFunction = zeros(nRerun,nSteps)
-        unknownArray = zeros(nRerun,nGrid)
-
-        for k=1:nRerun 
-            
-            # Initial condition 
-            # For the first try identity  
-            if k==1
-                unknown = ones(nGrid)
-            else 
-                # Random guess via the first few Fourier coefficients
-                coeff = 2*rand(3) .- 1.
-                unknown = coeff[1]/2 * cos.( LinRange(0,pi,nGrid) ) .+ coeff[2]/4 * cos.( 2 .* LinRange(0,pi,nGrid) ) .+ coeff[3]/8 * cos.( 3 .* LinRange(0,pi,nGrid) ) 
-                unknown = clamp.(unknown,-1,1)
-            end
-
-            # Counter of the steps 
-            i = 1
-            continueLoop = true 
-
-            while (i <= nSteps) & continueLoop
-
-                # Evaluation of the function and ascent direction 
-                f, df = evaluationObjectiveGrid_new(unknown,weightsAtoms, Q,true)
-                
-                # Project the ascent direction on the admissible set and find how luch we can advance 
-                ascentDirection = df
-                t_max = 1. /tol 
-
-                for j =1:nGrid
-
-                    if unknown[j] > 1. - tol
-                        unknown[j] = 1.
-                        if df[j] > - tol 
-                            ascentDirection[j] = 0. 
-                        else 
-                            t_max = min((-1 - unknown[j]) / ascentDirection[j], t_max)
-                        end
-                    elseif unknown[j] < -1 + tol
-                        unknown[j] = -1.
-                        if df[j] < tol 
-                            ascentDirection[j] = 0.
-                        else 
-                            t_max = min((1 - unknown[j]) / ascentDirection[j], t_max)  
-                        end
-                    else 
-                        if ascentDirection[j] > tol 
-                            t_max = min((1 - unknown[j]) / ascentDirection[j] ,t_max)
-                        elseif ascentDirection[j] < - tol 
-                            t_max = min((-1 - unknown[j]) / ascentDirection[j] ,t_max)
-                        end  
-                             
-                    end
-                
-                end
-        
                 # Only move if the predicted ascent is large enough in this direction
-                if dot(df, ascentDirection) * deltaX  < 1e-8 
+                if dot(df, ascentDirection) * delta_x  < 1e-8 
                     # Then don't move and exit the loop 
                     candidateUnknown = unknown
                     newf = f
@@ -438,15 +254,15 @@ function dlip(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64},
                     expectedIncrease = dot(df, ascentDirection) 
                     t = t_max 
                     candidateUnknown = unknown + t * ascentDirection 
-                    newf = evaluationObjectiveGrid_new(candidateUnknown,weightsAtoms, Q,false)[1]
+                    newf = eval_objective_grid(candidateUnknown,weights_atoms_1, weights_atoms_2, Q,false)[1]
                     while (newf < f + 0.5 * t * expectedIncrease) & (t > 1/128) 
                         t *= 0.5 
                         candidateUnknown = unknown + t * ascentDirection
-                        newf = evaluationObjectiveGrid_new(candidateUnknown,weightsAtoms, Q,false)[1]
+                        newf = eval_objective_grid(candidateUnknown,weights_atoms_1, weights_atoms_2, Q,false)[1]
                     end 
 
                     # Stop also the loop if the increase is too small 
-                    if newf -f <= norm(df) * sqrt(deltaX) * tol^2
+                    if newf -f <= norm(df) * sqrt(delta_x) * tol^2
                         continueLoop = false 
                     end 
 
@@ -460,22 +276,17 @@ function dlip(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64},
                 i += 1
 
                 # End of loop 
-
             end
 
             # At the end of the loop: fill the remaining value with the last one 
 
-            if i < nSteps +1
-                valueFunction[k,i:nSteps] = fill( valueFunction[k,i-1], nSteps -i +1 )
+            if i < n_steps +1
+                valueFunction[k,i:n_steps] = fill( valueFunction[k,i-1], n_steps -i +1 )
             end
 
             # Store the final function 
             unknownArray[k,:] = unknown
-
-            
-
-        end 
-        
+        end
         # Return the maximal value that has been reached, 
         # together with the optimal function
         
@@ -484,91 +295,118 @@ function dlip(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64},
         # Change only return best run
         return valueFunction[index]
         #return maximum(valueFunction[index,end]), Q *unknownArray[index,:] 
+    else
+        function obj(g::Vector{Float64})
+            # we define firstly f from g and then wass distance 
+            f = delta_x .* vcat([0.0], cumsum(g))
+    
+        
+            atoms_1 = weights_atoms_1 * f
+            atoms_2 = weights_atoms_2 * f
 
-
-    end
-
-end
-
-function wasserstein1_uniform(x::AbstractVector{<:Real},
-                                    y::AbstractVector{<:Real};
-                                    tol = 1e-12)
-    # this code is from chatgpt. It computes Wasserstein 1 distance between two vectors
-    # of different sizes.
-    x = sort(collect(x))
-    y = sort(collect(y))
-
-    m, n = length(x), length(y)
-    @assert m > 0 && n > 0
-
-    i, j = 1, 1
-    a = 1.0 / m   # remaining mass at x[i]
-    b = 1.0 / n   # remaining mass at y[j]
-
-    cost = 0.0
-
-    while i <= m && j <= n
-        δ = min(a, b)
-        cost += δ * abs(float(x[i]) - float(y[j]))
-        a -= δ
-        b -= δ
-
-        if a ≤ tol
-            i += 1
-            a = (i <= m) ? 1.0 / m : 0.0
+            return -1.0 * wasserstein_1d_general(atoms_1, atoms_2)
         end
 
-        if b ≤ tol
-            j += 1
-            b = (j <= n) ? 1.0 / n : 0.0
-        end
+        res = bboptimize(obj; SearchRange = (-1.0, 1.0), NumDimensions = n_grid, MaxTime = max_time, TraceMode = :silent)
+        return -1.0 * best_fitness(res)
     end
-
-    return cost
 end
 
 
+"""
+    dlip_projected_measures
 
-function dlip_diffsize(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64}, 
-              weights_1::Matrix{Float64}, weights_2::Matrix{Float64}, a::Float64, b::Float64;
-              nGrid::Int = 250, maxTime::Float64 = 10.0)
-    # This function does not assume that hierarchical samples have same number of rows.
-    # Weights are also general for each atom.
+Function to compute HIPM when only atoms are given. 
 
-    s1 = size(atoms_1)
-    s2 = size(atoms_2)
+# Arguments:
+    atoms_1::AbstractArray{Float64,2}    
+    atoms_2::AbstractArray{Float64,2}  
+    b::Float64                                
+    a::Float64                                        
+    n_grid::Int = 250                                    
+    n_steps::Int=1000                          :  number of steps for Gradient ascent.
+    n_rerun::Int = 5                           :  number of times to do optimization algorithm when n_1 = n_2.
+    tol::Float64 = 1e-4                        :  tolerance level to stop optimization process when n_1 = n_2.
+    max_time::Float64 = 10.0                   :  maximum amount of time to run optimization algorithm when n_1 != n_2.
+"""
+function dlip(atoms_1::AbstractArray{Float64,2}, atoms_2::AbstractArray{Float64,2}, a::Float64, b::Float64, n_grid::Int = 250,
+                n_steps::Int=1000, n_rerun::Int = 5,tol::Float64 = 1e-4, max_time::Float64 = 0.5)
+    
+    n_1 = size(atoms_1)[1]
+    n_2 = size(atoms_2)[1]
+    # Project weights on a grid
+    weights_atoms_1 = zeros(n_1, n_grid + 1)
+    weights_atoms_2 = zeros(n_2, n_grid + 1)
 
-    deltaX = (b-a) / nGrid
+    for i in 1:n_1
+        weights_atoms_1[i, :] .= project_weights(atoms_1[i, :], a, b, n_grid)
+    end
+
+    for i in 1:n_2
+        weights_atoms_2[i, :] .= project_weights(atoms_2[i, :], a, b, n_grid)
+    end
+
+    return dlip_projected_measures(weights_atoms_1, weights_atoms_2, a, b, n_grid, n_steps, n_rerun, tol, max_time)
+end
+
+"""
+    dlip_projected_measures
+
+Function to compute HIPM when only hierarchical sample objects are given. 
+
+# Arguments:
+    h_1::HierSample    
+    h_2::HierSample  
+    b::Float64                                 
+    a::Float64                                         
+    n_grid::Int = 250                                     
+    n_steps::Int=1000                          :  number of steps for Gradient ascent.
+    n_rerun::Int = 5                           :  number of times to do optimization algorithm when n_1 = n_2.
+    tol::Float64 = 1e-4                        :  tolerance level to stop optimization process when n_1 = n_2.
+    max_time::Float64 = 10.0                   :  maximum amount of time to run optimization algorithm when n_1 != n_2.
+"""
+function dlip(h_1::HierSample, h_2::HierSample, a::Float64, b::Float64, n_grid::Int = 250,
+                n_steps::Int=1000, n_rerun::Int = 5,tol::Float64 = 1e-4)
+    return dlip(h_1.atoms, h_2.atoms, a, b, n_grid, n_steps, n_rerun, tol)
+end
 
 
+
+"""
+    dlip_projected_measures
+
+Function to compute HIPM when weights are general.
+
+# Arguments:
+    atoms_1::AbstractArray{Float64,2}   
+    atoms_2::AbstractArray{Float64,2} 
+    weights_1::AbstractArray{Float64,2} 
+    weights_2::AbstractArray{Float64,2}
+    b::Float64                                 
+    a::Float64                                         
+    n_grid::Int = 250                                     
+    n_steps::Int=1000                          :  number of steps for Gradient ascent.
+    n_rerun::Int = 5                           :  number of times to do optimization algorithm when n_1 = n_2.
+    tol::Float64 = 1e-4                        :  tolerance level to stop optimization process when n_1 = n_2.
+    max_time::Float64 = 10.0                   :  maximum amount of time to run optimization algorithm when n_1 != n_2.
+"""
+function dlip(atoms_1::AbstractArray{Float64,2}, atoms_2::AbstractArray{Float64,2},
+              weights_1::AbstractArray{Float64,2}, weights_2::AbstractArray{Float64,2},
+              a::Float64, b::Float64; n_grid::Int = 250,
+                n_steps::Int=1000, n_rerun::Int = 5,tol::Float64 = 1e-4, max_time::Float64 = 0.5)
+    
+    n_1 = size(atoms_1)[1]
+    n_2 = size(atoms_2)[1]
     # Project atoms on a grid
-    weight_atoms_1 = zeros(s1[1], nGrid + 1)
-    weight_atoms_2 = zeros(s2[1], nGrid + 1)
+    weights_atoms_1 = zeros(n_1, n_grid + 1)
+    weights_atoms_2 = zeros(n_2, n_grid + 1)
 
-    for i in 1:s1[1]
-        weight_atoms_1[i, :] .= projectionGridMeasure_new(atoms_1[i, :], weights_1[i,:], a,b,nGrid)
+    for i in 1:n_1
+        weights_atoms_1[i, :] .= project_weights(atoms_1[i, :], weights_1[i,:], a, b, n_grid)
     end
-    for i in 1:s2[1]
-        weight_atoms_2[i, :] .= projectionGridMeasure_new(atoms_2[i, :], weights_2[i,:], a,b,nGrid)
-    end
-
-    # define objective function to optimize
-
-    function obj(g::Vector{Float64})
-        # we define firstly f from g and then wass distance 
-        @assert length(g) == nGrid
-        f = deltaX .* vcat([0.0], cumsum(g))
-        
-       
-        atoms_mu = weight_atoms_1 * f
-        atoms_nu = weight_atoms_2 * f
-
-        return -1.0*wasserstein1_uniform(atoms_mu, atoms_nu)
+    for i in 1:n_2
+        weights_atoms_2[i, :] .= project_weights(atoms_2[i, :], weights_2[i,:], a, b, n_grid)
     end
 
-    res = bboptimize(obj; SearchRange = (-1.0, 1.0), NumDimensions = nGrid, MaxTime = maxTime,TraceMode = :silent)
-    return -1.0 * best_fitness(res)
+    return dlip_projected_measures(weights_atoms_1, weights_atoms_2, a, b, n_grid, n_steps, n_rerun, tol, max_time)
 end
-
-
-
