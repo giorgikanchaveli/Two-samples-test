@@ -1,28 +1,19 @@
 
 include("distances/hipm.jl")
-include("distances/hipm_old.jl")
 include("distributions.jl")
 
 
 n_1 = 50
 n_2 = 50
-m = 1
+m = 10
 
 
 h_1, h_2 = generate_hiersample(DP(1.0, Beta(1,2)), n_1, m), generate_hiersample(DP(3.0, Beta(1,4)), n_2, m)
-weights_1, weights_2 = rand(n_1, m), rand(n_2, m)
-
-for i in 1:n_1
-    weights_1[i,:] .= weights_1[i,:] ./ sum(weights_1[i,:])
-end
-for i in 1:n_2
-    weights_2[i,:] .= weights_2[i,:] ./ sum(weights_2[i,:])
-end
+weights_1, weights_2 = fill(1.0/m, n_1, m), fill(1.0/m, n_1, m)
 
 
 
 d_dlip = dlip(h_1.atoms, h_2.atoms, weights_1, weights_2, 0.0, 1.0; max_time = 1.0)
-d_dlip_old = dlip_old_diffsize(h_1.atoms, h_2.atoms, weights_1, weights_2, 0.0,1.0; maxTime = 1.0)
 
 
 @assert abs(d_dlip - d_dlip_old) < 1e-2 "new dlip and old dlip are not the same"
