@@ -113,6 +113,8 @@ Computes Wasserstein over Wasserstein distance between two hierarchical samples 
 # Arguments:
     atoms_1::AbstractArray{Float64, 2}  :  first hierarchical sample
     atoms_2::AbstractArray{Float64, 2}  :  second hierarchical sample 
+
+# Warning: This function assumes that atoms are sorted.
 """
 
 function ww(atoms_1::AbstractArray{Float64, 2}, atoms_2::AbstractArray{Float64, 2})
@@ -156,6 +158,8 @@ Computes Wasserstein over Wasserstein distance between two hierarchical samples 
 # Arguments:
     atoms_1::HierSample  :  first hierarchical sample object
     atoms_2::HierSample  :  second hierarchical sample object
+    
+# Warning: This function assumes that atoms are sorted.
 """
 
 function ww(q_1::HierSample, q_2::HierSample)
