@@ -92,18 +92,18 @@ end
 struct for Q, law of RPM, defined as Q = λQ_1 + (1 - λ)Q_2 where Q_1,Q_2 are another laws of RPM.
 
 # Arguments:
-    lawrpm1::LawRPM  :  Law of RPM
-    lawrpm2::LawRPM  :  Law of RPM
+    law_rpm_1::LawRPM  :  Law of RPM
+    law_rpm_2::LawRPM  :  Law of RPM
     λ::Float64       :  mixing parameter
 
 """
 struct mixture{T1<:LawRPM, T2<:LawRPM} <: LawRPM
-    lawrpm1::T1
-    lawrpm2::T2
+    law_rpm_1::T1
+    law_rpm_2::T2
     λ::Float64
-    function mixture(lawrpm1::T1, lawrpm2::T2, λ::Float64) where {T1<:LawRPM, T2<:LawRPM}
+    function mixture(law_rpm_1::T1, law_rpm_2::T2, λ::Float64) where {T1<:LawRPM, T2<:LawRPM}
         (0.0 <= λ <= 1.0) || throw(ArgumentError("Mixing parameter λ must be in [0,1]. Got λ = $λ."))
-        return new{T1,T2}(lawrpm1, lawrpm2, λ)
+        return new{T1,T2}(law_rpm_1, law_rpm_2, λ)
     end
 end
 
@@ -117,14 +117,14 @@ end
 
 Function to generate HierSample using given law of RPM.
 # Arguments:
-    lawrpm::LawRPM
+    law_rpm::LawRPM
     n::Int  :  number of rows in a hierarchical sample.
     m::Int  :  number of columns in a hierarchical sample.
 """
-function generate_hiersample(lawrpm::LawRPM, n::Int, m::Int)
+function generate_hiersample(law_rpm::LawRPM, n::Int, m::Int)
     atoms = Matrix{Float64}(undef, n, m)
     for i in 1:n
-        atoms[i, :] = sort(sample_exch_seq(lawrpm, m)) # generate row of exchangeable sequences from law of RPM
+        atoms[i, :] = sort(sample_exch_seq(law_rpm, m)) # generate row of exchangeable sequences from law of RPM
     end
     a = @views minimum(atoms[:,1]) # left end point of interval containing hierarchical sample
     b = @views maximum(atoms[:,end]) # right end point of interval containing hierarchical
@@ -139,12 +139,12 @@ At each step i, with probability α / (α + i - 1) we generate a new sample
 from base distribution P_0, otherwise we choose uniformly from the previous samples.
 
 # Arguments:
-    lawrpm::DP  :  Dirichlet process DP(α, P_0)
+    law_rpm::DP  :  Dirichlet process DP(α, P_0)
     m::Int     :  number of samples to generate.
 """
- function sample_exch_seq(lawrpm::DP, m::Int)
-    α = lawrpm.α
-    p_0 = lawrpm.p_0
+ function sample_exch_seq(law_rpm::DP, m::Int)
+    α = law_rpm.α
+    p_0 = law_rpm.p_0
     samples = Vector{Float64}(undef, m) # to store samples from DP
     samples[1] = rand(p_0) # first sample from base distribution
     for i in 2:m
@@ -164,12 +164,12 @@ Function to generate m samples from tnormal_normal law of RPM. Firstly, δ is ge
 with standard deviation σ and mean μ, and then i.i.d observations are generated from Gaussian(δ, 1).
 
 # Arguments:
-    lawrpm::tnormal_normal
+    law_rpm::tnormal_normal
     m::Int  :  number of samples to generate.
 """
 
-function sample_exch_seq(lawrpm::tnormal_normal, m::Int)
-    truncated_normal = truncated(Normal(lawrpm.μ, lawrpm.σ), lawrpm.a, lawrpm.b) 
+function sample_exch_seq(law_rpm::tnormal_normal, m::Int)
+    truncated_normal = truncated(Normal(law_rpm.μ, law_rpm.σ), law_rpm.a, law_rpm.b) 
     δ = rand(truncated_normal) # generate mean for latent Gaussian(δ, 1).
     return rand(Normal(δ, 1.0), m) # generate obseravtions from Gaussian(δ, 1).
 end
@@ -179,35 +179,85 @@ end
 Function to generate m samples from discr_normal law of RPM. Firstly, δ is generated from discrete measure and 
 then i.i.d observations are generated from Gaussian(δ, 1).
 # Arguments:
-    lawrpm::discr_normal
+    law_rpm::discr_normal
     m::Int  :  number of samples to generate.
 """
-function sample_exch_seq(lawrpm::discr_normal, m::Int)
-    δ = sample(lawrpm.atoms, Weights(lawrpm.weights), 1)[1]  # generate mean for latent Gaussian with parameters (δ, 1).
+function sample_exch_seq(law_rpm::discr_normal, m::Int)
+    δ = sample(law_rpm.atoms, Weights(law_rpm.weights), 1)[1]  # generate mean for latent Gaussian with parameters (δ, 1).
     return rand(Normal(δ, 1.0), m) # generate obseravtions from Gaussian(δ, 1).
 end
 
 """
     sample_exch_seq
-Function to generate m samples from mixture of two laws of RPM. Each latent probability measure is generated from either lawrpm1
-or lawrpm2 with probabilities λ and 1 - λ respectively. Then, i.i.d observations are generated from it. 
+Function to generate m samples from mixture of two laws of RPM. Each latent probability measure is generated from either law_rpm_1
+or law_rpm_2 with probabilities λ and 1 - λ respectively. Then, i.i.d observations are generated from it. 
 
 # Arguments:
-    lawrpm::mixture  :  mixture of two laws of RPM.
+    law_rpm::mixture  :  mixture of two laws of RPM.
     m::Int           :  number of samples to generate.
 
 """
 
-function sample_exch_seq(lawrpm::mixture, m::Int)
-    λ = lawrpm.λ
+function sample_exch_seq(law_rpm::mixture, m::Int)
+    λ = law_rpm.λ
     if rand() <= λ
-        return sample_exch_seq(lawrpm.lawrpm1, m) # generate samples from lawrpm1
+        return sample_exch_seq(law_rpm.law_rpm_1, m) # generate samples from law_rpm_1
     else
-        return sample_exch_seq(lawrpm.lawrpm2, m) # generate samples from lawrpm2
+        return sample_exch_seq(law_rpm.law_rpm_2, m) # generate samples from law_rpm_2
     end
 end
 
 
+
+
+"""
+    generate_prob_measures
+Function to generate n values for δ from tnormal_normal that completely characterizes the probability measure Gaussian(δ, 1).
+# Arguments:
+    law_rpm::tnormal_normal
+    n::Int  :  number of probability measures to generate.
+"""
+
+function generate_prob_measures(law_rpm::tnormal_normal, n::Int)
+    truncated_normal = truncated(Normal(law_rpm.μ, law_rpm.σ), law_rpm.a, law_rpm.b)
+    return rand(truncated_normal, n)
+end
+
+"""
+    generate_prob_measures
+Function to generate n values for δ from discr_normal that completely characterizes the probability measure Gaussian(δ, 1).
+As discr_normal is discrete measure, we sample n values from its atoms with respect to its weights (without replacement).
+
+# Arguments:
+    law_rpm::discr_normal
+    n::Int  :  number of probability measures to generate.
+"""
+function generate_prob_measures(law_rpm::discr_normal, n::Int)
+    return sample(law_rpm.atoms, Weights(law_rpm.weights), n)
+end
+
+"""
+    generate_prob_measures
+
+Function to generate n values for δ from mixture of two laws of RPM that completely characterizes the probability measure Gaussian(δ, 1).
+Each δ is generated from either law_rpm_1 or law_rpm_2 with probabilities λ and 1 - λ respectively. 
+
+# Arguments:
+    law_rpm::mixture
+    n::Int  :  number of probability measures to generate.
+"""
+function generate_prob_measures(law_rpm::mixture, n::Int)
+    δs = zeros(n)
+    λ = law_rpm.λ # mixing parameter
+    for i in 1:n
+        if rand() <= λ
+            δs[i] = generate_prob_measures(law_rpm.law_rpm_1, 1)[1]
+        else
+            δs[i] = generate_prob_measures(law_rpm.law_rpm_1, 1)[1]
+        end
+    end
+    return δs
+end
 
 
 
@@ -227,14 +277,14 @@ end
 # then m observations are generated from Gaussian(δ, 1).
 
 # # Arguments:
-#     lawrpm::tnormal_normal
+#     law_rpm::tnormal_normal
 #     n::Int  :  number of rows in a hierarchical sample.
 #     m::Int  :  number of columns in a hierarchical sample.
 # """
-# function generate_hiersample(lawrpm::tnormal_normal, n::Int, m::Int)
+# function generate_hiersample(law_rpm::tnormal_normal, n::Int, m::Int)
 #     atoms = zeros(n,m)
 #     for i in 1:n
-#         truncated_normal = truncated(Normal(lawrpm.μ, lawrpm.σ), lawrpm.a, lawrpm.b) 
+#         truncated_normal = truncated(Normal(law_rpm.μ, law_rpm.σ), law_rpm.a, law_rpm.b) 
 #         δ = rand(truncated_normal) # generate mean for latent Gaussian(δ, 1).
 
 #         atoms[i,:] = sort(rand(Normal(δ, 1.0), m)) # generate obseravtions from Gaussian(δ, 1).
@@ -249,22 +299,22 @@ end
 # """
 #     generate_hiersample
 
-# Function to generate HierSample using mixture of two laws of RPM. Each latent probability measure is generated from either lawrpm1
-# or lawrpm2 with probabilities λ and 1 - λ respectively.
+# Function to generate HierSample using mixture of two laws of RPM. Each latent probability measure is generated from either law_rpm_1
+# or law_rpm_2 with probabilities λ and 1 - λ respectively.
 
 # # Arguments:
-#     lawrpm::mixture  :  mixture of two laws of RPM.
+#     law_rpm::mixture  :  mixture of two laws of RPM.
 #     n::Int           :  number of rows in a hierarchical sample.
 #     m::Int           :  number of columns in a hierarchical sample.
 # """
-# function generate_hiersample(lawrpm::mixture, n::Int, m::Int)
+# function generate_hiersample(law_rpm::mixture, n::Int, m::Int)
 #     atoms = zeros(n,m) # to store hierarchical sample.
-#     λ = lawrpm.λ
+#     λ = law_rpm.λ
 #     for i in 1:n
 #         if rand() <= λ
-#             atoms[i,:] = generate_hiersample(lawrpm.lawrpm1, 1, m).atoms[1,:] # generate one row from lawrpm1
+#             atoms[i,:] = generate_hiersample(law_rpm.law_rpm_1, 1, m).atoms[1,:] # generate one row from law_rpm_1
 #         else
-#             atoms[i,:] = generate_hiersample(lawrpm.lawrpm2, 1, m).atoms[1,:] # generate one row from lawrpm2
+#             atoms[i,:] = generate_hiersample(law_rpm.law_rpm_2, 1, m).atoms[1,:] # generate one row from law_rpm_2
 #         end
 #     end
 #     a = @views minimum(atoms[:,1]) # left end point of interval containing hierarchical sample
@@ -280,15 +330,15 @@ end
 # δ is generated from discrete measure and then m observations are generated from Gaussian(δ, 1).
 
 # # Arguments:
-#     lawrpm::discr_normal
+#     law_rpm::discr_normal
 #     n::Int  :  number of rows in a hierarchical sample.
 #     m::Int  :  number of columns in a hierarchical sample.
 # """
 
-# function generate_hiersample(lawrpm::discr_normal, n::Int, m::Int)
+# function generate_hiersample(law_rpm::discr_normal, n::Int, m::Int)
 #     atoms = zeros(n, m) # to store hierarchical sample.
 
-#     δs = sample(lawrpm.atoms, Weights(lawrpm.weights), n)  # generate means for latent Gaussians with parameters (δ, 1).
+#     δs = sample(law_rpm.atoms, Weights(law_rpm.weights), n)  # generate means for latent Gaussians with parameters (δ, 1).
 #     for i in 1:n_top
 #         atoms[i, :] = sort(rand(Normal(δs[i], 1.0), m)) # generate obseravtions from Gaussian(δ, 1).
 #     end
@@ -306,12 +356,12 @@ end
 #     generate_prob_measures
 # Function to generate n values for δ tnormal_normal law of RPM which completely characterizes the probability measure Gaussian(δ, 1).
 # # Arguments:
-#     lawppm::tnormal_normal
+#     law_rpm::tnormal_normal
 #     n::Int  :  number of probability measures to generate.
 # """
 
-# function generate_prob_measures(lawppm::tnormal_normal, n::Int)
-#     truncated_normal = truncated(Normal(lawppm.μ, lawppm.σ), lawppm.a, lawppm.b)
+# function generate_prob_measures(law_rpm::tnormal_normal, n::Int)
+#     truncated_normal = truncated(Normal(law_rpm.μ, law_rpm.σ), law_rpm.a, law_rpm.b)
 #     return rand(truncated_normal, n)
 # end
 
@@ -321,11 +371,11 @@ end
 # As discr_normal is discrete measure, we sample n values from its atoms with respect to its weights (without replacement).
 
 # # Arguments:
-#     lawppm::discr_normal
+#     law_rpm::discr_normal
 #     n::Int  :  number of probability measures to generate.
 # """
-# function generate_prob_measures(lawppm::discr_normal, n::Int)
-#     return sample(lawppm.atoms, Weights(lawppm.weights), n)
+# function generate_prob_measures(law_rpm::discr_normal, n::Int)
+#     return sample(law_rpm.atoms, Weights(law_rpm.weights), n)
 # end
 
 # """
@@ -335,17 +385,17 @@ end
 # Each δ is generated from either lawppm1 or lawppm2 with probabilities λ and 1 - λ respectively. 
 
 # # Arguments:
-#     lawppm::mixture
+#     law_rpm::mixture
 #     n::Int  :  number of probability measures to generate.
 # """
-# function generate_prob_measures(lawppm::mixture, n::Int)
+# function generate_prob_measures(law_rpm::mixture, n::Int)
 #     δs = zeros(n)
-#     λ = lawppm.λ # mixing parameter
+#     λ = law_rpm.λ # mixing parameter
 #     for i in 1:n
 #         if rand() <= λ
-#             δs[i] = generate_prob_measures(lawppm.ppm1, 1)[1]
+#             δs[i] = generate_prob_measures(law_rpm.ppm1, 1)[1]
 #         else
-#             δs[i] = generate_prob_measures(lawppm.ppm2, 1)[1]
+#             δs[i] = generate_prob_measures(law_rpm.ppm2, 1)[1]
 #         end
 #     end
 #     return δs

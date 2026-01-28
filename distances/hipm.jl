@@ -1,3 +1,7 @@
+# This file conrtains the code for computing HIPM.
+
+
+
 include("wow.jl")
 using LinearAlgebra 
 using BlackBoxOptim
