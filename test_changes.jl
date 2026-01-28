@@ -1,56 +1,50 @@
 
-include("distances/hipm.jl")
-include("distributions.jl")
+include("methods.jl")
+using Plots
 
 
-n_1 = 50
-n_2 = 50
-m = 10
+n_1 = 70
+n_2 = 70
+n = n_1
+m = 100
+
+# θ = collect(0.0:0.01:1.0)
+θ = 0.05
+n_samples = 3
+bootstrap = true
 
 
-h_1, h_2 = generate_hiersample(DP(1.0, Beta(1,2)), n_1, m), generate_hiersample(DP(3.0, Beta(1,4)), n_2, m)
-weights_1, weights_2 = fill(1.0/m, n_1, m), fill(1.0/m, n_1, m)
+S = 3
+q_1 = tnormal_normal(1.0, 1.0, -10.0, 10.0)
+q_2 = mixture(q_1, tnormal_normal(1.0, 1.0, -10.0, 10.0), 0.6)
 
-
-
-d_dlip = dlip(h_1.atoms, h_2.atoms, weights_1, weights_2, 0.0, 1.0; max_time = 1.0)
-
-
-@assert abs(d_dlip - d_dlip_old) < 1e-2 "new dlip and old dlip are not the same"
-
-println("dlip is $(d_dlip)")
-println("original is $(d_dlip_old)")
-
-
+@time r = rejection_rate_all(q_1, q_2, n, m, S, θ, n_samples, bootstrap)
 
 
 
 
 
+function test_statistic_energy_1(atoms_1::AbstractArray{Float64, 2}, atoms_2::AbstractArray{Float64, 2})
+    
+    n = size(atoms_1)[1]
+    n == size(atoms_2)[1] || throw(ArgumentError("Number of rows of atoms_1 and atoms_2 are not the same."))
+    
+    sum_distances_x = 0.0 # collects sum of all possible distances in atoms_1
+    sum_distances_xy = 0.0 # collects sum of all possible distances between atoms_1 and atoms_2
+    sum_distances_y = 0.0 # collects sum of all possible distances in atoms_2
 
-# weights_1 = fill(1.0/m, (n_1, m))
-# weights_2 = fill(1.0/m, (n_2, m))
+    for i in 1:n
+        x = @view atoms_1[i,:]
+        y = @view atoms_2[i,:]
+        for j in 1:n
+            x_j = @view atoms_1[j,:]
+            y_j = @view atoms_2[j,:]
 
-
-# a = minimum((minimum(h_1),minimum(h_2)))
-# b = maximum((maximum(h_1),maximum(h_2)))
-
-# Random.seed!(1234)
-# d_old = dlip_old_diffsize(h_1, h_2, weights_1, weights_2, a, b; maxTime = 5.0)
-# Random.seed!(1234)
-# d_new = dlip(h_1, h_2, weights_1, weights_2, a, b; max_time = 5.0)
-
- distance_w1d = mean(abs.(sort(h_1.atoms[:,1]) .- sort(h_2.atoms[:,1])))
-
- distance_ww = ww(h_1, h_2)
-# distance_hipm = dlip(h_1, h_2, 0.0,1.0)
-
-# println("true distance is : $(distance_w1d)")
-# println("ww is : $(distance_ww)")
-# println("hipm is : $(distance_hipm)")
-
-# println("$(abs(distance_w1d-distance_hipm))")
-# println("$(abs(distance_w1d-distance_ww))")
-
-
-
+            sum_distances_x += wasserstein_1d_equal(x, x_j)
+            sum_distances_xy += wasserstein_1d_equal(x, y_j)
+            sum_distances_y += wasserstein_1d_equal(y, y_j)
+        end
+    end
+    distance = 2 * sum_distances_xy / (n * n) - sum_distances_x / (n * n) -sum_distances_y / (n * n)
+    return distance * n / 2
+end

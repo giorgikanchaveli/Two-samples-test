@@ -1,5 +1,4 @@
-# This file contains functions for simulations. In particular
-# functions for test statistics, decision of rejection, thresholds and rejection rates.
+# This file contains functions for simulations: test statistics, decision of rejection, thresholds and rejection rates.
 
 
 using RCall # to call R functions
@@ -8,409 +7,482 @@ using FLoops # for parallel computing
 include("distributions.jl")
 
 include("distances/hipm.jl")
-include("distances/wow.jl")
+include("distances/wow.jl") 
 
-function test_statistic_energy(atoms_1::Matrix{Float64}, atoms_2::Matrix{Float64})
-    # Given two hierarchical samples, computes test statistic
-    # according to energy statistic method. 
-    # we assume that rows in each atoms are sorted.
 
-    n = size(atoms_1)[1]
+"""
+    test_statistic_energy
+
+Given two matrices of atoms (hierarchical sample using definition in paper), computes the test statitic from Szekely et al. (2004).
+
+# Arguments:
+    atoms_1::AbstractArray{Float64, 2}
+    atoms_2::AbstractArray{Float64, 2}
+
+# Warning: 
+    Each row in matrices atoms_1/2 must be sorted.
+    Number of rows of atoms_1 and atoms_2 should be the same.
+"""
+
+function test_statistic_energy(atoms_1::AbstractArray{Float64, 2}, atoms_2::AbstractArray{Float64, 2})
     
-    distances_x = Matrix{Float64}(undef, n, n)
-    distances_xy = Matrix{Float64}(undef, n, n)
-    distances_y = Matrix{Float64}(undef, n, n)
+    n = size(atoms_1)[1]
+    n == size(atoms_2)[1] || throw(ArgumentError("Number of rows of atoms_1 and atoms_2 are not the same."))
+    
+    sum_distances_x = 0.0 # collects sum of all possible distances in atoms_1
+    sum_distances_xy = 0.0 # collects sum of all possible distances between atoms_1 and atoms_2
+    sum_distances_y = 0.0 # collects sum of all possible distances in atoms_2
 
     for i in 1:n
-        x = atoms_1[i,:]
-        y = atoms_2[i,:]
+        x = @view atoms_1[i,:]
+        y = @view atoms_2[i,:]
         for j in 1:n
-            distances_x[i, j] = wasserstein1DUniform_sorted(x, atoms_1[j,:])
-            distances_xy[i, j] = wasserstein1DUniform_sorted(x, atoms_2[j,:])
-            distances_y[i, j] = wasserstein1DUniform_sorted(y, atoms_2[j,:])
+            x_j = @view atoms_1[j,:]
+            y_j = @view atoms_2[j,:]
+
+            sum_distances_x += wasserstein_1d_equal(x, x_j)
+            sum_distances_xy += wasserstein_1d_equal(x, y_j)
+            sum_distances_y += wasserstein_1d_equal(y, y_j)
         end
     end
-    distance = 2 * mean(distances_xy) - mean(distances_x) - mean(distances_y)
+    distance = 2 * sum_distances_xy / (n * n) - sum_distances_x / (n * n) -sum_distances_y / (n * n)
     return distance * n / 2
 end
 
-function decide_energy(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_samples::Int)
-    # Given two hierarchical samples, it decides whether to reject H_0 using 
-    # bootstrap or permutation approach.
 
-    n = hier_sample_1.n
+"""
+    decision_energy
 
-    atoms_1 = hier_sample_1.atoms
-    atoms_2 = hier_sample_2.atoms
+Given two hierarchical samples, decides whether to reject null hypothesis using the method from Szekely et al. (2004).
 
-    
+# Arguments: 
+    h_1::HierSample
+    h_2::HierSample
+    θ::Float64       :  Significance level
+    n_samples::Int   :  number samples for Bootstrap approach
+"""
+
+function decision_energy(h_1::HierSample, h_2::HierSample, θ::Float64, n_samples::Int)
+
+    atoms_1 = h_1.atoms
+    atoms_2 = h_2.atoms
+    n = size(atoms_1)[1]
+
     observed_test_stat = test_statistic_energy(atoms_1, atoms_2)
         
     # obtain quantile using bootstrap approach
-    bootstrap_samples = zeros(n_samples) # zeros can be improved
-    
-    total_rows = vcat(atoms_1, atoms_2) # collect all rows
+    bootstrap_samples = zeros(n_samples) 
+    pooled_atoms = vcat(atoms_1, atoms_2) # collect all rows
     for i in 1:n_samples
         indices_1 = sample(1:2*n, n; replace = true)
         indices_2 = sample(1:2*n, n; replace = true)
-    
-        bootstrap_samples[i] = test_statistic_energy(total_rows[indices_1,:], total_rows[indices_2,:])
+
+        new_atoms_1 = @view pooled_atoms[indices_1,:]
+        new_atoms_2 = @view pooled_atoms[indices_2,:]
+        bootstrap_samples[i] = test_statistic_energy(new_atoms_1, new_atoms_2)
     end
-    threshold = quantile(bootstrap_samples, 1 - θ)
-    
-    return 1.0*(observed_test_stat > threshold)
+    pvalue = mean(bootstrap_samples .>= observed_test_stat)
+    return Float64(pvalue < θ)
 end
 
 
-function decide_dm(mu_1::Vector{Float64}, mu_2::Vector{Float64}, θ::Float64, n_bootstrap::Int)
-    # Given two vectors containing probability measures, decides whether to reject H_0 or not
-    # according to DM method.
-    n = length(mu_1)
+"""
+    decision_dm
+
+Given two vectors, each containing the means of Gaussian distributions with variance 1, decides whether to reject H_0
+according to the method from Dubey and Muller (2019).
+
+# Arguments:
+    means_1::Vector{Float64}  :  means of Gaussians with variance 1
+    means_2::Vector{Float64}  :  means of Gaussians with variance 1
+    θ::Float64                :  Significance level
+    n_bootstrap::Int          :  number of bootstrap samples.
+"""
+function decision_dm(means_1::Vector{Float64}, means_2::Vector{Float64}, θ::Float64, n_bootstrap::Int)
+  
+    n = length(means_1)
     
-    @rput mu_1 mu_2 n n_bootstrap
+    @rput means_1 means_2 n n_bootstrap
     R"""
 
     library(frechet)
-    n1 <- n
-    n2 <- n
+    n_1 <- n
+    n_2 <- n
     delta <- 1
     qSup <- seq(0.01, 0.99, (0.99 - 0.01) / 50)
 
-    Y1 <- lapply(1:n1, function(i) {
-    qnorm(qSup, mu_1[i], sd = 1)
+    Y1 <- lapply(1:n_1, function(i) {
+    qnorm(qSup, means_1[i], sd = 1)
     })
-    Y2 <- lapply(1:n2, function(i) {
-    qnorm(qSup, mu_2[i], sd = 1)
+    Y2 <- lapply(1:n_2, function(i) {
+    qnorm(qSup, means_2[i], sd = 1)
     })
     Ly <- c(Y1, Y2)
     Lx <- qSup
-    group <- c(rep(1, n1), rep(2, n2))
+    group <- c(rep(1, n_1), rep(2, n_2))
     res <- DenANOVA(qin = Ly, supin = Lx, group = group, optns = list(boot = TRUE, R = n_bootstrap))
-    pvalue = res$pvalBoot # returns bootstrap pvalue
+    pvalue = res$pvalBoot 
     """
     @rget pvalue  
-    return 1 * (pvalue < θ)
+    return Float64(pvalue < θ)
 end
 
 
+"""
+    decision_dm
 
-function decide_dm(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_bootstrap::Int)
-    # Given two vectors containing probability measures, decides whether to reject H_0 or not
-    # according to DM method.
-    n = hier_sample_1.n
+Given hierarchical sample objects, decides whether to reject H_0 according to the method from Dubey and Muller (2019).
 
-    all_samples = vcat(hier_sample_1.atoms, hier_sample_2.atoms)
+# Arguments:
+    h_1::HierSample
+    h_2::HierSample
+    θ::Float64                :  Significance level
+    n_bootstrap::Int          :  number of bootstrap samples.
+
+# Warning:
+    if in each row, most of the atoms are repeating, may give an error.
+"""
+function decision_dm(h_1::HierSample, h_2::HierSample, θ::Float64, n_bootstrap::Int)
+
+    n_1 = size(h_1.atoms)[1]
+    n_2 = size(h_2.atoms)[1]
+
+    pooled_atoms = vcat(h_1.atoms, h_2.atoms)
     
-    @rput all_samples n n_bootstrap
+    @rput pooled_atoms n_1 n_2 n_bootstrap
     R"""
 
     library(frechet)
-    n1 <- n
-    n2 <- n
     
-    group <- c(rep(1, n1), rep(2, n2))
-    res <- DenANOVA(yin = all_samples, group = group, optns = list(boot = TRUE, R = n_bootstrap))
+    group <- c(rep(1, n_1), rep(2, n_2))
+    res <- DenANOVA(yin = pooled_atoms, group = group, optns = list(boot = TRUE, R = n_bootstrap))
     pvalue = res$pvalBoot # returns bootstrap pvalue
     """
     @rget pvalue  
-    return 1 * (pvalue < θ)
+    return Float64(pvalue < θ)
 end
 
 
 
-function rejection_rate_dm(q_1::Union{tnormal_normal,simple_discr_1, simple_discr_2,mixture_ppm},
-                             q_2::Union{tnormal_normal,simple_discr_1, simple_discr_2,mixture_ppm}, n::Int, m::Int,
-                         S::Int, θ::Float64, n_bootstrap::Int)
-    # Given two laws of RPMs, returns rate of rejecting H_0 according to DM method.
- 
-    rate = 0.0
+"""
+    rejection_rate_dm
+
+Given specific laws of RPMS (laws on N(δ, 1)), estimates the rejection rate of the testing scheme
+according to Dubey and Muller (2019). It works directly on probability measures instead of hierarchical samples.
+
+# Arguments:
+    q_1::Union{tnormal_normal, discr_normal, mixture}  :  law of RPM
+    q_2::Union{tnormal_normal, discr_normal, mixture}  :  law of RPM
+    n::Int                                                 :  number of probability measures
+    S::Int                                                 :  number of MCMC iterations to estimate rejection rate
+    θ::Float64                                             :  significance level
+    n_bootstrap::Int                                       :  number of bootstrap samples.
+"""
+
+function rejection_rate_dm(q_1::Union{tnormal_normal, discr_normal, mixture},
+                             q_2::Union{tnormal_normal, discr_normal, mixture}, 
+                             n::Int,S::Int, θ::Float64, n_bootstrap::Int)
+    rej_rate = 0.0
     
     for i in 1:S
         # generate normal distributions 
-        mu_1 = generate_prob_measures(q_1, n) # only contains means for normal distribution
-        mu_2 = generate_prob_measures(q_2, n) # only contains means for normal distribution
+        means_1 = generate_prob_measures(q_1, n) # only contains means for normal distribution
+        means_2 = generate_prob_measures(q_2, n) # only contains means for normal distribution
         
-        rate += decide_dm(mu_1, mu_2, θ, n_bootstrap) 
+        rej_rate += decision_dm(means_1, means_2, θ, n_bootstrap) 
     end
-    return rate/S
-end
-function rejection_rate_dm(q_1::DP,q_2::DP, n::Int, m::Int,
-                         S::Int, θ::Float64, n_bootstrap::Int)
-    # Given two laws of RPMs, returns rate of rejecting H_0 according to DM method.
- 
-    rate = 0.0
-    
-    for i in 1:S
-        hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
-        rate += decide_dm(hier_sample_1, hier_sample_2, θ, n_bootstrap) 
-    end
-    return rate/S
+    return rej_rate/S
 end
 
 
+"""
+    threshold_hipm
 
+Given hierchical samples, obtains the threshold using HIPM via bootstrap/permutation approach.
 
-function threshold_hipm(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_samples::Int, bootstrap::Bool)
+# Arguments: 
+    h_1::HierSample
+    h_2::HierSample
+    θ::Union{Float64, Vector{Float64}}  :  Significance level/s
+    n_samples::Int                      :  number of bootstrap/permutation samples
+    bootstrap::Bool                     :  Boolean variable. If true use bootstrap, otherwise permutation.
+
+"""
+function threshold_hipm(h_1::HierSample, h_2::HierSample, θ::Union{Float64, Vector{Float64}}, n_samples::Int, bootstrap::Bool)
     # Obtains threshold for HIPM via permutation or bootstrap approach.
-    n = hier_sample_1.n
-    a = minimum((hier_sample_1.a,hier_sample_2.a))
-    b = maximum((hier_sample_1.b,hier_sample_2.b))
+    n_1 = size(h_1.atoms)[1]
+    n_2 = size(h_2.atoms)[1]
+    n_total = n_1 + n_2
+
+    a = minimum((h_1.a,h_2.a))
+    b = maximum((h_1.b,h_2.b))
    
-    samples = zeros(n_samples)
-    total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
+    samples = zeros(n_samples) # storing bootstrap/permutation samples
+    pooled_atoms = vcat(h_1.atoms, h_2.atoms) # collect all rows
+
     if bootstrap
         for i in 1:n_samples
-            indices_1 = sample(1:2*n, n; replace = true)
-            indices_2 = sample(1:2*n, n; replace = true)
+            indices_1 = sample(1:n_total, n_1; replace = true)
+            indices_2 = sample(1:n_total, n_2; replace = true)
 
-            new_atoms_1 = total_rows[indices_1,:] # first rows indexed by n random indices to the atoms_1
-            new_atoms_2 = total_rows[indices_2,:] # first rows indexed by n random indices to the atoms_2
+            new_atoms_1 = @view pooled_atoms[indices_1,:] 
+            new_atoms_2 = @view pooled_atoms[indices_2,:] 
 
             samples[i] = dlip(new_atoms_1, new_atoms_2, a, b)
         end
     else
         for i in 1:n_samples
-            random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
+            random_indices = randperm(n_total) # indices to distribute rows to new hierarchical meausures
 
-            new_atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
-            new_atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
+            new_atoms_1 = @view pooled_atoms[random_indices[1:n_1],:] # rows indexed by first n_1 random indices to the atoms_1
+            new_atoms_2 = @view pooled_atoms[random_indices[n_1+1:end],:] # rows indexed by the rest of random indices to the atoms_2
         
             samples[i] = dlip(new_atoms_1, new_atoms_2, a, b)
         end
     end
-    return quantile(samples, 1 - θ)
+    return quantile(samples, 1 .- θ) .* sqrt(n_1*n_2 / n_total)
 end
 
+"""
+    decision_hipm
 
-function threshold_hipm(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Vector{Float64}, n_samples::Int, bootstrap::Bool)
+Given two hierarchical samples, decides whether to reject H_0 using HIPM via bootstrap/permutation approach,
+
+# Arguments:
+    h_1::HierSample
+    h_2::HierSample
+    θ::Float64       :  Significance level/s
+    n_samples::Int   :  number of bootstrap/permutation samples
+    bootstrap::Bool  :  Boolean variable. If true use bootstrap, otherwise permutation.
+"""
+function decision_hipm(h_1::HierSample, h_2::HierSample, θ::Union{Float64, Vector{Float64}}, n_samples::Int, bootstrap::Bool)
+    
+    atoms_1 = h_1.atoms
+    atoms_2 = h_2.atoms
+    n_1 = size(atoms_1)[1]
+    n_2 = size(atoms_2)[1]
+    n_total = n_1 + n_2
+
+    a = minimum((h_1.a, h_2.a))
+    b = maximum((h_1.b, h_2.b))
+    observed_distance = dlip(h_1, h_2, a, b)
+       
+    # obtain bootstrap/permutation samples
+    samples = zeros(n_samples) 
+    pooled_atoms = vcat(atoms_1, atoms_2) # collect all rows
+
+    if bootstrap
+        for i in 1:n_samples
+            indices_1 = sample(1:n_total, n_1; replace = true)
+            indices_2 = sample(1:n_total, n_2; replace = true)
+
+            new_atoms_1 = @view pooled_atoms[indices_1,:] 
+            new_atoms_2 = @view pooled_atoms[indices_2,:] 
+
+            samples[i] = dlip(new_atoms_1, new_atoms_2, a, b)
+        end
+    else
+        for i in 1:n_samples
+            random_indices = randperm(n_total) # indices to distribute rows to new hierarchical meausures
+
+            new_atoms_1 = @view pooled_atoms[random_indices[1:n_1],:] # rows indexed by first n_1 random indices to the atoms_1
+            new_atoms_2 = @view pooled_atoms[random_indices[n_1+1:end],:] # rows indexed by the rest of random indices to the atoms_2
+        
+            samples[i] = dlip(new_atoms_1, new_atoms_2, a, b)
+        end
+    end
+    pvalue = mean(samples .>= observed_distance)
+    return Float64.(pvalue .< θ)
+end
+
+"""
+    threshold_wow
+
+Given hierchical samples, obtains the threshold using WoW via bootstrap/permutation approach.
+
+# Arguments: 
+    h_1::HierSample
+    h_2::HierSample
+    θ::Union{Float64, Vector{Float64}}  :  Significance level/s
+    n_samples::Int                      :  number of bootstrap/permutation samples
+    bootstrap::Bool                     :  Boolean variable. If true use bootstrap, otherwise permutation.
+
+"""
+function threshold_wow(h_1::HierSample, h_2::HierSample, θ::Union{Float64, Vector{Float64}}, n_samples::Int, bootstrap::Bool)
     # Obtains threshold for HIPM via permutation or bootstrap approach.
-    n = hier_sample_1.n
-    a = minimum((hier_sample_1.a,hier_sample_2.a))
-    b = maximum((hier_sample_1.b,hier_sample_2.b))
-   
-    samples = zeros(n_samples)
-    total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
+    n_1 = size(h_1.atoms)[1]
+    n_2 = size(h_2.atoms)[1]
+    n_total = n_1 + n_2
+
+    samples = zeros(n_samples) # storing bootstrap/permutation samples
+    pooled_atoms = vcat(h_1.atoms, h_2.atoms) # collect all rows
+
     if bootstrap
         for i in 1:n_samples
-            indices_1 = sample(1:2*n, n; replace = true)
-            indices_2 = sample(1:2*n, n; replace = true)
+            indices_1 = sample(1:n_total, n_1; replace = true)
+            indices_2 = sample(1:n_total, n_2; replace = true)
 
-            new_atoms_1 = total_rows[indices_1,:] # first rows indexed by n random indices to the atoms_1
-            new_atoms_2 = total_rows[indices_2,:] # first rows indexed by n random indices to the atoms_2
+            new_atoms_1 = @view pooled_atoms[indices_1,:] 
+            new_atoms_2 = @view pooled_atoms[indices_2,:] 
 
-            samples[i] = dlip(new_atoms_1, new_atoms_2, a, b)
+            samples[i] = ww(new_atoms_1, new_atoms_2)
         end
     else
         for i in 1:n_samples
-            random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
+            random_indices = randperm(n_total) # indices to distribute rows to new hierarchical meausures
 
-            new_atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
-            new_atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
+            new_atoms_1 = @view pooled_atoms[random_indices[1:n_1],:] # rows indexed by first n_1 random indices to the atoms_1
+            new_atoms_2 = @view pooled_atoms[random_indices[n_1+1:end],:] # rows indexed by the rest of random indices to the atoms_2
         
-            samples[i] = dlip(new_atoms_1, new_atoms_2, a, b)
+            samples[i] = ww(new_atoms_1, new_atoms_2)
         end
     end
+    return quantile(samples, 1 .- θ) .* sqrt(n_1*n_2 / n_total)
+end
+
+
+"""
+    decision_wow
+
+Given two hierarchical samples, decides whether to reject H_0 using WoW via bootstrap/permutation approach,
+
+# Arguments:
+    h_1::HierSample
+    h_2::HierSample
+    θ::Float64       :  Significance level/s
+    n_samples::Int   :  number of bootstrap/permutation samples
+    bootstrap::Bool  :  Boolean variable. If true use bootstrap, otherwise permutation.
+"""
+function decision_wow(h_1::HierSample, h_2::HierSample, θ::Union{Float64, Vector{Float64}}, n_samples::Int, bootstrap::Bool)
     
-    return quantile(samples, 1 .- θ)
-end
+    atoms_1 = h_1.atoms
+    atoms_2 = h_2.atoms
+    n_1 = size(atoms_1)[1]
+    n_2 = size(atoms_2)[1]
+    n_total = n_1 + n_2
 
+  
+    observed_distance = ww(h_1, h_2)
+       
+    # obtain bootstrap/permutation samples
+    samples = zeros(n_samples) 
+    pooled_atoms = vcat(atoms_1, atoms_2) # collect all rows
 
-function decide_hipm(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_samples::Int, bootstrap::Bool)
-    # Given two hierarchical samples, it decides whether to reject H_0 using HIPM via
-    # bootstrap or permutation approach. 
-    threshold = threshold_hipm(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
-    a = minimum((hier_sample_1.a, hier_sample_2.a))
-    b = maximum((hier_sample_1.b, hier_sample_2.b))
-
-    return 1.0*(dlip(hier_sample_1, hier_sample_2, a, b) > threshold)
-end
-
-function decide_hipm(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Vector{Float64}, n_samples::Int, bootstrap::Bool)
-    # Given two hierarchical samples, it decides whether to reject H_0 using HIPM via
-    # bootstrap or permutation approach. 
-    threshold = threshold_hipm(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
-    a = minimum((hier_sample_1.a, hier_sample_2.a))
-    b = maximum((hier_sample_1.b, hier_sample_2.b))
-
-    return 1.0.*(dlip(hier_sample_1, hier_sample_2, a, b) .> threshold)
-end
-
-function threshold_wow(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_samples::Int, bootstrap::Bool)
-    # Obtains threshold for WoW via permutation or bootstrap approach.
-    n = hier_sample_1.n
-    atoms_1 = hier_sample_1.atoms
-    atoms_2 = hier_sample_2.atoms
-    
-    samples = zeros(n_samples)
-    total_rows = vcat(atoms_1, atoms_2) # collect all rows
     if bootstrap
         for i in 1:n_samples
-            indices_1 = sample(1:2*n, n; replace = true)
-            indices_2 = sample(1:2*n, n; replace = true)
+            indices_1 = sample(1:n_total, n_1; replace = true)
+            indices_2 = sample(1:n_total, n_2; replace = true)
 
-            new_atoms_1 = total_rows[indices_1,:] # first rows indexed by n random indices to the atoms_1
-            new_atoms_2 = total_rows[indices_2,:] # first rows indexed by n random indices to the atoms_2
+            new_atoms_1 = @view pooled_atoms[indices_1,:] 
+            new_atoms_2 = @view pooled_atoms[indices_2,:] 
 
-            samples[i] = ww(new_atoms_1, new_atoms_2) # sorted = true
+            samples[i] = ww(new_atoms_1, new_atoms_2)
         end
     else
         for i in 1:n_samples
-            random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
+            random_indices = randperm(n_total) # indices to distribute rows to new hierarchical meausures
 
-            new_atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
-            new_atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
+            new_atoms_1 = @view pooled_atoms[random_indices[1:n_1],:] # rows indexed by first n_1 random indices to the atoms_1
+            new_atoms_2 = @view pooled_atoms[random_indices[n_1+1:end],:] # rows indexed by the rest of random indices to the atoms_2
         
-         
-            samples[i] = ww(new_atoms_1, new_atoms_2) # sorted = true
+            samples[i] = ww(new_atoms_1, new_atoms_2)
         end
     end
-    return quantile(samples, 1 - θ)
+    pvalue = mean(samples .>= observed_distance)
+    return Float64.(pvalue .< θ)
 end
 
 
-function threshold_wow(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Vector{Float64}, n_samples::Int, bootstrap::Bool)
-    # Obtains threshold for WoW via permutation or bootstrap approach.
-    n = hier_sample_1.n
-    atoms_1 = hier_sample_1.atoms
-    atoms_2 = hier_sample_2.atoms
-    
-    samples = zeros(n_samples)
-    total_rows = vcat(atoms_1, atoms_2) # collect all rows
-    if bootstrap
-        for i in 1:n_samples
-            indices_1 = sample(1:2*n, n; replace = true)
-            indices_2 = sample(1:2*n, n; replace = true)
+"""
+    rejection_rate_hipm_wow
 
-            new_atoms_1 = total_rows[indices_1,:] # first rows indexed by n random indices to the atoms_1
-            new_atoms_2 = total_rows[indices_2,:] # first rows indexed by n random indices to the atoms_2
+Given two laws of RPMs, returns rejection rates using HIPM and WoW.
 
-            samples[i] = ww(new_atoms_1, new_atoms_2) # sorted = true
-        end
-    else
-        for i in 1:n_samples
-            random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
-
-            new_atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
-            new_atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
-        
-         
-            samples[i] = ww(new_atoms_1, new_atoms_2) # sorted = true
-        end
-    end
-    return quantile(samples, 1 .- θ)
-end
-
-function decide_wow(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Vector{Float64}, n_samples::Int, bootstrap::Bool)
-    # Given two hierarchical samples, it decides whether to reject H_0 using WoW via
-    # bootstrap or permutation approach. 
-    threshold = threshold_wow(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
-
-    return 1.0.*(ww(hier_sample_1, hier_sample_2) .> threshold)
-end
-
-function decide_wow(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_samples::Int, bootstrap::Bool)
-    # Given two hierarchical samples, it decides whether to reject H_0 using WoW via
-    # bootstrap or permutation approach. 
-    threshold = threshold_wow(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
-
-    return 1.0*(ww(hier_sample_1, hier_sample_2) > threshold)
-end
-
-function rejection_rate_hipm_wow(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
-    # Given two laws of RPMs, returns rejection rate for all HIPM and WoW.
-    # Note that here thresholds for HIPM, WoW and Energy are sample dependent,
-    rates_hipm = 0.0
-    rates_wow = 0.0
+# Arguments: 
+    q_1::LawRPM
+    q_2::LawRPM 
+    n::Int              :  number of exchangeable sequences
+    m::Int              :  length of each exchangeable sequence 
+    S::Int              :  number of MCMC samples to estimate rejection rate 
+    θ::Vector{Float64}  :  siginicance level/s
+    n_samples::Int      :  number of bootstrap/permutation samples
+    bootstrap::Bool     :  Boolean variable, if true use bootstrap approach, otherwise permutation.
+"""
+function rejection_rate_hipm_wow(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Vector{Float64},
+                     n_samples::Int, bootstrap::Bool)
+    rates_hipm = zeros(length(θ))
+    rates_wow = zeros(length(θ))
     @floop ThreadedEx() for s in 1:S
         # generate samples
-        hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
+        h_1, h_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
 
         # record decisions from each testing methods
-        @reduce rates_hipm += decide_hipm(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
-        @reduce rates_wow += decide_wow(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
+        @reduce rates_hipm .+= decision_hipm(h_1, h_2, θ, n_samples, bootstrap)
+        @reduce rates_wow .+= decision_wow(h_1, h_2, θ, n_samples, bootstrap)
     end
-    rates_hipm /= S
-    rates_wow /= S
-    return rates_hipm,rates_wow
+    rates_hipm ./= S
+    rates_wow ./= S
+    
+    if length(θ) == 1
+        return rates_hipm[1],rates_wow[1]
+    else
+        return rates_hipm, rates_wow
+    end
 end
 
 
 
 
+"""
+    rejection_rate_all
+
+Given two laws of RPMs, returns rejection rates for all 4 testing schemes: HIPM, WoW, DM, Energy. Note that for HIPM, 
+WoW and Energy test, we record decisions on same hierarchical samples; On the other hand, we record seperately decisions for DM. 
+
+# Arguments: 
+    q_1::LawRPM
+    q_2::LawRPM 
+    n::Int              :  number of exchangeable sequences
+    m::Int              :  length of each exchangeable sequence 
+    S::Int              :  number of MCMC samples to estimate rejection rate 
+    θ::Float64          :  siginicance level
+    n_samples::Int      :  number of bootstrap/permutation samples
+    bootstrap::Bool     :  Boolean variable, if true use bootstrap approach, otherwise permutation.
+"""
 function rejection_rate_all(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
-    # Given two laws of RPMs, returns rejection rate for all 4 testing schemes.
-    # Note that for HIPM, WoW and Energy test, we record decisions on same hierarchical samples,
-    # on the other hand, we record seperately decisions for DM. 
-
-    # Note also that here thresholds for HIPM, WoW and Energy are sample dependent,
-    
     rates_hipm = 0.0
     rates_wow = 0.0
     rates_energy = 0.0
 
     @floop ThreadedEx() for s in 1:S
         # generate samples and set endpoints
-        hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
+        h_1, h_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
 
         # record decisions from each testing methods
-        @reduce rates_hipm += decide_hipm(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
-        @reduce rates_wow += decide_wow(hier_sample_1, hier_sample_2, θ, n_samples, bootstrap)
-
-        #@reduce rates_hipm += 1.0*(dlip(hier_sample_1, hier_sample_2) > threshold_hipm_wrong)
-        #@reduce rates_wow += 1.0 * (ww(hier_sample_1, hier_sample_2) > threshold_wow_wrong)
-        
-        @reduce rates_energy += decide_energy(hier_sample_1, hier_sample_2, θ, n_samples) 
+        @reduce rates_hipm += decision_hipm(h_1, h_2, θ, n_samples, bootstrap)
+        @reduce rates_wow += decision_wow(h_1, h_2, θ, n_samples, bootstrap)
+        @reduce rates_energy += decision_energy(h_1, h_2, θ, n_samples) 
     end
     rates_energy /= S
     rates_wow /= S
     rates_hipm /= S
-    rates_dm = rejection_rate_dm(q_1, q_2, n, m, S, θ, n_samples)
-    return rates_hipm,rates_wow,rates_dm,rates_energy
-end
-
-
-
-
-
-
-function rejection_rate_all_fake(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
-    # Given two laws of RPMs, returns rejection rate for all 4 testing schemes.
-    
-    # It is called fake because thresholds for hipm and wow are obtained from some auxiliary hierarchical
-    # samples and then used for each simulated sample.
-
-    # firstly we obtain fixed thresholds for HIPM and WoW
-    aux_hier_sample_1 = generate_hiersample(q_1,n,m)
-    aux_hier_sample_2 = generate_hiersample(q_2, n, m)
-    threshold_hipm_wrong = threshold_hipm(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
-    threshold_wow_wrong = threshold_wow(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
-
-    rates_hipm = 0.0
-    rates_wow = 0.0
-    rates_energy = 0.0
-
-    @floop ThreadedEx() for s in 1:S
-        # generate samples and set endpoints
-        hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
-        a = minimum((hier_sample_1.a, hier_sample_2.a))
-        b = maximum((hier_sample_1.b, hier_sample_2.b))
-        hier_sample_1.a = a
-        hier_sample_2.a = a
-        hier_sample_1.b = b
-        hier_sample_2.b = b
-
-        # record decisions from each testing methods
-        @reduce rates_hipm += 1.0*(dlip(hier_sample_1, hier_sample_2) > threshold_hipm_wrong)
-        @reduce rates_wow += 1.0 * (ww(hier_sample_1, hier_sample_2) > threshold_wow_wrong)
-        @reduce rates_energy += decide_energy(hier_sample_1, hier_sample_2, θ, n_samples) 
-    end
-    rates_energy /= S
-    rates_wow /= S
-    rates_hipm /= S
-    rates_dm = 0.0
     rates_dm = rejection_rate_dm(q_1, q_2, n, S, θ, n_samples)
+    
     return rates_hipm,rates_wow,rates_dm,rates_energy
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -420,35 +492,44 @@ end
 
 
 
+# function rejection_rate_all_fake(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_samples::Int, bootstrap::Bool)
+#     # Given two laws of RPMs, returns rejection rate for all 4 testing schemes.
+    
+#     # It is called fake because thresholds for hipm and wow are obtained from some auxiliary hierarchical
+#     # samples and then used for each simulated sample.
 
+#     # firstly we obtain fixed thresholds for HIPM and WoW
+#     aux_h_1 = generate_hiersample(q_1,n,m)
+#     aux_h_2 = generate_hiersample(q_2, n, m)
+#     threshold_hipm_wrong = threshold_hipm(aux_h_1, aux_h_2, θ, n_samples, bootstrap) # gasaketebeli
+#     threshold_wow_wrong = threshold_wow(aux_h_1, aux_h_2, θ, n_samples, bootstrap) # gasaketebeli
 
+#     rates_hipm = 0.0
+#     rates_wow = 0.0
+#     rates_energy = 0.0
 
+#     @floop ThreadedEx() for s in 1:S
+#         # generate samples and set endpoints
+#         h_1, h_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
+#         a = minimum((h_1.a, h_2.a))
+#         b = maximum((h_1.b, h_2.b))
+#         h_1.a = a
+#         h_2.a = a
+#         h_1.b = b
+#         h_2.b = b
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#         # record decisions from each testing methods
+#         @reduce rates_hipm += 1.0*(dlip(h_1, h_2) > threshold_hipm_wrong)
+#         @reduce rates_wow += 1.0 * (ww(h_1, h_2) > threshold_wow_wrong)
+#         @reduce rates_energy += decision_energy(h_1, h_2, θ, n_samples) 
+#     end
+#     rates_energy /= S
+#     rates_wow /= S
+#     rates_hipm /= S
+#     rates_dm = 0.0
+#     rates_dm = rejection_rate_dm(q_1, q_2, n, S, θ, n_samples)
+#     return rates_hipm,rates_wow,rates_dm,rates_energy
+# end
 
 
 
@@ -465,11 +546,11 @@ end
   
 #     @floop ThreadedEx() for s in 1:S
 #         # generate samples and set endpoints
-#         hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
+#         h_1, h_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
         
 
 #         # record decisions from each testing methods
-#         @reduce rates_wow += 1.0 * (ww(hier_sample_1, hier_sample_2) > threshold_wow_wrong)
+#         @reduce rates_wow += 1.0 * (ww(h_1, h_2) > threshold_wow_wrong)
 #     end
 #     rates_wow /= S
 #     return rates_wow
@@ -478,9 +559,9 @@ end
 # function rejection_rate_wow(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int,
 #                      θ::Float64, n_samples::Int, bootstrap::Bool)
 #     # firstly obtain threshold
-#     aux_hier_sample_1 = generate_hiersample(q_1,n,m)
-#     aux_hier_sample_2 = generate_hiersample(q_2, n, m)
-#     threshold_wow_wrong = threshold_wow(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
+#     aux_h_1 = generate_hiersample(q_1,n,m)
+#     aux_h_2 = generate_hiersample(q_2, n, m)
+#     threshold_wow_wrong = threshold_wow(aux_h_1, aux_h_2, θ, n_samples, bootstrap) # gasaketebeli
 #     return rejection_rate_wow(q_1, q_2, n, m, S, threshold_wow_wrong)
 # end
 
@@ -497,27 +578,27 @@ end
 #     # if bootstrap is true then do bootstrap approach, n_samples refers to either number of permutations or bootstraps
 
 #     # firstly we obtain fixed thresholds for HIPM and WoW
-#     aux_hier_sample_1 = generate_hiersample(q_1,n,m)
-#     aux_hier_sample_2 = generate_hiersample(q_2, n, m)
-#     threshold_hipm_wrong = threshold_hipm(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
-#     threshold_wow_wrong = threshold_wow(aux_hier_sample_1, aux_hier_sample_2, θ, n_samples, bootstrap) # gasaketebeli
+#     aux_h_1 = generate_hiersample(q_1,n,m)
+#     aux_h_2 = generate_hiersample(q_2, n, m)
+#     threshold_hipm_wrong = threshold_hipm(aux_h_1, aux_h_2, θ, n_samples, bootstrap) # gasaketebeli
+#     threshold_wow_wrong = threshold_wow(aux_h_1, aux_h_2, θ, n_samples, bootstrap) # gasaketebeli
 
 #     rates_hipm = 0.0
 #     rates_wow = 0.0
 
 #     @floop ThreadedEx() for s in 1:S
 #         # generate samples and set endpoints
-#         hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
-#         a = minimum((hier_sample_1.a, hier_sample_2.a))
-#         b = maximum((hier_sample_1.b, hier_sample_2.b))
-#         hier_sample_1.a = a
-#         hier_sample_2.a = a
-#         hier_sample_1.b = b
-#         hier_sample_2.b = b
+#         h_1, h_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
+#         a = minimum((h_1.a, h_2.a))
+#         b = maximum((h_1.b, h_2.b))
+#         h_1.a = a
+#         h_2.a = a
+#         h_1.b = b
+#         h_2.b = b
 
 #         # record decisions from each testing methods
-#         @reduce rates_hipm += 1.0*(dlip(hier_sample_1, hier_sample_2) > threshold_hipm_wrong)
-#         @reduce rates_wow += 1.0 * (ww(hier_sample_1, hier_sample_2) > threshold_wow_wrong)
+#         @reduce rates_hipm += 1.0*(dlip(h_1, h_2) > threshold_hipm_wrong)
+#         @reduce rates_wow += 1.0 * (ww(h_1, h_2) > threshold_wow_wrong)
 #     end
 #     rates_wow /= S
 #     rates_hipm /= S
@@ -553,39 +634,40 @@ end
 #     rej_rate = 0.0
 
 #     @floop ThreadedEx() for s in 1:S
-#         hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
-#         observed_test_stat = test_statistic_energy(hier_sample_1, hier_sample_2)
+#         h_1, h_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
+#         observed_test_stat = test_statistic_energy(h_1, h_2)
         
 #         # obtain quantile using bootstrap approach
 #         boostrap_samples = zeros(n_boostrap) # zeros can be improved
-#         a = minimum([hier_sample_1.a, hier_sample_2.a])
-#         b = maximum([hier_sample_1.b, hier_sample_2.b])
-#         total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
+#         a = minimum([h_1.a, h_2.a])
+#         b = maximum([h_1.b, h_2.b])
+#         pooled_atoms = vcat(h_1.atoms, h_2.atoms) # collect all rows
 #         for i in 1:n_boostrap
 #             indices_1 = sample(1:2*n, n; replace = true)
 #             indices_2 = sample(1:2*n, n; replace = true)
-#             atoms_1 = total_rows[indices_1,:]  # resample from pooled hierarchical sample
-#             atoms_2 = total_rows[indices_2,:]  # resample from pooled hierarchical sample
+#             atoms_1 = pooled_atoms[indices_1,:]  # resample from pooled hierarchical sample
+#             atoms_2 = pooled_atoms[indices_2,:]  # resample from pooled hierarchical sample
             
         
-#             hier_sample_1_boostrap = HierSample(atoms_1, n, m, a, b)
-#             hier_sample_2_boostrap = HierSample(atoms_2, n, m, a, b)
+#             h_1_boostrap = HierSample(atoms_1, n, m, a, b)
+#             h_2_boostrap = HierSample(atoms_2, n, m, a, b)
 
-#             boostrap_samples[i] = test_statistic_energy(hier_sample_1_boostrap, hier_sample_2_boostrap)
+#             boostrap_samples[i] = test_statistic_energy(h_1_boostrap, h_2_boostrap)
 #         end
 #         threshold = quantile(boostrap_samples, 1 - θ)
         
-#         @reduce rej_rate += 1.0*(observed_test_stat > threshold)
+#         @reduce rej_rate += Float64(observed_test_stat > threshold)
+
 #     end
 #     return rej_rate / S
 # end
 
 
 
-# function decide_dm(hier_sample_1::HierSample, hier_sample_2::HierSample, θ::Float64, n_samples::Int)
-#     atoms_1 = copy(hier_sample_1.atoms)
-#     atoms_2 = copy(hier_sample_2.atoms)
-#     n = hier_sample_1.n     
+# function decision_dm(h_1::HierSample, h_2::HierSample, θ::Float64, n_samples::Int)
+#     atoms_1 = copy(h_1.atoms)
+#     atoms_2 = copy(h_2.atoms)
+#     n = size(h_1.atoms)[1]     
     
 #     @rput atoms_1 atoms_2 n n_samples
 #     R"""
@@ -606,7 +688,7 @@ end
 #     pvalue = result_denanova$pvalBoot
 #     """
 #     @rget pvalue
-#     return 1 * (pvalue < θ)
+#     return Float64(pvalue < θ)
 # end
 
 
@@ -616,8 +698,8 @@ end
 #     rej_rate = 0.0
 #     for s in 1:S
      
-#         hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
-#         atoms_1, atoms_2 = hier_sample_1.atoms, hier_sample_2.atoms
+#         h_1, h_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
+#         atoms_1, atoms_2 = h_1.atoms, h_2.atoms
 
 #         @rput atoms_1 atoms_2 n n_boostrap
 #         R"""
@@ -637,7 +719,7 @@ end
 #         pvalue = result_denanova$pvalBoot
 #         """
 #         @rget pvalue
-#         rej_rate += 1 * (pvalue < θ)
+#         rej_rate += Float64(pvalue < θ)
 #     end
 #     rej_rate /= S
 #     return rej_rate
@@ -649,34 +731,35 @@ end
 #     rej_rate = 0.0
 
 #     @floop ThreadedEx() for s in 1:S
-#         hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
-#         a = minimum([hier_sample_1.a, hier_sample_2.a])
-#         b = maximum([hier_sample_1.b, hier_sample_2.b])
-#         hier_sample_1.a = a
-#         hier_sample_2.a = a
-#         hier_sample_1.b = b
-#         hier_sample_2.b = b
-#         observed_test_stat = dlip(hier_sample_1, hier_sample_2)
+#         h_1, h_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
+#         a = minimum([h_1.a, h_2.a])
+#         b = maximum([h_1.b, h_2.b])
+#         h_1.a = a
+#         h_2.a = a
+#         h_1.b = b
+#         h_2.b = b
+#         observed_test_stat = dlip(h_1, h_2)
         
 #         # obtain quantile using bootstrap approach
 #         boostrap_samples = zeros(n_boostrap) # zeros can be improved
         
-#         total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
+#         pooled_atoms = vcat(h_1.atoms, h_2.atoms) # collect all rows
 #         for i in 1:n_boostrap
 #             indices_1 = sample(1:2*n, n; replace = true)
 #             indices_2 = sample(1:2*n, n; replace = true)
-#             atoms_1 = total_rows[indices_1,:]  # resample from pooled hierarchical sample
-#             atoms_2 = total_rows[indices_2,:]  # resample from pooled hierarchical sample
+#             atoms_1 = pooled_atoms[indices_1,:]  # resample from pooled hierarchical sample
+#             atoms_2 = pooled_atoms[indices_2,:]  # resample from pooled hierarchical sample
             
         
-#             hier_sample_1_boostrap = HierSample(atoms_1, n, m, a, b)
-#             hier_sample_2_boostrap = HierSample(atoms_2, n, m, a, b)
+#             h_1_boostrap = HierSample(atoms_1, n, m, a, b)
+#             h_2_boostrap = HierSample(atoms_2, n, m, a, b)
 
-#             boostrap_samples[i] = dlip(hier_sample_1_boostrap, hier_sample_2_boostrap)
+#             boostrap_samples[i] = dlip(h_1_boostrap, h_2_boostrap)
 #         end
 #         threshold = quantile(boostrap_samples, 1 - θ)
         
-#         @reduce rej_rate += 1.0*(observed_test_stat > threshold)
+#         @reduce rej_rate += Float64(observed_test_stat > threshold)
+
 #     end
 #     return rej_rate / S
 # end
@@ -685,43 +768,44 @@ end
 # function rejection_rate_hipm_permutation_wrong(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
 
 #     # firstly we obtain threshold
-#     hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
-#     a = minimum([hier_sample_1.a, hier_sample_2.a])
-#     b = maximum([hier_sample_1.b, hier_sample_2.b])
-#     hier_sample_1.a = a
-#     hier_sample_2.a = a
-#     hier_sample_1.b = b
-#     hier_sample_2.b = b
+#     h_1, h_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
+#     a = minimum([h_1.a, h_2.a])
+#     b = maximum([h_1.b, h_2.b])
+#     h_1.a = a
+#     h_2.a = a
+#     h_1.b = b
+#     h_2.b = b
 
 #     permutation_samples = zeros(n_permutation) # zeros can be improved
-#     total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
+#     pooled_atoms = vcat(h_1.atoms, h_2.atoms) # collect all rows
 #         for i in 1:n_permutation
 #             random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
 
-#             atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
-#             atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
+#             atoms_1 = pooled_atoms[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
+#             atoms_2 = pooled_atoms[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-#             hier_sample_1_permutation = HierSample(atoms_1, n, m, a, b)
-#             hier_sample_2_permutation = HierSample(atoms_2, n, m, a, b)
+#             h_1_permutation = HierSample(atoms_1, n, m, a, b)
+#             h_2_permutation = HierSample(atoms_2, n, m, a, b)
 
-#             permutation_samples[i] = dlip(hier_sample_1_permutation, hier_sample_2_permutation)
+#             permutation_samples[i] = dlip(h_1_permutation, h_2_permutation)
 #         end
 #     threshold = quantile(permutation_samples, 1 - θ)
 
 #     rej_rate = 0.0
 
 #     @floop ThreadedEx() for s in 1:S
-#         local hier_sample_1 = generate_hiersample(q_1, n, m)
-#         local hier_sample_2 = generate_hiersample(q_2, n, m)
-#         local a = minimum([hier_sample_1.a, hier_sample_2.a])
-#         local b = maximum([hier_sample_1.b, hier_sample_2.b])
-#         hier_sample_1.a = a
-#         hier_sample_2.a = a
-#         hier_sample_1.b = b
-#         hier_sample_2.b = b
-#         observed_test_stat = dlip(hier_sample_1, hier_sample_2)
+#         local h_1 = generate_hiersample(q_1, n, m)
+#         local h_2 = generate_hiersample(q_2, n, m)
+#         local a = minimum([h_1.a, h_2.a])
+#         local b = maximum([h_1.b, h_2.b])
+#         h_1.a = a
+#         h_2.a = a
+#         h_1.b = b
+#         h_2.b = b
+#         observed_test_stat = dlip(h_1, h_2)
         
-#         @reduce rej_rate += 1.0*(observed_test_stat > threshold)
+#         @reduce rej_rate += Float64(observed_test_stat > threshold)
+
 #     end
 #     return rej_rate / S
 # end
@@ -732,33 +816,34 @@ end
 #     rej_rate = 0.0
 
 #     @floop ThreadedEx() for s in 1:S
-#         hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
-#         a = minimum([hier_sample_1.a, hier_sample_2.a])
-#         b = maximum([hier_sample_1.b, hier_sample_2.b])
-#         hier_sample_1.a = a
-#         hier_sample_2.a = a
-#         hier_sample_1.b = b
-#         hier_sample_2.b = b
-#         observed_test_stat = dlip(hier_sample_1, hier_sample_2)
+#         h_1, h_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
+#         a = minimum([h_1.a, h_2.a])
+#         b = maximum([h_1.b, h_2.b])
+#         h_1.a = a
+#         h_2.a = a
+#         h_1.b = b
+#         h_2.b = b
+#         observed_test_stat = dlip(h_1, h_2)
         
 #         # obtain quantile using permutation approach
 #         permutation_samples = zeros(n_permutation) # zeros can be improved
         
-#         total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
+#         pooled_atoms = vcat(h_1.atoms, h_2.atoms) # collect all rows
 #         for i in 1:n_permutation
 #             random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
 
-#             atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
-#             atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
+#             atoms_1 = pooled_atoms[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
+#             atoms_2 = pooled_atoms[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-#             hier_sample_1_permutation = HierSample(atoms_1, n, m, a, b)
-#             hier_sample_2_permutation = HierSample(atoms_2, n, m, a, b)
+#             h_1_permutation = HierSample(atoms_1, n, m, a, b)
+#             h_2_permutation = HierSample(atoms_2, n, m, a, b)
 
-#             permutation_samples[i] = dlip(hier_sample_1_permutation, hier_sample_2_permutation)
+#             permutation_samples[i] = dlip(h_1_permutation, h_2_permutation)
 #         end
 #         threshold = quantile(permutation_samples, 1 - θ)
         
-#         @reduce rej_rate += 1.0*(observed_test_stat > threshold)
+#         @reduce rej_rate += Float64(observed_test_stat > threshold)
+
 #     end
 #     return rej_rate / S
 # end
@@ -769,34 +854,35 @@ end
 #     rej_rate = 0.0
 
 #     @floop ThreadedEx() for s in 1:S
-#         hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
-#         a = minimum([hier_sample_1.a, hier_sample_2.a])
-#         b = maximum([hier_sample_1.b, hier_sample_2.b])
-#         hier_sample_1.a = a
-#         hier_sample_2.a = a
-#         hier_sample_1.b = b
-#         hier_sample_2.b = b
-#         observed_test_stat = ww(hier_sample_1, hier_sample_2)
+#         h_1, h_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
+#         a = minimum([h_1.a, h_2.a])
+#         b = maximum([h_1.b, h_2.b])
+#         h_1.a = a
+#         h_2.a = a
+#         h_1.b = b
+#         h_2.b = b
+#         observed_test_stat = ww(h_1, h_2)
         
 #         # obtain quantile using bootstrap approach
 #         boostrap_samples = zeros(n_boostrap) # zeros can be improved
   
-#         total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
+#         pooled_atoms = vcat(h_1.atoms, h_2.atoms) # collect all rows
 #         for i in 1:n_boostrap
 #             indices_1 = sample(1:2*n, n; replace = true)
 #             indices_2 = sample(1:2*n, n; replace = true)
-#             atoms_1 = total_rows[indices_1,:]  # resample from pooled hierarchical sample
-#             atoms_2 = total_rows[indices_2,:]  # resample from pooled hierarchical sample
+#             atoms_1 = pooled_atoms[indices_1,:]  # resample from pooled hierarchical sample
+#             atoms_2 = pooled_atoms[indices_2,:]  # resample from pooled hierarchical sample
             
         
-#             hier_sample_1_boostrap = HierSample(atoms_1, n, m, a, b)
-#             hier_sample_2_boostrap = HierSample(atoms_2, n, m, a, b)
+#             h_1_boostrap = HierSample(atoms_1, n, m, a, b)
+#             h_2_boostrap = HierSample(atoms_2, n, m, a, b)
 
-#             boostrap_samples[i] = ww(hier_sample_1_boostrap, hier_sample_2_boostrap)
+#             boostrap_samples[i] = ww(h_1_boostrap, h_2_boostrap)
 #         end
 #         threshold = quantile(boostrap_samples, 1 - θ)
         
-#         @reduce rej_rate += 1.0*(observed_test_stat > threshold)
+#         @reduce rej_rate += Float64(observed_test_stat > threshold)
+
 #     end
 #     return rej_rate / S
 # end
@@ -805,43 +891,44 @@ end
 # function rejection_rate_wow_permutation_wrong(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ::Float64, n_permutation::Int)
 
 #     # firstly we obtain threshold
-#     hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
-#     a = minimum([hier_sample_1.a, hier_sample_2.a])
-#     b = maximum([hier_sample_1.b, hier_sample_2.b])
-#     hier_sample_1.a = a
-#     hier_sample_2.a = a
-#     hier_sample_1.b = b
-#     hier_sample_2.b = b
+#     h_1, h_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
+#     a = minimum([h_1.a, h_2.a])
+#     b = maximum([h_1.b, h_2.b])
+#     h_1.a = a
+#     h_2.a = a
+#     h_1.b = b
+#     h_2.b = b
 
 #     permutation_samples = zeros(n_permutation) # zeros can be improved
-#     total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
+#     pooled_atoms = vcat(h_1.atoms, h_2.atoms) # collect all rows
 #         for i in 1:n_permutation
 #             random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
 
-#             atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
-#             atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
+#             atoms_1 = pooled_atoms[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
+#             atoms_2 = pooled_atoms[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-#             hier_sample_1_permutation = HierSample(atoms_1, n, m, a, b)
-#             hier_sample_2_permutation = HierSample(atoms_2, n, m, a, b)
+#             h_1_permutation = HierSample(atoms_1, n, m, a, b)
+#             h_2_permutation = HierSample(atoms_2, n, m, a, b)
 
-#             permutation_samples[i] = ww(hier_sample_1_permutation, hier_sample_2_permutation)
+#             permutation_samples[i] = ww(h_1_permutation, h_2_permutation)
 #         end
 #     threshold = quantile(permutation_samples, 1 - θ)
 
 #     rej_rate = 0.0
 
 #     @floop ThreadedEx() for s in 1:S
-#         local hier_sample_1 = generate_hiersample(q_1, n, m)
-#         local hier_sample_2 = generate_hiersample(q_2, n, m)
-#         local a = minimum([hier_sample_1.a, hier_sample_2.a])
-#         local b = maximum([hier_sample_1.b, hier_sample_2.b])
-#         hier_sample_1.a = a
-#         hier_sample_2.a = a
-#         hier_sample_1.b = b
-#         hier_sample_2.b = b
-#         observed_test_stat = ww(hier_sample_1, hier_sample_2)
+#         local h_1 = generate_hiersample(q_1, n, m)
+#         local h_2 = generate_hiersample(q_2, n, m)
+#         local a = minimum([h_1.a, h_2.a])
+#         local b = maximum([h_1.b, h_2.b])
+#         h_1.a = a
+#         h_2.a = a
+#         h_1.b = b
+#         h_2.b = b
+#         observed_test_stat = ww(h_1, h_2)
         
-#         @reduce rej_rate += 1.0*(observed_test_stat > threshold)
+#         @reduce rej_rate += Float64(observed_test_stat > threshold)
+
 #     end
 #     return rej_rate / S
 # end
@@ -852,33 +939,34 @@ end
 #     rej_rate = 0.0
 
 #     @floop ThreadedEx() for s in 1:S
-#         hier_sample_1, hier_sample_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
-#         a = minimum([hier_sample_1.a, hier_sample_2.a])
-#         b = maximum([hier_sample_1.b, hier_sample_2.b])
-#         hier_sample_1.a = a
-#         hier_sample_2.a = a
-#         hier_sample_1.b = b
-#         hier_sample_2.b = b
-#         observed_test_stat = ww(hier_sample_1, hier_sample_2)
+#         h_1, h_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
+#         a = minimum([h_1.a, h_2.a])
+#         b = maximum([h_1.b, h_2.b])
+#         h_1.a = a
+#         h_2.a = a
+#         h_1.b = b
+#         h_2.b = b
+#         observed_test_stat = ww(h_1, h_2)
         
 #         # obtain quantile using permutation approach
 #         permutation_samples = zeros(n_permutation) # zeros can be improved
         
-#         total_rows = vcat(hier_sample_1.atoms, hier_sample_2.atoms) # collect all rows
+#         pooled_atoms = vcat(h_1.atoms, h_2.atoms) # collect all rows
 #         for i in 1:n_permutation
 #             random_indices = randperm(2*n) # indices to distribute rows to new hierarchical meausures
 
-#             atoms_1 = total_rows[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
-#             atoms_2 = total_rows[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
+#             atoms_1 = pooled_atoms[random_indices[1:n],:] # first rows indexed by n random indices to the atoms_1
+#             atoms_2 = pooled_atoms[random_indices[n+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-#             hier_sample_1_permutation = HierSample(atoms_1, n, m, a, b)
-#             hier_sample_2_permutation = HierSample(atoms_2, n, m, a, b)
+#             h_1_permutation = HierSample(atoms_1, n, m, a, b)
+#             h_2_permutation = HierSample(atoms_2, n, m, a, b)
 
-#             permutation_samples[i] = ww(hier_sample_1_permutation, hier_sample_2_permutation)
+#             permutation_samples[i] = ww(h_1_permutation, h_2_permutation)
 #         end
 #         threshold = quantile(permutation_samples, 1 - θ)
         
-#         @reduce rej_rate += 1.0*(observed_test_stat > threshold)
+#         @reduce rej_rate += Float64(observed_test_stat > threshold)
+
 #     end
 #     return rej_rate / S
 # end
