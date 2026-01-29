@@ -55,7 +55,7 @@ function run_simulation(config::SimConfig)
     total_sims = length(pairs)
     @extract config : n m S n_samples θ bootstrap
     
-    @info "Starting simulation for Figure 1, mean with parameters: n = $n, m = $m, S = $S, n_samples = $(n_samples)."
+    @info "Starting simulation for mean with parameters: n = $n, m = $m, S = $S, n_samples = $(n_samples)."
     results = map(enumerate(pairs)) do (i, p) # per each pair collect the results
         # Assuming rejection_rate_all returns (hipm, wow, dm, energy)
         q_1,q_2 = p
@@ -81,7 +81,7 @@ function save_results(df::DataFrame, config::SimConfig)
 
   
    
-    file_name = "varying_mean_n=$(n)_m=$(m)_S=$(S)_bootstrap=$(bootstrap)_n_samples=$(n_samples)"
+    file_name = "mean_n=$(n)_m=$(m)_S=$(S)_bootstrap=$(bootstrap)_n_samples=$(n_samples)"
 
     fig = plot(
             title = "Rejection rates for 4 schemes",
