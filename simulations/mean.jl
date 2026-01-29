@@ -60,7 +60,7 @@ function run_simulation(config::SimConfig)
         # Assuming rejection_rate_all returns (hipm, wow, dm, energy)
         q_1,q_2 = p
         out = rejection_rate_all(q_1, q_2, n, m, S, θ, n_samples, bootstrap) 
-        @info "Progress $i / $(total_sims)"                    
+        # @info "Progress $i / $(total_sims)"                    
         return out
     end
     return DataFrame(δs = δs,
