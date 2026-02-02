@@ -15,7 +15,7 @@ group2 = ["Australia", "Austria", "Belgium", "Canada", "Denmark", "Finland", "Fr
 "Japan", "Luxembourg", "Netherlands", "NewZealand", "Norway", "Spain", "Sweden",
 "Switzerland", "UnitedKingdom" , "UnitedStatesofAmerica"]
 
-# 111 * (i - 1) + 1, 111*i i denotes the time periods. 
+
 
 
 #  Create a function to pre-load all data into memory
@@ -293,56 +293,144 @@ function save_plots_optimized(time_periods::Vector{Int}, gender::String, min_age
 end
 
 
+
+
+function test_statistic(atoms::Vector{Float64}, weights_1::Matrix{Float64}, weights_2::Matrix{Float64})
+    n_1 = size(weights_1)[1]
+    n_2 = size(weights_2)[1]
+    new_weights_1 = sum(weights_1, dims = 2)[:,1] / n_1
+    new_weights_2 = sum(weights_2, dims = 2)[:,1] / n_2
+
+    return sum((atoms[2:end] .- atoms[1:end-1]).*abs.(cumsum(new_weights_1)[1:end-1] .- cumsum(new_weights_2)[1:end-1]))
+end
+
+function pooled_p_values_hipm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64}, 
+                    weights_1::Matrix{Float64},weights_2::Matrix{Float64}, n_samples::Int, bootstrap::Bool, maxTime::Float64)
+    
+    n_1 = size(atoms_1,1)
+    n_2 = size(atoms_2,1)
+    n = n_1 + n_2
+    a = 0.0
+    b = maximum(atoms_1[1,:])
+
+    T_observed = test_statistic(atoms_1[1,:], weights_1, weights_2)
+   
+    samples = zeros(n_samples)
+    total_weights = vcat(weights_1, weights_2) # collect all rows
+    if bootstrap
+        for i in 1:n_samples
+            indices_1 = sample(1:n, n_1; replace = true)
+            indices_2 = sample(1:n, n_2; replace = true)
+
+            new_weights_1 = total_weights[indices_1,:] # first rows indexed by n random indices to the weights_1
+            new_weights_2 = total_weights[indices_2,:] # first rows indexed by n random indices to the weights_2
+
+            samples[i] = test_statistic(atoms_1[1,:], new_weights_1, new_weights_2)
+        end
+    else
+        for i in 1:n_samples
+            random_indices = randperm(n) # indices to distribute rows to new hierarchical meausures
+
+            new_weights_1 = total_weights[random_indices[1:n_1],:] # first rows indexed by n random indices to the atoms_1
+            new_weights_2 = total_weights[random_indices[n_1+1:end],:] # first rows indexed by n random indices to the atoms_2
+        
+            samples[i] = test_statistic(atoms_1[1,:], new_weights_1, new_weights_2)
+        end
+    end
+    return mean(samples.>=T_observed)
+end
+
+function pooled_p_values_hipm(time_periods::Vector{Int}, min_age::Int, max_age::Int,
+                     n_samples::Int, bootstrap::Bool, maxTime::Float64, gender_data::Dict{String, DataFrame})
+    pvalues_hipm = zeros(length(time_periods))
+
+    @floop ThreadedEx() for (i, t) in enumerate(time_periods)
+        atoms_1, weights_1 = group_pmf_per_year(group1, gender_data, t, min_age, max_age)
+        atoms_2, weights_2 = group_pmf_per_year(group2, gender_data, t, min_age, max_age)
+
+        pvalues_hipm[i] = pooled_p_values_hipm(atoms_1, atoms_2, weights_1, weights_2, 
+                                    n_samples, bootstrap, maxTime)
+    end
+    return pvalues_hipm
+end
+
+function save_plots_pooled(time_periods::Vector{Int}, gender::String, min_age::Int,
+                max_age::Int, n_samples::Int, bootstrap::Bool, data_bank::Dict)
+    
+    # 1. Select the relevant sub-cache
+    gender_data = data_bank[gender]
+    title = "Pooled, P-values for $(gender), Age range ($(min_age)-$(max_age))"
+    
+    # 2. Call calculation functions (gender variable removed from arguments)
+    if min_age == 0 && max_age == 0
+        pvalues_hipm, pvalues_ks = infant_pvalues(time_periods, n_samples,
+                             bootstrap, 0.5, gender_data)
+        pl = plot_p_values_hipm_ks(pvalues_hipm, pvalues_ks, time_periods, title)
+    else
+        pvalues_hipm = pooled_p_values_hipm(time_periods, min_age, max_age,
+                     n_samples, bootstrap, 0.5, gender_data)
+
+        pl = plot_p_values_hipm(pvalues_hipm, time_periods, title)
+    end
+    
+    # 3. Save
+    output_path = "application/newplots"
+    mkpath(output_path)
+    filename = "$(gender)_$(min_age)_$(max_age).png"
+    savefig(pl, joinpath(output_path, filename))
+    @info "Saved: $filename"
+end
+
+
 # 1. Initialize data
 groups_configs = [(group1, 1), (group2, 2)]
 genders = ["males", "females"]
 
 @info "Loading data bank into memory..."
-MORTALITY_CACHE = load_mortality_data(groups_configs, genders)
+mortality_cache = load_mortality_data(groups_configs, genders)
 
 # 2. Define simulation parameters
 time_periods = collect(1960:2010)
 n_samples = 100
 bootstrap = false
 
+
+
+
+
+
 # 3. Run all analysis tasks
 settings = [
     (0, 70)
 ]
-# settings = [
-#     (0, 0),
-#     (1, 18),
-#     (19, 70)
-# ]
+# # settings = [
+# #     (0, 0),
+# #     (1, 18),
+# #     (19, 70)
+# # ]
 t = time()
 for gender in genders
     for (min_a, max_a) in settings
-        save_plots_optimized(time_periods, gender, min_a, max_a, n_samples, bootstrap, MORTALITY_CACHE)
+        save_plots_pooled(time_periods, gender, min_a, max_a, n_samples, bootstrap, mortality_cache)
     end
 end
 dur = time() - t
 
-# # --- Pre-processing Step ---
-# groups_configs = [(group1, 1), (group2, 2)]
-# genders = ["males", "females"]
-
-# @info "Loading all datasets into RAM..."
-# const MORTALITY_CACHE = load_mortality_data(groups_configs, genders)
-
-# # --- Updated Analysis Loop ---
-# function run_analysis()
-#     time_periods = collect(1960:1968)
-#     n_samples = 100 # You can increase this now!
+# --- Updated Analysis Loop ---
+function run_analysis()
+    time_periods = collect(1960:1968)
+    n_samples = 3 # You can increase this now!
     
-#     for gen in genders
-#         # Use MORTALITY_CACHE[gen] inside your functions now
-#         # You'll need to update all_pvalues and infant_pvalues 
-#         # to accept the dictionary instead of re-reading files.
-#         save_plots_optimized(time_periods, gen, 0, 90, n_samples, false, MORTALITY_CACHE[gen])
-#     end
-# end
+    for gen in genders
+        # Use mortality_cache[gen] inside your functions now
+        # You'll need to update all_pvalues and infant_pvalues 
+        # to accept the dictionary instead of re-reading files.
+        save_plots_pooled(time_periods, gen, 0, 70, n_samples, false, mortality_cache[gen])
+    end
+end
 
-
+run_analysis()
+println("done")
 
 
 

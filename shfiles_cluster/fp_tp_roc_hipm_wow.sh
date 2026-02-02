@@ -1,10 +1,10 @@
 #!/bin/bash -l
-#SBATCH --job-name=fp_tp_roc                        # name of the SLURM job (shows up in queue)
+#SBATCH --job-name=tp,fp,toc                        # name of the SLURM job (shows up in queue)
 #SBATCH --partition=compute                       # which partition/queue to use
 #SBATCH --ntasks=1                                # number of tasks (1 is fine for Julia)
 #SBATCH --cpus-per-task=20  					  # number of cores
-#SBATCH --time=02:00:00                           # maximum run time (hh:mm:ss)
-#SBATCH --array=1-6                               # To run several jobs
+#SBATCH --time=01:00:00                           # maximum run time (hh:mm:ss)
+#SBATCH --array=1-2                               # To run several jobs
 #SBATCH --output=/home/3049277/logs/%x_%A_%a.out  # standard output log file
 #SBATCH --error=/home/3049277/logs/%x_%A_%a.err   # standard error log file
 #SBATCH --chdir=/home/3049277/Two-samples-test # working directory for the job
@@ -18,36 +18,31 @@ eval "$(conda shell.bash hook)"                # enable conda commands inside ba
 conda activate Renv2                           # activate the conda environment (named Renv2)
 
 
-
 echo "Running on node: $(hostname)"
 echo "Running from: $(pwd)"                    # print the current working directory for confirmation
 
 
-# --- Simulation parameter configuration ---
-configs=(
 
-    "50 100 1.4"
-    "100 100 1.4"
+# --- Simulation parameter configuration ---
+# Format: "n m b "
+configs=(
+    "3 3 1.1"
+    "15 15 1.3"
 )
 
-# Extract parameters for the current task
+# Extract parameters for the current task (0-indexed array)
 params=(${configs[$SLURM_ARRAY_TASK_ID-1]})
+
 n=${params[0]}
 m=${params[1]}
 b=${params[2]}
 
 
-echo "Task ID: $SLURM_ARRAY_TASK_ID"
-echo "Node: $(hostname)"
-echo "Config: n=$n, m=$m, b=$b"
-
-
-export JULIA_NUM_THREADS=$SLURM_CPUS_PER_TASK
+export JULIA_NUM_THREADS=$SLURM_CPUS_PER_TASK # set number of threads for julia
 
 # Warning: write this in login node before running sh file.
 # julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile(); println("Threads.nthreads() = ", Threads.nthreads())'
-
-
-julia --project=. fp_tp_roc.jl $n $m $b
+# IMPORTANT: Use the flags defined in your Julia parse_commandline() function
+julia --project=. simulations/fp_tp_roc.jl --n ${n} --m ${m} --b ${b} 
 
 echo "This is the end"                         # simple marker showing the script reached the end successfully
