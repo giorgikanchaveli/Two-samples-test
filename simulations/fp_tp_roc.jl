@@ -102,7 +102,7 @@ end
 
 function main()
     parsed_args = parse_commandline()
-    S = 10
+    S = 5
     n_samples = 5
     θs = collect(0.0:0.01:1.0)
     bootstrap = false
