@@ -46,7 +46,7 @@ end
 
 
 """
-    country_pmf_from_cache
+    country_pmf
 
 Given dataframe for some country, returns the probability mass function for deaths at ages from min_age to max_age.
 It obtains number of deaths per each age in range (min_age, max_age) and renormalazies it. 
@@ -56,7 +56,7 @@ It obtains number of deaths per each age in range (min_age, max_age) and renorma
     min_age::Int
     max_age::Int
 """
-function country_pmf_from_cache(df::DataFrame, t::Int, min_age::Int, max_age::Int)
+function country_pmf(df::DataFrame, t::Int, min_age::Int, max_age::Int)
     @assert max_age <= 85 "Maximum age must be lower than the truncation age."
     # Find the year in the already loaded DataFrame
     row_idx = findfirst(==(t), df[!, :Year])
@@ -95,7 +95,7 @@ function group_pmf_per_year(gender_data::Dict{String, DataFrame}, group::Vector{
 
     for i in 1:length(group)
         country_df = gender_data[group[i]]
-        weights[i, :] .= country_pmf_from_cache(country_df, t, min_age, max_age)
+        weights[i, :] .= country_pmf(country_df, t, min_age, max_age)
     end
     return atoms, weights
 end
@@ -111,7 +111,7 @@ is represented by atoms [0, 1] and weights associated to it.
     gender_data::Dict{String, DataFrame}
     t::Int  :  Year
 """
-function group_infant_pmf_from_cache(group::Vector{String}, gender_data::Dict{String, DataFrame}, t::Int)
+function group_infant_pmf(group::Vector{String}, gender_data::Dict{String, DataFrame}, t::Int)
     
     # 0 = survival, 1 =  death
     atoms = repeat([0.0, 1.0]', length(group), 1) 
@@ -231,8 +231,8 @@ end
 
 #     @floop ThreadedEx() for (i, t) in enumerate(time_periods)
 #         # These now strictly use gender_data passed from save_plots_optimized
-#         atoms_1, weights_1 = group_infant_pmf_from_cache(group1, gender_data, t)
-#         atoms_2, weights_2 = group_infant_pmf_from_cache(group2, gender_data, t)
+#         atoms_1, weights_1 = group_infant_pmf(group1, gender_data, t)
+#         atoms_2, weights_2 = group_infant_pmf(group2, gender_data, t)
 
 #         pvalues_hipm[i] = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, 
 #                                     n_samples, bootstrap, maxTime)
@@ -490,7 +490,7 @@ end
 
 
 
-# function group_infant_pmf_from_cache(group::Vector{String}, gender_data::Dict{String, DataFrame}, t::Int)
+# function group_infant_pmf(group::Vector{String}, gender_data::Dict{String, DataFrame}, t::Int)
 #     atoms = [0.0 1.0] # 0 = survival, 1 = infant death
 #     atoms = repeat(atoms, length(group), 1)
 #     weights = Matrix{Float64}(undef, length(group), 2)
