@@ -9,14 +9,6 @@ using HypothesisTests
 include("../distances/hipm.jl")
 
 
-group1 = ["belarus", "Bulgaria", "Czechia", "Estonia", "Hungary", "Latvia", "Poland", "Lithuania", "Russia", "Slovakia", "Ukraine"]
-
-group2 = ["Australia", "Austria", "Belgium", "Canada", "Denmark", "Finland", "France", "Iceland", "Ireland", "Italy", 
-"Japan", "Luxembourg", "Netherlands", "NewZealand", "Norway", "Spain", "Sweden",
-"Switzerland", "UnitedKingdom" , "UnitedStatesofAmerica"]
-
-
-
 """
     load_mortality_data
 
@@ -94,7 +86,7 @@ Obtains hierarchical sample with weights from the group of countries.
     min_age::Int
     max_age::Int
 """
-function group_pmf_per_year(group::Vector{String}, gender_data::Dict{String, DataFrame}, 
+function group_pmf_per_year(gender_data::Dict{String, DataFrame}, group::Vector{String}, 
                                     t::Int, min_age::Int, max_age::Int)
     @assert min_age < max_age "minimum age must be strictly smaller than maximum age."
     ages = Float64.(collect(min_age:max_age))
@@ -108,9 +100,21 @@ function group_pmf_per_year(group::Vector{String}, gender_data::Dict{String, Dat
     return atoms, weights
 end
 
+"""
+    group_infant_pmf_per_year
+
+Obtains pmf for infant death rate per each country. Per each country we have Bernoulli distribution. this
+is represented by atoms [0, 1] and weights associated to it. 
+
+# Arguments:
+    group::Vector{String}
+    gender_data::Dict{String, DataFrame}
+    t::Int  :  Year
+"""
 function group_infant_pmf_from_cache(group::Vector{String}, gender_data::Dict{String, DataFrame}, t::Int)
-    atomsaxs = [0.0, 1.0] # 0 = survival, 1 = infant death
-    atoms = repeat(atomsaxs', length(group), 1)
+    
+    # 0 = survival, 1 =  death
+    atoms = repeat([0.0, 1.0]', length(group), 1) 
     weights = Matrix{Float64}(undef, length(group), 2)
 
     for i in 1:length(group)
@@ -119,348 +123,357 @@ function group_infant_pmf_from_cache(group::Vector{String}, gender_data::Dict{St
         @assert row_idx !== nothing "Year $t not found for $(group[i])"
 
         # Extract dx (deaths in first year)
-        dx_val = df[row_idx, :dx]
-        # If dx is a string (e.g., " 0.123"), parse it
-        dx_0 = dx_val isa AbstractString ? parse(Float64, dx_val) : Float64(dx_val)
-
-        # To get the total sum for renormalization within the age 0-85 range
-        # (matching your previous logic)
-        dx_85 = df[row_idx:(row_idx + 85), :dx]
-        if eltype(dx_85) <: AbstractString
-            dx_85 = parse.(Float64, dx_85)
+        dx_infant = df[row_idx, :dx]
+        # If dx is a string convert it into float.
+        if dx_infant isa AbstractString
+            dx_infant = parse(Float64, dx_infant)
+        else
+            dx_infant = Float64(dx_infant)
         end
-        total_sum = sum(dx_85)
 
-        weights[i, 2] = dx_0 / total_sum
+        # Truncate within the age 0-85 range
+
+        dx_base = df[row_idx:(row_idx + 85), :dx]
+        if eltype(dx_base) <: AbstractString
+            dx_base = parse.(Float64, dx_base)
+        end
+        total_sum = sum(dx_base)
+
+        weights[i, 2] = dx_infant / total_sum
         weights[i, 1] = 1.0 - weights[i, 2]
     end
     return atoms, weights
 end
 
-function p_value_hipm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64}, 
-                    weights_1::Matrix{Float64},weights_2::Matrix{Float64}, n_samples::Int, bootstrap::Bool, maxTime::Float64)
-    n_1 = size(atoms_1,1)
-    n_2 = size(atoms_2,1)
-    n = n_1 + n_2
-    a = 0.0
-    b = maximum(atoms_1[1,:])
 
-    T_observed = dlip_diffsize(atoms_1,atoms_2, weights_1, weights_2, a, b, maxTime = maxTime)
+# Exploratory data analysis
+
+
+
+# function p_value_hipm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64}, 
+#                     weights_1::Matrix{Float64},weights_2::Matrix{Float64}, n_samples::Int, bootstrap::Bool, maxTime::Float64)
+#     n_1 = size(atoms_1,1)
+#     n_2 = size(atoms_2,1)
+#     n = n_1 + n_2
+#     a = 0.0
+#     b = maximum(atoms_1[1,:])
+
+#     T_observed = dlip_diffsize(atoms_1,atoms_2, weights_1, weights_2, a, b, maxTime = maxTime)
    
-    samples = zeros(n_samples)
-    total_weights = vcat(weights_1, weights_2) # collect all rows
-    if bootstrap
-        for i in 1:n_samples
-            indices_1 = sample(1:n, n_1; replace = true)
-            indices_2 = sample(1:n, n_2; replace = true)
+#     samples = zeros(n_samples)
+#     total_weights = vcat(weights_1, weights_2) # collect all rows
+#     if bootstrap
+#         for i in 1:n_samples
+#             indices_1 = sample(1:n, n_1; replace = true)
+#             indices_2 = sample(1:n, n_2; replace = true)
 
-            new_weights_1 = total_weights[indices_1,:] # first rows indexed by n random indices to the weights_1
-            new_weights_2 = total_weights[indices_2,:] # first rows indexed by n random indices to the weights_2
+#             new_weights_1 = total_weights[indices_1,:] # first rows indexed by n random indices to the weights_1
+#             new_weights_2 = total_weights[indices_2,:] # first rows indexed by n random indices to the weights_2
 
-            samples[i] = dlip_diffsize(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b, maxTime = maxTime)
-        end
-    else
-        for i in 1:n_samples
-            random_indices = randperm(n) # indices to distribute rows to new hierarchical meausures
+#             samples[i] = dlip_diffsize(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b, maxTime = maxTime)
+#         end
+#     else
+#         for i in 1:n_samples
+#             random_indices = randperm(n) # indices to distribute rows to new hierarchical meausures
 
-            new_weights_1 = total_weights[random_indices[1:n_1],:] # first rows indexed by n random indices to the atoms_1
-            new_weights_2 = total_weights[random_indices[n_1+1:end],:] # first rows indexed by n random indices to the atoms_2
+#             new_weights_1 = total_weights[random_indices[1:n_1],:] # first rows indexed by n random indices to the atoms_1
+#             new_weights_2 = total_weights[random_indices[n_1+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-            samples[i] = dlip_diffsize(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b, maxTime = maxTime)
-        end
-    end
-    return mean(samples.>=T_observed)
-end
+#             samples[i] = dlip_diffsize(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b, maxTime = maxTime)
+#         end
+#     end
+#     return mean(samples.>=T_observed)
+# end
 
 
 
-function p_value_ks(x::Vector{Float64}, y::Vector{Float64}, 
-                    n_samples, bootstrap)
+# function p_value_ks(x::Vector{Float64}, y::Vector{Float64}, 
+#                     n_samples, bootstrap)
 
-    n_1 = length(x)
-    n_2 = length(y)
-    n = n_1 + n_2
+#     n_1 = length(x)
+#     n_2 = length(y)
+#     n = n_1 + n_2
    
-    T_observed = HypothesisTests.ksstats(x, y)[3]
+#     T_observed = HypothesisTests.ksstats(x, y)[3]
     
-    samples = zeros(n_samples)
+#     samples = zeros(n_samples)
 
-    all_observations = vcat(x, y) # collect all rows
-    if bootstrap
-        for i in 1:n_samples
-            indices_1 = sample(1:n, n_1; replace = true)
-            indices_2 = sample(1:n, n_2; replace = true)
+#     all_observations = vcat(x, y) # collect all rows
+#     if bootstrap
+#         for i in 1:n_samples
+#             indices_1 = sample(1:n, n_1; replace = true)
+#             indices_2 = sample(1:n, n_2; replace = true)
 
-            new_x = all_observations[indices_1] # first rows indexed by n random indices to the weights_1
-            new_y = all_observations[indices_2] # first rows indexed by n random indices to the weights_2
+#             new_x = all_observations[indices_1] # first rows indexed by n random indices to the weights_1
+#             new_y = all_observations[indices_2] # first rows indexed by n random indices to the weights_2
 
-            samples[i] = HypothesisTests.ksstats(new_x, new_y)[3]
-        end
-    else
-        for i in 1:n_samples
-            random_indices = randperm(n) # indices to distribute rows to new hierarchical meausures
+#             samples[i] = HypothesisTests.ksstats(new_x, new_y)[3]
+#         end
+#     else
+#         for i in 1:n_samples
+#             random_indices = randperm(n) # indices to distribute rows to new hierarchical meausures
 
-            new_x = all_observations[random_indices[1:n_1]] # first rows indexed by n random indices to the atoms_1
-            new_y = all_observations[random_indices[n_1+1:end]] # first rows indexed by n random indices to the atoms_2
+#             new_x = all_observations[random_indices[1:n_1]] # first rows indexed by n random indices to the atoms_1
+#             new_y = all_observations[random_indices[n_1+1:end]] # first rows indexed by n random indices to the atoms_2
         
-            samples[i] = HypothesisTests.ksstats(new_x, new_y)[3]
-        end
-    end
-    return mean(samples.>=T_observed)
-end
+#             samples[i] = HypothesisTests.ksstats(new_x, new_y)[3]
+#         end
+#     end
+#     return mean(samples.>=T_observed)
+# end
 
 
-function infant_pvalues(time_periods::Vector{Int64}, n_samples::Int, 
-                        bootstrap::Bool, maxTime::Float64, gender_data::Dict{String, DataFrame})
+# function infant_pvalues(time_periods::Vector{Int64}, n_samples::Int, 
+#                         bootstrap::Bool, maxTime::Float64, gender_data::Dict{String, DataFrame})
     
-    pvalues_ks = zeros(length(time_periods))
-    pvalues_hipm = zeros(length(time_periods))
+#     pvalues_ks = zeros(length(time_periods))
+#     pvalues_hipm = zeros(length(time_periods))
 
-    @floop ThreadedEx() for (i, t) in enumerate(time_periods)
-        # These now strictly use gender_data passed from save_plots_optimized
-        atoms_1, weights_1 = group_infant_pmf_from_cache(group1, gender_data, t)
-        atoms_2, weights_2 = group_infant_pmf_from_cache(group2, gender_data, t)
+#     @floop ThreadedEx() for (i, t) in enumerate(time_periods)
+#         # These now strictly use gender_data passed from save_plots_optimized
+#         atoms_1, weights_1 = group_infant_pmf_from_cache(group1, gender_data, t)
+#         atoms_2, weights_2 = group_infant_pmf_from_cache(group2, gender_data, t)
 
-        pvalues_hipm[i] = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, 
-                                    n_samples, bootstrap, maxTime)
+#         pvalues_hipm[i] = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, 
+#                                     n_samples, bootstrap, maxTime)
         
-        pvalues_ks[i] = p_value_ks(weights_1[:,2], weights_2[:,2], n_samples, bootstrap)
-    end
-    return pvalues_hipm, pvalues_ks
-end
+#         pvalues_ks[i] = p_value_ks(weights_1[:,2], weights_2[:,2], n_samples, bootstrap)
+#     end
+#     return pvalues_hipm, pvalues_ks
+# end
 
-function all_pvalues(time_periods::Vector{Int64}, min_age::Int, max_age::Int, 
-                     n_samples::Int, bootstrap::Bool, maxTime::Float64, gender_data::Dict{String, DataFrame})
+# function all_pvalues(time_periods::Vector{Int64}, min_age::Int, max_age::Int, 
+#                      n_samples::Int, bootstrap::Bool, maxTime::Float64, gender_data::Dict{String, DataFrame})
     
-    pvalues_hipm = zeros(length(time_periods))
+#     pvalues_hipm = zeros(length(time_periods))
 
-    @floop ThreadedEx() for (i, t) in enumerate(time_periods)
-        atoms_1, weights_1 = group_pmf_per_year(group1, gender_data, t, min_age, max_age)
-        atoms_2, weights_2 = group_pmf_per_year(group2, gender_data, t, min_age, max_age)
+#     @floop ThreadedEx() for (i, t) in enumerate(time_periods)
+#         atoms_1, weights_1 = group_pmf_per_year(group1, gender_data, t, min_age, max_age)
+#         atoms_2, weights_2 = group_pmf_per_year(group2, gender_data, t, min_age, max_age)
 
-        pvalues_hipm[i] = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, 
-                                    n_samples, bootstrap, maxTime)
-    end
-    return pvalues_hipm
-end
+#         pvalues_hipm[i] = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, 
+#                                     n_samples, bootstrap, maxTime)
+#     end
+#     return pvalues_hipm
+# end
 
 
-function plot_p_values_hipm(pvalues_hipm::Vector{Float64},
-                    time_periods::Vector{Int64}, 
-                    title::String)
+# function plot_p_values_hipm(pvalues_hipm::Vector{Float64},
+#                     time_periods::Vector{Int64}, 
+#                     title::String)
 
-    all_ticks = minimum(time_periods):5:(maximum(time_periods)+1)
-    ymax = maximum(pvalues_hipm) * 1.1
-    scatterplot = scatter(
-        time_periods,
-        pvalues_hipm,
-        xticks = all_ticks,
-        xlabel = "Time Periods (Years)",
-        ylabel = "P-Value", # Updated label to reflect both series
-        ylims = (-0.005,1.1),
-        title = title,
-        label = "HIPM"
-    )
-    # # # Add the horizontal line to the existing plot object
-    hline!(scatterplot, [0.05], linestyle = :dash, label = "θ = 0.05")
+#     all_ticks = minimum(time_periods):5:(maximum(time_periods)+1)
+#     ymax = maximum(pvalues_hipm) * 1.1
+#     scatterplot = scatter(
+#         time_periods,
+#         pvalues_hipm,
+#         xticks = all_ticks,
+#         xlabel = "Time Periods (Years)",
+#         ylabel = "P-Value", # Updated label to reflect both series
+#         ylims = (-0.005,1.1),
+#         title = title,
+#         label = "HIPM"
+#     )
+#     # # # Add the horizontal line to the existing plot object
+#     hline!(scatterplot, [0.05], linestyle = :dash, label = "θ = 0.05")
 
    
-    return scatterplot
-end
+#     return scatterplot
+# end
 
-function plot_p_values_hipm_ks(pvalues_hipm::Vector{Float64}, pvalues_ks::Vector{Float64},
-                     time_periods::Vector{Int64}, 
-                    title::String)
+# function plot_p_values_hipm_ks(pvalues_hipm::Vector{Float64}, pvalues_ks::Vector{Float64},
+#                      time_periods::Vector{Int64}, 
+#                     title::String)
 
-    all_ticks = minimum(time_periods):5:(maximum(time_periods)+1)
-    ymax = maximum(pvalues_hipm) * 1.1
-    scatterplot = scatter(
-        time_periods,
-        pvalues_hipm,
-        xticks = all_ticks,
-        xlabel = "Time Periods (Years)",
-        ylabel = "P-Value", # Updated label to reflect both series
-        ylims = (-0.005,1.1),
-        title = title,
-        label = "HIPM"
-    )
-    # # # Add the horizontal line to the existing plot object
-    hline!(scatterplot, [0.05], linestyle = :dash, label = "θ = 0.05")
+#     all_ticks = minimum(time_periods):5:(maximum(time_periods)+1)
+#     ymax = maximum(pvalues_hipm) * 1.1
+#     scatterplot = scatter(
+#         time_periods,
+#         pvalues_hipm,
+#         xticks = all_ticks,
+#         xlabel = "Time Periods (Years)",
+#         ylabel = "P-Value", # Updated label to reflect both series
+#         ylims = (-0.005,1.1),
+#         title = title,
+#         label = "HIPM"
+#     )
+#     # # # Add the horizontal line to the existing plot object
+#     hline!(scatterplot, [0.05], linestyle = :dash, label = "θ = 0.05")
 
-    scatter!(
-        scatterplot, 
-        time_periods, # Assuming the x-axis data is the same
-        pvalues_ks, 
-        label = "KS"
-    )
-    return scatterplot
-end
+#     scatter!(
+#         scatterplot, 
+#         time_periods, # Assuming the x-axis data is the same
+#         pvalues_ks, 
+#         label = "KS"
+#     )
+#     return scatterplot
+# end
 
-function save_plots_optimized(time_periods::Vector{Int}, gender::String, min_age::Int,
-                max_age::Int, n_samples::Int, bootstrap::Bool, data_bank::Dict)
+# function save_plots_optimized(time_periods::Vector{Int}, gender::String, min_age::Int,
+#                 max_age::Int, n_samples::Int, bootstrap::Bool, data_bank::Dict)
     
-    # 1. Select the relevant sub-cache
-    gender_data = data_bank[gender]
-    title = "P-values for $(gender), Age range ($(min_age)-$(max_age))"
+#     # 1. Select the relevant sub-cache
+#     gender_data = data_bank[gender]
+#     title = "P-values for $(gender), Age range ($(min_age)-$(max_age))"
     
-    # 2. Call calculation functions (gender variable removed from arguments)
-    if min_age == 0 && max_age == 0
-        pvalues_hipm, pvalues_ks = infant_pvalues(time_periods, n_samples,
-                             bootstrap, 0.5, gender_data)
-        pl = plot_p_values_hipm_ks(pvalues_hipm, pvalues_ks, time_periods, title)
-    else
-        pvalues_hipm = all_pvalues(time_periods, min_age, max_age,
-                     n_samples, bootstrap, 0.5, gender_data)
-        pl = plot_p_values_hipm(pvalues_hipm, time_periods, title)
-    end
+#     # 2. Call calculation functions (gender variable removed from arguments)
+#     if min_age == 0 && max_age == 0
+#         pvalues_hipm, pvalues_ks = infant_pvalues(time_periods, n_samples,
+#                              bootstrap, 0.5, gender_data)
+#         pl = plot_p_values_hipm_ks(pvalues_hipm, pvalues_ks, time_periods, title)
+#     else
+#         pvalues_hipm = all_pvalues(time_periods, min_age, max_age,
+#                      n_samples, bootstrap, 0.5, gender_data)
+#         pl = plot_p_values_hipm(pvalues_hipm, time_periods, title)
+#     end
     
-    # 3. Save
-    output_path = "application/plots"
-    mkpath(output_path)
-    filename = "$(gender)_$(min_age)_$(max_age).png"
-    savefig(pl, joinpath(output_path, filename))
-    @info "Saved: $filename"
-end
+#     # 3. Save
+#     output_path = "application/plots"
+#     mkpath(output_path)
+#     filename = "$(gender)_$(min_age)_$(max_age).png"
+#     savefig(pl, joinpath(output_path, filename))
+#     @info "Saved: $filename"
+# end
 
 
 
 
-function test_statistic(atoms::Vector{Float64}, weights_1::Matrix{Float64}, weights_2::Matrix{Float64})
-    n_1 = size(weights_1)[1]
-    n_2 = size(weights_2)[1]
-    new_weights_1 = sum(weights_1, dims = 2)[:,1] / n_1
-    new_weights_2 = sum(weights_2, dims = 2)[:,1] / n_2
+# function test_statistic(atoms::Vector{Float64}, weights_1::Matrix{Float64}, weights_2::Matrix{Float64})
+#     n_1 = size(weights_1)[1]
+#     n_2 = size(weights_2)[1]
+#     new_weights_1 = sum(weights_1, dims = 2)[:,1] / n_1
+#     new_weights_2 = sum(weights_2, dims = 2)[:,1] / n_2
 
-    return sum((atoms[2:end] .- atoms[1:end-1]).*abs.(cumsum(new_weights_1)[1:end-1] .- cumsum(new_weights_2)[1:end-1]))
-end
+#     return sum((atoms[2:end] .- atoms[1:end-1]).*abs.(cumsum(new_weights_1)[1:end-1] .- cumsum(new_weights_2)[1:end-1]))
+# end
 
-function pooled_p_values_hipm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64}, 
-                    weights_1::Matrix{Float64},weights_2::Matrix{Float64}, n_samples::Int, bootstrap::Bool, maxTime::Float64)
+# function pooled_p_values_hipm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64}, 
+#                     weights_1::Matrix{Float64},weights_2::Matrix{Float64}, n_samples::Int, bootstrap::Bool, maxTime::Float64)
     
-    n_1 = size(atoms_1,1)
-    n_2 = size(atoms_2,1)
-    n = n_1 + n_2
-    a = 0.0
-    b = maximum(atoms_1[1,:])
+#     n_1 = size(atoms_1,1)
+#     n_2 = size(atoms_2,1)
+#     n = n_1 + n_2
+#     a = 0.0
+#     b = maximum(atoms_1[1,:])
 
-    T_observed = test_statistic(atoms_1[1,:], weights_1, weights_2)
+#     T_observed = test_statistic(atoms_1[1,:], weights_1, weights_2)
    
-    samples = zeros(n_samples)
-    total_weights = vcat(weights_1, weights_2) # collect all rows
-    if bootstrap
-        for i in 1:n_samples
-            indices_1 = sample(1:n, n_1; replace = true)
-            indices_2 = sample(1:n, n_2; replace = true)
+#     samples = zeros(n_samples)
+#     total_weights = vcat(weights_1, weights_2) # collect all rows
+#     if bootstrap
+#         for i in 1:n_samples
+#             indices_1 = sample(1:n, n_1; replace = true)
+#             indices_2 = sample(1:n, n_2; replace = true)
 
-            new_weights_1 = total_weights[indices_1,:] # first rows indexed by n random indices to the weights_1
-            new_weights_2 = total_weights[indices_2,:] # first rows indexed by n random indices to the weights_2
+#             new_weights_1 = total_weights[indices_1,:] # first rows indexed by n random indices to the weights_1
+#             new_weights_2 = total_weights[indices_2,:] # first rows indexed by n random indices to the weights_2
 
-            samples[i] = test_statistic(atoms_1[1,:], new_weights_1, new_weights_2)
-        end
-    else
-        for i in 1:n_samples
-            random_indices = randperm(n) # indices to distribute rows to new hierarchical meausures
+#             samples[i] = test_statistic(atoms_1[1,:], new_weights_1, new_weights_2)
+#         end
+#     else
+#         for i in 1:n_samples
+#             random_indices = randperm(n) # indices to distribute rows to new hierarchical meausures
 
-            new_weights_1 = total_weights[random_indices[1:n_1],:] # first rows indexed by n random indices to the atoms_1
-            new_weights_2 = total_weights[random_indices[n_1+1:end],:] # first rows indexed by n random indices to the atoms_2
+#             new_weights_1 = total_weights[random_indices[1:n_1],:] # first rows indexed by n random indices to the atoms_1
+#             new_weights_2 = total_weights[random_indices[n_1+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-            samples[i] = test_statistic(atoms_1[1,:], new_weights_1, new_weights_2)
-        end
-    end
-    return mean(samples.>=T_observed)
-end
+#             samples[i] = test_statistic(atoms_1[1,:], new_weights_1, new_weights_2)
+#         end
+#     end
+#     return mean(samples.>=T_observed)
+# end
 
-function pooled_p_values_hipm(time_periods::Vector{Int}, min_age::Int, max_age::Int,
-                     n_samples::Int, bootstrap::Bool, maxTime::Float64, gender_data::Dict{String, DataFrame})
-    pvalues_hipm = zeros(length(time_periods))
+# function pooled_p_values_hipm(time_periods::Vector{Int}, min_age::Int, max_age::Int,
+#                      n_samples::Int, bootstrap::Bool, maxTime::Float64, gender_data::Dict{String, DataFrame})
+#     pvalues_hipm = zeros(length(time_periods))
 
-    @floop ThreadedEx() for (i, t) in enumerate(time_periods)
-        atoms_1, weights_1 = group_pmf_per_year(group1, gender_data, t, min_age, max_age)
-        atoms_2, weights_2 = group_pmf_per_year(group2, gender_data, t, min_age, max_age)
+#     @floop ThreadedEx() for (i, t) in enumerate(time_periods)
+#         atoms_1, weights_1 = group_pmf_per_year(group1, gender_data, t, min_age, max_age)
+#         atoms_2, weights_2 = group_pmf_per_year(group2, gender_data, t, min_age, max_age)
 
-        pvalues_hipm[i] = pooled_p_values_hipm(atoms_1, atoms_2, weights_1, weights_2, 
-                                    n_samples, bootstrap, maxTime)
-    end
-    return pvalues_hipm
-end
+#         pvalues_hipm[i] = pooled_p_values_hipm(atoms_1, atoms_2, weights_1, weights_2, 
+#                                     n_samples, bootstrap, maxTime)
+#     end
+#     return pvalues_hipm
+# end
 
-function save_plots_pooled(time_periods::Vector{Int}, gender::String, min_age::Int,
-                max_age::Int, n_samples::Int, bootstrap::Bool, data_bank::Dict)
+# function save_plots_pooled(time_periods::Vector{Int}, gender::String, min_age::Int,
+#                 max_age::Int, n_samples::Int, bootstrap::Bool, data_bank::Dict)
     
-    # 1. Select the relevant sub-cache
-    gender_data = data_bank[gender]
-    title = "Pooled, P-values for $(gender), Age range ($(min_age)-$(max_age))"
+#     # 1. Select the relevant sub-cache
+#     gender_data = data_bank[gender]
+#     title = "Pooled, P-values for $(gender), Age range ($(min_age)-$(max_age))"
     
-    # 2. Call calculation functions (gender variable removed from arguments)
-    if min_age == 0 && max_age == 0
-        pvalues_hipm, pvalues_ks = infant_pvalues(time_periods, n_samples,
-                             bootstrap, 0.5, gender_data)
-        pl = plot_p_values_hipm_ks(pvalues_hipm, pvalues_ks, time_periods, title)
-    else
-        pvalues_hipm = pooled_p_values_hipm(time_periods, min_age, max_age,
-                     n_samples, bootstrap, 0.5, gender_data)
+#     # 2. Call calculation functions (gender variable removed from arguments)
+#     if min_age == 0 && max_age == 0
+#         pvalues_hipm, pvalues_ks = infant_pvalues(time_periods, n_samples,
+#                              bootstrap, 0.5, gender_data)
+#         pl = plot_p_values_hipm_ks(pvalues_hipm, pvalues_ks, time_periods, title)
+#     else
+#         pvalues_hipm = pooled_p_values_hipm(time_periods, min_age, max_age,
+#                      n_samples, bootstrap, 0.5, gender_data)
 
-        pl = plot_p_values_hipm(pvalues_hipm, time_periods, title)
-    end
+#         pl = plot_p_values_hipm(pvalues_hipm, time_periods, title)
+#     end
     
-    # 3. Save
-    output_path = "application/newplots"
-    mkpath(output_path)
-    filename = "$(gender)_$(min_age)_$(max_age).png"
-    savefig(pl, joinpath(output_path, filename))
-    @info "Saved: $filename"
-end
+#     # 3. Save
+#     output_path = "application/newplots"
+#     mkpath(output_path)
+#     filename = "$(gender)_$(min_age)_$(max_age).png"
+#     savefig(pl, joinpath(output_path, filename))
+#     @info "Saved: $filename"
+# end
 
 
-# 1. Initialize data
-groups_configs = [(group1, 1), (group2, 2)]
-genders = ["males", "females"]
+# # 1. Initialize data
+# groups_configs = [(group1, 1), (group2, 2)]
+# genders = ["males", "females"]
 
-@info "Loading data bank into memory..."
-mortality_cache = load_mortality_data(groups_configs, genders)
+# @info "Loading data bank into memory..."
+# mortality_cache = load_mortality_data(groups_configs, genders)
 
-# 2. Define simulation parameters
-time_periods = collect(1960:2010)
-n_samples = 100
-bootstrap = false
-
-
-
+# # 2. Define simulation parameters
+# time_periods = collect(1960:2010)
+# n_samples = 100
+# bootstrap = false
 
 
 
-# 3. Run all analysis tasks
-settings = [
-    (0, 85)
-]
-# # settings = [
-# #     (0, 0),
-# #     (1, 18),
-# #     (19, 85)
-# # ]
-t = time()
-for gender in genders
-    for (min_a, max_a) in settings
-        save_plots_pooled(time_periods, gender, min_a, max_a, n_samples, bootstrap, mortality_cache)
-    end
-end
-dur = time() - t
 
-# --- Updated Analysis Loop ---
-function run_analysis()
-    time_periods = collect(1960:1968)
-    n_samples = 3 # You can increase this now!
+
+
+# # 3. Run all analysis tasks
+# settings = [
+#     (0, 85)
+# ]
+# # # settings = [
+# # #     (0, 0),
+# # #     (1, 18),
+# # #     (19, 85)
+# # # ]
+# t = time()
+# for gender in genders
+#     for (min_a, max_a) in settings
+#         save_plots_pooled(time_periods, gender, min_a, max_a, n_samples, bootstrap, mortality_cache)
+#     end
+# end
+# dur = time() - t
+
+# # --- Updated Analysis Loop ---
+# function run_analysis()
+#     time_periods = collect(1960:1968)
+#     n_samples = 3 # You can increase this now!
     
-    for gen in genders
-        # Use mortality_cache[gen] inside your functions now
-        # You'll need to update all_pvalues and infant_pvalues 
-        # to accept the dictionary instead of re-reading files.
-        save_plots_pooled(time_periods, gen, 0, 85, n_samples, false, mortality_cache[gen])
-    end
-end
+#     for gen in genders
+#         # Use mortality_cache[gen] inside your functions now
+#         # You'll need to update all_pvalues and infant_pvalues 
+#         # to accept the dictionary instead of re-reading files.
+#         save_plots_pooled(time_periods, gen, 0, 85, n_samples, false, mortality_cache[gen])
+#     end
+# end
 
-run_analysis()
-println("done")
+# run_analysis()
+# println("done")
 
 
 
@@ -488,9 +501,9 @@ println("done")
 #         @assert row_idx !== nothing "Year $t not found for $(group[i])"
 
 #         # Extract dx (deaths in first year)
-#         dx_val = df[row_idx, :dx]
+#         dx_infant = df[row_idx, :dx]
 #         # If dx is a string (e.g., " 0.123"), parse it
-#         dx_0 = dx_val isa AbstractString ? parse(Float64, dx_val) : Float64(dx_val)
+#         dx_infant = dx_infant isa AbstractString ? parse(Float64, dx_infant) : Float64(dx_infant)
 
 #         # To get the total sum for renormalization within the age 0-90 range
 #         # (matching your previous logic)
@@ -500,7 +513,7 @@ println("done")
 #         end
 #         total_sum = sum(dx_90)
 
-#         weights[i, 2] = dx_0 / total_sum
+#         weights[i, 2] = dx_infant / total_sum
 #         weights[i, 1] = 1.0 - weights[i, 2]
 #     end
 #     return atoms, weights
