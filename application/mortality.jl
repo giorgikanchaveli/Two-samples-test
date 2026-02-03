@@ -17,8 +17,15 @@ group2 = ["Australia", "Austria", "Belgium", "Canada", "Denmark", "Finland", "Fr
 
 
 
+"""
+    load_mortality_data
 
-#  Create a function to pre-load all data into memory
+Loads all data into memory from each group. We store DataFrame per each country and gender. 
+
+# Arguments
+    groups_configs::Vector{Tuple{Vector{String}, Int}}  
+    genders::Vector{String}
+"""
 function load_mortality_data(groups_configs::Vector{Tuple{Vector{String}, Int}}, genders::Vector{String})
     # Structure: data_bank[gender][country_name] = DataFrame
     data_bank = Dict{String, Dict{String, DataFrame}}()
@@ -45,14 +52,26 @@ function load_mortality_data(groups_configs::Vector{Tuple{Vector{String}, Int}},
     return data_bank
 end
 
+
+"""
+    country_pmf_from_cache
+
+Given dataframe for some country, returns the probability mass function for deaths at ages from min_age to max_age.
+It obtains number of deaths per each age in range (min_age, max_age) and renormalazies it. 
+# Arguments: 
+    df::DataFrame
+    t::Int          :  Year
+    min_age::Int
+    max_age::Int
+"""
 function country_pmf_from_cache(df::DataFrame, t::Int, min_age::Int, max_age::Int)
+    @assert max_age <= 85 "Maximum age must be lower than the truncation age."
     # Find the year in the already loaded DataFrame
     row_idx = findfirst(==(t), df[!, :Year])
     @assert row_idx !== nothing "Year $t not found."
 
-    # Ages are rows starting from row_idx
-    # dx is typically at index row_idx + age
-    dx_base = df[row_idx:(row_idx + 70), :dx]
+    # data for year t starts from row_idx.
+    dx_base = df[row_idx:(row_idx + 85), :dx]
     
     # Handle String-to-Float conversion if necessary
     if eltype(dx_base) <: AbstractString
@@ -63,13 +82,24 @@ function country_pmf_from_cache(df::DataFrame, t::Int, min_age::Int, max_age::In
     return dx_band ./ sum(dx_band)
 end
 
+"""
+    group_pmf_per_year
 
+Obtains hierarchical sample with weights from the group of countries.
+
+# Arguments:
+    group::Vector{String}
+    gender_data::Dict{String, DataFrame}
+    t::Int  :  Year
+    min_age::Int
+    max_age::Int
+"""
 function group_pmf_per_year(group::Vector{String}, gender_data::Dict{String, DataFrame}, 
                                     t::Int, min_age::Int, max_age::Int)
-    
+    @assert min_age < max_age "minimum age must be strictly smaller than maximum age."
     ages = Float64.(collect(min_age:max_age))
     weights = Matrix{Float64}(undef, length(group), length(ages))
-    atoms = repeat(ages', length(group), 1)
+    atoms = repeat(ages', length(group), 1) # Each row contains ages from min_age to max_age.
 
     for i in 1:length(group)
         country_df = gender_data[group[i]]
@@ -93,13 +123,13 @@ function group_infant_pmf_from_cache(group::Vector{String}, gender_data::Dict{St
         # If dx is a string (e.g., " 0.123"), parse it
         dx_0 = dx_val isa AbstractString ? parse(Float64, dx_val) : Float64(dx_val)
 
-        # To get the total sum for renormalization within the age 0-70 range
+        # To get the total sum for renormalization within the age 0-85 range
         # (matching your previous logic)
-        dx_70 = df[row_idx:(row_idx + 70), :dx]
-        if eltype(dx_70) <: AbstractString
-            dx_70 = parse.(Float64, dx_70)
+        dx_85 = df[row_idx:(row_idx + 85), :dx]
+        if eltype(dx_85) <: AbstractString
+            dx_85 = parse.(Float64, dx_85)
         end
-        total_sum = sum(dx_70)
+        total_sum = sum(dx_85)
 
         weights[i, 2] = dx_0 / total_sum
         weights[i, 1] = 1.0 - weights[i, 2]
@@ -401,12 +431,12 @@ bootstrap = false
 
 # 3. Run all analysis tasks
 settings = [
-    (0, 70)
+    (0, 85)
 ]
 # # settings = [
 # #     (0, 0),
 # #     (1, 18),
-# #     (19, 70)
+# #     (19, 85)
 # # ]
 t = time()
 for gender in genders
@@ -425,7 +455,7 @@ function run_analysis()
         # Use mortality_cache[gen] inside your functions now
         # You'll need to update all_pvalues and infant_pvalues 
         # to accept the dictionary instead of re-reading files.
-        save_plots_pooled(time_periods, gen, 0, 70, n_samples, false, mortality_cache[gen])
+        save_plots_pooled(time_periods, gen, 0, 85, n_samples, false, mortality_cache[gen])
     end
 end
 
@@ -1281,8 +1311,8 @@ println("done")
 # # t = 1962
 # # start = findfirst(==(t), df[!,:Year])
 
-# #     # we truncate age interval to [0, 70], so we have to renormalize death counts.
-# # dx = df[start:(start + 70), "dx"]
+# #     # we truncate age interval to [0, 85], so we have to renormalize death counts.
+# # dx = df[start:(start + 85), "dx"]
 # # # sum(df[1:111,"dx"])
 
 
