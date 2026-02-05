@@ -111,7 +111,7 @@ is represented by atoms [0, 1] and weights associated to it.
     gender_data::Dict{String, DataFrame}
     t::Int  :  Year
 """
-function group_infant_pmf(group::Vector{String}, gender_data::Dict{String, DataFrame}, t::Int)
+function group_infant_pmf(gender_data::Dict{String, DataFrame}, group::Vector{String}, t::Int)
     
     # 0 = survival, 1 =  death
     atoms = repeat([0.0, 1.0]', length(group), 1) 
@@ -150,190 +150,240 @@ end
 
 
 
-# function p_value_hipm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64}, 
-#                     weights_1::Matrix{Float64},weights_2::Matrix{Float64}, n_samples::Int, bootstrap::Bool, maxTime::Float64)
-#     n_1 = size(atoms_1,1)
-#     n_2 = size(atoms_2,1)
-#     n = n_1 + n_2
-#     a = 0.0
-#     b = maximum(atoms_1[1,:])
+function p_value_hipm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64}, 
+                    weights_1::Matrix{Float64},weights_2::Matrix{Float64}, n_samples::Int, bootstrap::Bool, maxTime::Float64)
+    n_1 = size(atoms_1,1)
+    n_2 = size(atoms_2,1)
+    n = n_1 + n_2
+    a = atoms_1[1,1]
+    b = atoms_1[1,end]
 
-#     T_observed = dlip_diffsize(atoms_1,atoms_2, weights_1, weights_2, a, b, maxTime = maxTime)
+    T_observed = dlip(atoms_1,atoms_2, weights_1, weights_2, a, b; max_time = maxTime)
    
-#     samples = zeros(n_samples)
-#     total_weights = vcat(weights_1, weights_2) # collect all rows
-#     if bootstrap
-#         for i in 1:n_samples
-#             indices_1 = sample(1:n, n_1; replace = true)
-#             indices_2 = sample(1:n, n_2; replace = true)
+    samples = zeros(n_samples)
+    total_weights = vcat(weights_1, weights_2) # collect all rows
+    if bootstrap
+        for i in 1:n_samples
+            indices_1 = sample(1:n, n_1; replace = true)
+            indices_2 = sample(1:n, n_2; replace = true)
 
-#             new_weights_1 = total_weights[indices_1,:] # first rows indexed by n random indices to the weights_1
-#             new_weights_2 = total_weights[indices_2,:] # first rows indexed by n random indices to the weights_2
+            new_weights_1 = total_weights[indices_1,:] # first rows indexed by n random indices to the weights_1
+            new_weights_2 = total_weights[indices_2,:] # first rows indexed by n random indices to the weights_2
 
-#             samples[i] = dlip_diffsize(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b, maxTime = maxTime)
-#         end
-#     else
-#         for i in 1:n_samples
-#             random_indices = randperm(n) # indices to distribute rows to new hierarchical meausures
+            samples[i] = dlip(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b; max_time = maxTime)
+        end
+    else
+        for i in 1:n_samples
+            random_indices = randperm(n) # indices to distribute rows to new hierarchical meausures
 
-#             new_weights_1 = total_weights[random_indices[1:n_1],:] # first rows indexed by n random indices to the atoms_1
-#             new_weights_2 = total_weights[random_indices[n_1+1:end],:] # first rows indexed by n random indices to the atoms_2
+            new_weights_1 = total_weights[random_indices[1:n_1],:] # first rows indexed by n random indices to the atoms_1
+            new_weights_2 = total_weights[random_indices[n_1+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-#             samples[i] = dlip_diffsize(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b, maxTime = maxTime)
-#         end
-#     end
-#     return mean(samples.>=T_observed)
-# end
+            samples[i] = dlip(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b; max_time = maxTime)
+        end
+    end
+    return mean(samples.>=T_observed)
+end
 
 
 
-# function p_value_ks(x::Vector{Float64}, y::Vector{Float64}, 
-#                     n_samples, bootstrap)
+function p_value_ks(x::Vector{Float64}, y::Vector{Float64}, 
+                    n_samples, bootstrap)
 
-#     n_1 = length(x)
-#     n_2 = length(y)
-#     n = n_1 + n_2
+    n_1 = length(x)
+    n_2 = length(y)
+    n = n_1 + n_2
    
-#     T_observed = HypothesisTests.ksstats(x, y)[3]
+    T_observed = HypothesisTests.ksstats(x, y)[3]
     
-#     samples = zeros(n_samples)
+    samples = zeros(n_samples)
 
-#     all_observations = vcat(x, y) # collect all rows
-#     if bootstrap
-#         for i in 1:n_samples
-#             indices_1 = sample(1:n, n_1; replace = true)
-#             indices_2 = sample(1:n, n_2; replace = true)
+    all_observations = vcat(x, y) # collect all rows
+    if bootstrap
+        for i in 1:n_samples
+            indices_1 = sample(1:n, n_1; replace = true)
+            indices_2 = sample(1:n, n_2; replace = true)
 
-#             new_x = all_observations[indices_1] # first rows indexed by n random indices to the weights_1
-#             new_y = all_observations[indices_2] # first rows indexed by n random indices to the weights_2
+            new_x = all_observations[indices_1] # first rows indexed by n random indices to the weights_1
+            new_y = all_observations[indices_2] # first rows indexed by n random indices to the weights_2
 
-#             samples[i] = HypothesisTests.ksstats(new_x, new_y)[3]
-#         end
-#     else
-#         for i in 1:n_samples
-#             random_indices = randperm(n) # indices to distribute rows to new hierarchical meausures
+            samples[i] = HypothesisTests.ksstats(new_x, new_y)[3]
+        end
+    else
+        for i in 1:n_samples
+            random_indices = randperm(n) # indices to distribute rows to new hierarchical meausures
 
-#             new_x = all_observations[random_indices[1:n_1]] # first rows indexed by n random indices to the atoms_1
-#             new_y = all_observations[random_indices[n_1+1:end]] # first rows indexed by n random indices to the atoms_2
+            new_x = all_observations[random_indices[1:n_1]] # first rows indexed by n random indices to the atoms_1
+            new_y = all_observations[random_indices[n_1+1:end]] # first rows indexed by n random indices to the atoms_2
         
-#             samples[i] = HypothesisTests.ksstats(new_x, new_y)[3]
-#         end
-#     end
-#     return mean(samples.>=T_observed)
-# end
+            samples[i] = HypothesisTests.ksstats(new_x, new_y)[3]
+        end
+    end
+    return mean(samples.>=T_observed)
+end
 
 
-# function infant_pvalues(time_periods::Vector{Int64}, n_samples::Int, 
-#                         bootstrap::Bool, maxTime::Float64, gender_data::Dict{String, DataFrame})
+function infant_pvalues(time_periods::Vector{Int64}, n_samples::Int, 
+                        bootstrap::Bool, maxTime::Float64, gender_data::Dict{String, DataFrame})
     
-#     pvalues_ks = zeros(length(time_periods))
-#     pvalues_hipm = zeros(length(time_periods))
+    pvalues_ks = zeros(length(time_periods))
+    pvalues_hipm = zeros(length(time_periods))
+    n_years = length(time_periods)
 
-#     @floop ThreadedEx() for (i, t) in enumerate(time_periods)
-#         # These now strictly use gender_data passed from save_plots_optimized
-#         atoms_1, weights_1 = group_infant_pmf(group1, gender_data, t)
-#         atoms_2, weights_2 = group_infant_pmf(group2, gender_data, t)
+    @floop ThreadedEx() for (i, t) in enumerate(time_periods)
+        # These now strictly use gender_data passed from save_plots_optimized
+        println("Progress $i / $(n_years)")   
+        atoms_1, weights_1 = group_infant_pmf(gender_data, group1, t)
+        atoms_2, weights_2 = group_infant_pmf(gender_data, group2,  t)
 
-#         pvalues_hipm[i] = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, 
-#                                     n_samples, bootstrap, maxTime)
+        pvalues_hipm[i] = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, 
+                                    n_samples, bootstrap, maxTime)
         
-#         pvalues_ks[i] = p_value_ks(weights_1[:,2], weights_2[:,2], n_samples, bootstrap)
-#     end
-#     return pvalues_hipm, pvalues_ks
-# end
+        pvalues_ks[i] = p_value_ks(weights_1[:,2], weights_2[:,2], n_samples, bootstrap)
+    end
+    return pvalues_hipm, pvalues_ks
+end
 
-# function all_pvalues(time_periods::Vector{Int64}, min_age::Int, max_age::Int, 
-#                      n_samples::Int, bootstrap::Bool, maxTime::Float64, gender_data::Dict{String, DataFrame})
+function all_pvalues(time_periods::Vector{Int64}, min_age::Int, max_age::Int, 
+                     n_samples::Int, bootstrap::Bool, maxTime::Float64, gender_data::Dict{String, DataFrame})
     
-#     pvalues_hipm = zeros(length(time_periods))
+    pvalues_hipm = zeros(length(time_periods))      
+    n_years = length(time_periods)
+    @floop ThreadedEx() for (i, t) in enumerate(time_periods)
+        println("Progress $i / $(n_years)") 
+        atoms_1, weights_1 = group_pmf_per_year(gender_data, group1, t, min_age, max_age)
+        atoms_2, weights_2 = group_pmf_per_year(gender_data, group2, t, min_age, max_age)
 
-#     @floop ThreadedEx() for (i, t) in enumerate(time_periods)
-#         atoms_1, weights_1 = group_pmf_per_year(group1, gender_data, t, min_age, max_age)
-#         atoms_2, weights_2 = group_pmf_per_year(group2, gender_data, t, min_age, max_age)
-
-#         pvalues_hipm[i] = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, 
-#                                     n_samples, bootstrap, maxTime)
-#     end
-#     return pvalues_hipm
-# end
+        pvalues_hipm[i] = p_value_hipm(atoms_1, atoms_2, weights_1, weights_2, 
+                                    n_samples, bootstrap, maxTime)
+    end
+    return pvalues_hipm
+end
 
 
-# function plot_p_values_hipm(pvalues_hipm::Vector{Float64},
-#                     time_periods::Vector{Int64}, 
-#                     title::String)
+function plot_p_values_hipm(pvalues_hipm::Vector{Float64},
+                    time_periods::Vector{Int64}, 
+                    title::String)
 
-#     all_ticks = minimum(time_periods):5:(maximum(time_periods)+1)
-#     ymax = maximum(pvalues_hipm) * 1.1
-#     scatterplot = scatter(
-#         time_periods,
-#         pvalues_hipm,
-#         xticks = all_ticks,
-#         xlabel = "Time Periods (Years)",
-#         ylabel = "P-Value", # Updated label to reflect both series
-#         ylims = (-0.005,1.1),
-#         title = title,
-#         label = "HIPM"
-#     )
-#     # # # Add the horizontal line to the existing plot object
-#     hline!(scatterplot, [0.05], linestyle = :dash, label = "θ = 0.05")
+    all_ticks = minimum(time_periods):5:(maximum(time_periods)+1)
+    scatterplot = scatter(
+        time_periods,
+        pvalues_hipm,
+        xticks = all_ticks,
+        xlabel = "Time Periods (Years)",
+        ylabel = "P-Value", # Updated label to reflect both series
+        ylims = (-0.005,1.1),
+        title = title,
+        label = "HIPM"
+    )
+    # # # Add the horizontal line to the existing plot object
+    hline!(scatterplot, [0.05], linestyle = :dash, label = "θ = 0.05")
 
    
-#     return scatterplot
-# end
+    return scatterplot
+end
 
-# function plot_p_values_hipm_ks(pvalues_hipm::Vector{Float64}, pvalues_ks::Vector{Float64},
-#                      time_periods::Vector{Int64}, 
-#                     title::String)
+function plot_p_values_hipm_ks(pvalues_hipm::Vector{Float64}, pvalues_ks::Vector{Float64},
+                     time_periods::Vector{Int64}, 
+                    title::String)
 
-#     all_ticks = minimum(time_periods):5:(maximum(time_periods)+1)
-#     ymax = maximum(pvalues_hipm) * 1.1
-#     scatterplot = scatter(
-#         time_periods,
-#         pvalues_hipm,
-#         xticks = all_ticks,
-#         xlabel = "Time Periods (Years)",
-#         ylabel = "P-Value", # Updated label to reflect both series
-#         ylims = (-0.005,1.1),
-#         title = title,
-#         label = "HIPM"
-#     )
-#     # # # Add the horizontal line to the existing plot object
-#     hline!(scatterplot, [0.05], linestyle = :dash, label = "θ = 0.05")
+    all_ticks = minimum(time_periods):5:(maximum(time_periods)+1)
+    scatterplot = scatter(
+        time_periods,
+        pvalues_hipm,
+        xticks = all_ticks,
+        xlabel = "Time Periods (Years)",
+        ylabel = "P-Value", # Updated label to reflect both series
+        ylims = (-0.005,1.1),
+        title = title,
+        label = "HIPM"
+    )
+    # # # Add the horizontal line to the existing plot object
+    hline!(scatterplot, [0.05], linestyle = :dash, label = "θ = 0.05")
 
-#     scatter!(
-#         scatterplot, 
-#         time_periods, # Assuming the x-axis data is the same
-#         pvalues_ks, 
-#         label = "KS"
-#     )
-#     return scatterplot
-# end
+    scatter!(
+        scatterplot, 
+        time_periods, # Assuming the x-axis data is the same
+        pvalues_ks, 
+        label = "KS"
+    )
+    return scatterplot
+end
 
-# function save_plots_optimized(time_periods::Vector{Int}, gender::String, min_age::Int,
-#                 max_age::Int, n_samples::Int, bootstrap::Bool, data_bank::Dict)
+function save_plots_optimized(time_periods::Vector{Int}, gender::String, min_age::Int,
+                max_age::Int, n_samples::Int, bootstrap::Bool, data_bank::Dict)
     
-#     # 1. Select the relevant sub-cache
-#     gender_data = data_bank[gender]
-#     title = "P-values for $(gender), Age range ($(min_age)-$(max_age))"
+    # 1. Select the relevant sub-cache
+    gender_data = data_bank[gender]
+    title = "P-values for $(gender), Age range ($(min_age)-$(max_age))"
     
-#     # 2. Call calculation functions (gender variable removed from arguments)
-#     if min_age == 0 && max_age == 0
-#         pvalues_hipm, pvalues_ks = infant_pvalues(time_periods, n_samples,
-#                              bootstrap, 0.5, gender_data)
-#         pl = plot_p_values_hipm_ks(pvalues_hipm, pvalues_ks, time_periods, title)
-#     else
-#         pvalues_hipm = all_pvalues(time_periods, min_age, max_age,
-#                      n_samples, bootstrap, 0.5, gender_data)
-#         pl = plot_p_values_hipm(pvalues_hipm, time_periods, title)
-#     end
+    # 2. Call calculation functions (gender variable removed from arguments)
+    if min_age == 0 && max_age == 0
+        pvalues_hipm, pvalues_ks = infant_pvalues(time_periods, n_samples,
+                             bootstrap, 0.5, gender_data)
+        pl = plot_p_values_hipm_ks(pvalues_hipm, pvalues_ks, time_periods, title)
+    else
+        pvalues_hipm = all_pvalues(time_periods, min_age, max_age,
+                     n_samples, bootstrap, 0.5, gender_data)
+        pl = plot_p_values_hipm(pvalues_hipm, time_periods, title)
+    end
     
-#     # 3. Save
-#     output_path = "application/plots"
-#     mkpath(output_path)
-#     filename = "$(gender)_$(min_age)_$(max_age).png"
-#     savefig(pl, joinpath(output_path, filename))
-#     @info "Saved: $filename"
-# end
+    # 3. Save
+    output_path = "applications/plots/pvalues"
+    mkpath(output_path)
+    filename = "$(gender)_$(min_age)_$(max_age).png"
+    savefig(pl, joinpath(output_path, filename))
+    @info "Saved: $filename"
+end
+
+
+
+
+# 1. Initialize data
+group1 = ["belarus", "Bulgaria", "Czechia", "Estonia", "Hungary", "Latvia", "Poland", "Lithuania", "Russia", "Slovakia", "Ukraine"]
+
+group2 = ["Australia", "Austria", "Belgium", "Canada", "Denmark", "Finland", "France", "Iceland", "Ireland", "Italy", 
+"Japan", "Luxembourg", "Netherlands", "NewZealand", "Norway", "Spain", "Sweden",
+"Switzerland", "UnitedKingdom" , "UnitedStatesofAmerica"]
+
+
+groups_configs = [(group1, 1), (group2, 2)]
+genders = ["males", "females"]
+min_age = 0
+max_age = 85
+
+@info "Loading data bank into memory..."
+mortality_cache = load_mortality_data(groups_configs, genders)
+
+# 2. Define simulation parameters
+time_periods = collect(1960:2010)
+n_samples = 100
+bootstrap = false
+
+
+
+
+# 3. Run all analysis tasks
+
+settings = [
+    (min_age, min_age),
+    (min_age + 1, 18),
+    (19, max_age)
+]
+t = time()
+for gender in genders
+    save_plots_optimized(time_periods, gender, min_age, max_age, n_samples, bootstrap, mortality_cache)
+    for (min_a, max_a) in settings
+        save_plots_optimized(time_periods, gender, min_a, max_a, n_samples, bootstrap, mortality_cache)
+    end
+end
+dur = time() - t
+
+
+println("done")
+
+
+
 
 
 
@@ -442,38 +492,6 @@ end
 
 
 
-# # 3. Run all analysis tasks
-# settings = [
-#     (0, 85)
-# ]
-# # # settings = [
-# # #     (0, 0),
-# # #     (1, 18),
-# # #     (19, 85)
-# # # ]
-# t = time()
-# for gender in genders
-#     for (min_a, max_a) in settings
-#         save_plots_pooled(time_periods, gender, min_a, max_a, n_samples, bootstrap, mortality_cache)
-#     end
-# end
-# dur = time() - t
-
-# # --- Updated Analysis Loop ---
-# function run_analysis()
-#     time_periods = collect(1960:1968)
-#     n_samples = 3 # You can increase this now!
-    
-#     for gen in genders
-#         # Use mortality_cache[gen] inside your functions now
-#         # You'll need to update all_pvalues and infant_pvalues 
-#         # to accept the dictionary instead of re-reading files.
-#         save_plots_pooled(time_periods, gen, 0, 85, n_samples, false, mortality_cache[gen])
-#     end
-# end
-
-# run_analysis()
-# println("done")
 
 
 
@@ -625,7 +643,7 @@ end
 #     a = atoms_1[1,1]
 #     b = atoms_1[1,end]
 
-#     T_observed = dlip_diffsize(atoms_1,atoms_2, weights_1, weights_2, a, b, maxTime = maxTime)
+#     T_observed = dlip(atoms_1,atoms_2, weights_1, weights_2, a, b; maxTime = maxTime)
    
 #     samples = zeros(n_samples)
 #     total_weights = vcat(weights_1, weights_2) # collect all rows
@@ -637,7 +655,7 @@ end
 #             new_weights_1 = total_weights[indices_1,:] # first rows indexed by n random indices to the weights_1
 #             new_weights_2 = total_weights[indices_2,:] # first rows indexed by n random indices to the weights_2
 
-#             samples[i] = dlip_diffsize(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b, maxTime = maxTime)
+#             samples[i] = dlip(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b; maxTime = maxTime)
 #         end
 #     else
 #         for i in 1:n_samples
@@ -646,7 +664,7 @@ end
 #             new_weights_1 = total_weights[random_indices[1:n_1],:] # first rows indexed by n random indices to the atoms_1
 #             new_weights_2 = total_weights[random_indices[n_1+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-#             samples[i] = dlip_diffsize(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b, maxTime = maxTime)
+#             samples[i] = dlip(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b; maxTime = maxTime)
 #         end
 #     end
 #     return mean(samples.>=T_observed)
@@ -1008,7 +1026,7 @@ end
 #     a = 0.0
 #     b = maximum(atoms_1[1,:])
 
-#     T_observed = dlip_diffsize(atoms_1,atoms_2, weights_1, weights_2, a, b, maxTime = maxTime)
+#     T_observed = dlip(atoms_1,atoms_2, weights_1, weights_2, a, b; maxTime = maxTime)
    
 #     samples = zeros(n_samples)
 #     total_weights = vcat(weights_1, weights_2) # collect all rows
@@ -1020,7 +1038,7 @@ end
 #             new_weights_1 = total_weights[indices_1,:] # first rows indexed by n random indices to the weights_1
 #             new_weights_2 = total_weights[indices_2,:] # first rows indexed by n random indices to the weights_2
 
-#             samples[i] = dlip_diffsize(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b, maxTime = maxTime)
+#             samples[i] = dlip(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b; maxTime = maxTime)
 #         end
 #     else
 #         for i in 1:n_samples
@@ -1029,7 +1047,7 @@ end
 #             new_weights_1 = total_weights[random_indices[1:n_1],:] # first rows indexed by n random indices to the atoms_1
 #             new_weights_2 = total_weights[random_indices[n_1+1:end],:] # first rows indexed by n random indices to the atoms_2
         
-#             samples[i] = dlip_diffsize(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b, maxTime = maxTime)
+#             samples[i] = dlip(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b; maxTime = maxTime)
 #         end
 #     end
 #     return mean(samples.>=T_observed)
