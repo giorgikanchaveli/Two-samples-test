@@ -149,7 +149,7 @@ end
 function plot_frechetmeans(gender_data::Dict{String, DataFrame}, groups::Tuple{Vector{String}, Vector{String}},
             time_periods::Vector{Int}, min_age::Int, max_age::Int)
 
-    pl = plot(title = "Frechet mean", xlabel = "age", ylabel = "density", ylims = (0.0, 0.06))
+    pl = plot(title = "Frechet mean", xlabel = "age", ylabel = "density", ylims = (0.0, 0.07))
     n_years = length(time_periods)
 
     # collect all atoms and weights
@@ -168,11 +168,11 @@ function plot_frechetmeans(gender_data::Dict{String, DataFrame}, groups::Tuple{V
     dout_2, dsup_2 = frechet_means(atoms_per_year_2, weights_per_year_2)
 
     for i in 1:n_years
-        intensity = 0.05 + (0.95 * (i / n_years))
+        intensity = 0.07 + (0.95 * (i / n_years))
         label = i == 1 ? "group1" : ""
-        plot!(pl, dsup_1[i], dout_1[i], color = "green", label = label, alpha = intensity, ylims = (0.0, 0.06))
+        plot!(pl, dsup_1[i], dout_1[i], color = "green", label = label, alpha = intensity)
         label = i == 1 ? "group2" : ""
-        plot!(pl, dsup_2[i], dout_2[i], color = "brown", label = label, alpha = intensity, ylims = (0.0, 0.06))
+        plot!(pl, dsup_2[i], dout_2[i], color = "brown", label = label, alpha = intensity)
     end
     return pl
 end
@@ -200,15 +200,15 @@ function plot_frechet_grid(gender_data::Dict{String, DataFrame},
     for (i, t) in enumerate(time_periods)
 
         # Create a subplot for this specific year
-        p = plot(title = "Year $t", titlefontsize=10, ylims = (0.0, 0.06)) 
+        p = plot(title = "Year $t", titlefontsize=10, ylims = (0.0, 0.07)) 
 
-        plot!(p, dsup_1[i], dout_1[i], color = "green", lw=2, label="group1", ylims = (0.0, 0.06))
-        plot!(p, dsup_2[i], dout_2[i], color = "brown", lw=2, label="group2", ylims = (0.0, 0.06))
+        plot!(p, dsup_1[i], dout_1[i], color = "green", lw=2, label="group1")
+        plot!(p, dsup_2[i], dout_2[i], color = "brown", lw=2, label="group2")
         
         push!(plot_list, p)
     end
     final_pl = plot(plot_list..., layout = (4, 4), size = (1200, 1200),
-                    xlabel = "Age", ylabel = "Density", ylims = (0.0, 0.06))
+                    xlabel = "Age", ylabel = "Density", ylims = (0.0, 0.07))
     return final_pl
 end
 
@@ -251,21 +251,21 @@ function plot_pooled_kdes_grid(gender_data::Dict{String, DataFrame},
         
         
         # Create a subplot for this specific year
-        p = plot(title = "Year $t", titlefontsize=10, ylims = (0.0, 0.06)) 
+        p = plot(title = "Year $t", titlefontsize=10, ylims = (0.0, 0.07)) 
         for j in 1:length(kde_1)
             lbl = (j == 1) ? "group1" : ""
-            plot!(p, kde_1[j].x, kde_1[j].density, color = "green", lw=2, label=lbl, alpha = 0.5, ylims = (0.0, 0.06))
+            plot!(p, kde_1[j].x, kde_1[j].density, color = "green", lw=2, label=lbl, alpha = 0.5)
         end
         for j in 1:length(kde_2)
             lbl = (j == 1) ? "group2" : ""
-            plot!(p, kde_2[j].x, kde_2[j].density, color = "brown", lw=2, label=lbl, alpha = 0.5, ylims = (0.0, 0.06))
+            plot!(p, kde_2[j].x, kde_2[j].density, color = "brown", lw=2, label=lbl, alpha = 0.5)
         end 
         push!(plot_list, p)
     end
 
     
     final_pl = plot(plot_list..., layout = (4, 4), size = (1200, 1200),
-                    xlabel = "Age", ylabel = "Density", ylims = (0.0, 0.06))
+                    xlabel = "Age", ylabel = "Density", ylims = (0.0, 0.07),)
 
     return final_pl
 end
@@ -312,3 +312,17 @@ save_plots(time_periods, "females")
 print("done")
 
 
+
+
+
+
+
+# x = rand(10,3000)
+
+# kd = [kde(x[i,:]) for i in 1:10]
+
+# pl = plot(ylims = (0.0,1.5))
+# for i in 1:10
+#     plot!(pl, kd[i].x, kd[i].density)
+# end
+# pl
