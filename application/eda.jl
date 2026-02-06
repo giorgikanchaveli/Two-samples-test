@@ -231,7 +231,7 @@ end
 
 
 
-function plot_pooled_kdes_grid(gender_data::Dict{String, DataFrame}, 
+function plot_kdes_grid(gender_data::Dict{String, DataFrame}, 
                            groups::Tuple{Vector{String}, Vector{String}},
                            time_periods::Vector{Int}, min_age::Int, max_age::Int)
 
@@ -300,10 +300,10 @@ time_periods = collect(1963:3:2010)
 function save_plots(time_periods, gender)
     pl_frechets_grid = plot_frechet_grid(data_bank[gender], (group1, group2), time_periods, min_age, max_age)
     pl_frechetmeans = plot_frechetmeans(data_bank[gender], (group1, group2), time_periods, min_age, max_age)
-    pl_pooled_kdes = plot_pooled_kdes_grid(data_bank[gender], (group1, group2), time_periods, min_age, max_age)
+    pl_kdes = plot_kdes_grid(data_bank[gender], (group1, group2), time_periods, min_age, max_age)
     output_dir = joinpath(pwd(), "applications", "plots")
     mkpath(output_dir)
-    savefig(pl_pooled_kdes, joinpath(output_dir, "$(gender)_pooled_kdes.png"))
+    savefig(pl_kdes, joinpath(output_dir, "$(gender)_kdes.png"))
     savefig(pl_frechets_grid, joinpath(output_dir, "$(gender)_frechets_grid.png"))
     savefig(pl_frechetmeans, joinpath(output_dir, "$(gender)_frechets.png"))
 end
