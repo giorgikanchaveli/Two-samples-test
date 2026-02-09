@@ -1,43 +1,39 @@
+# This file contains the methods to load data into memory, obtain matrices of empirical measures from each country representing the groups.
 using CSV, DataFrames
-using RCall
-using FLoops
-using Plots
-using Distributions, Random
-using LinearAlgebra
-using HypothesisTests
 
-include("../distances/hipm.jl")
+
+
+
+
 
 
 """
     load_mortality_data
 
-Loads all data into memory from each group. We store DataFrame per each country and gender. 
+Loads all data into memory. We store DataFrame per each gender and country. 
 
 # Arguments
-    groups_configs::Vector{Tuple{Vector{String}, Int}}  
     genders::Vector{String}
+    country_names::Vector{String}
 """
-function load_mortality_data(groups_configs::Vector{Tuple{Vector{String}, Int}}, genders::Vector{String})
+function load_mortality_data(genders::Vector{String}, country_names::Vector{String})
     # Structure: data_bank[gender][country_name] = DataFrame
     data_bank = Dict{String, Dict{String, DataFrame}}()
-    
     for gender in genders
         data_bank[gender] = Dict{String, DataFrame}()
-        for (group_list, group_num) in groups_configs
-            filepath = "application/mortality_dataset/group$(group_num)/$(gender)"
-            for country in group_list
-                fullpath = joinpath(filepath, "$(country)_$(gender).txt")
-                if isfile(fullpath)
-                    # Read once and store
-                    df = open(fullpath) do io
-                        readline(io) # skip metadata
-                        CSV.read(io, DataFrame; delim=' ', ignorerepeated=true)
-                    end
-                    data_bank[gender][country] = df
-                else
-                    @warn "File not found: $fullpath"
+
+        filepath = "mortality/dataset/$(gender)"
+        for country in country_names
+            fullpath = joinpath(filepath, "$(country)_$(gender).txt")
+            if isfile(fullpath)
+                # Read once and store
+                df = open(fullpath) do io
+                    readline(io) # skip metadata
+                    CSV.read(io, DataFrame; delim=' ', ignorerepeated=true) # seperate columns by space,multiple spaces in a row are treated as a single delimiter
                 end
+                data_bank[gender][country] = df
+            else
+                @warn "File not found: $fullpath"
             end
         end
     end
@@ -57,20 +53,16 @@ It obtains number of deaths per each age in range (min_age, max_age) and renorma
     max_age::Int
 """
 function country_pmf(df::DataFrame, t::Int, min_age::Int, max_age::Int)
-    @assert max_age <= 85 "Maximum age must be lower than the truncation age."
     # Find the year in the already loaded DataFrame
-    row_idx = findfirst(==(t), df[!, :Year])
+    row_idx = findfirst(==(t), df[!, :Year]) # data for year t starts from row_idx.
     @assert row_idx !== nothing "Year $t not found."
 
-    # data for year t starts from row_idx.
-    dx_base = df[row_idx:(row_idx + 85), :dx]
+    dx_band = df[row_idx + min_age:row_idx + max_age, :dx]
     
     # Handle String-to-Float conversion if necessary
-    if eltype(dx_base) <: AbstractString
-        dx_base = parse.(Float64, dx_base)
+    if eltype(dx_band) <: AbstractString
+        dx_band = parse.(Float64, dx_band)
     end
-
-    dx_band = dx_base[min_age+1:max_age+1]
     return dx_band ./ sum(dx_band)
 end
 
@@ -80,8 +72,8 @@ end
 Obtains hierarchical sample with weights from the group of countries.
 
 # Arguments:
-    group::Vector{String}
     gender_data::Dict{String, DataFrame}
+    group::Vector{String}
     t::Int  :  Year
     min_age::Int
     max_age::Int
@@ -107,11 +99,12 @@ Obtains pmf for infant death rate per each country. Per each country we have Ber
 is represented by atoms [0, 1] and weights associated to it. 
 
 # Arguments:
-    group::Vector{String}
     gender_data::Dict{String, DataFrame}
+    group::Vector{String}
     t::Int  :  Year
+    max_age::Int 
 """
-function group_infant_pmf(gender_data::Dict{String, DataFrame}, group::Vector{String}, t::Int)
+function group_infant_pmf(gender_data::Dict{String, DataFrame}, group::Vector{String}, t::Int, max_age::Int)
     
     # 0 = survival, 1 =  death
     atoms = repeat([0.0, 1.0]', length(group), 1) 
@@ -122,7 +115,7 @@ function group_infant_pmf(gender_data::Dict{String, DataFrame}, group::Vector{St
         row_idx = findfirst(==(t), df[!, :Year])
         @assert row_idx !== nothing "Year $t not found for $(group[i])"
 
-        # Extract dx (deaths in first year)
+        # Extract deaths in the first year
         dx_infant = df[row_idx, :dx]
         # If dx is a string convert it into float.
         if dx_infant isa AbstractString
@@ -131,24 +124,98 @@ function group_infant_pmf(gender_data::Dict{String, DataFrame}, group::Vector{St
             dx_infant = Float64(dx_infant)
         end
 
-        # Truncate within the age 0-85 range
+        # Truncate within the age 0-max_Age range
 
-        dx_base = df[row_idx:(row_idx + 85), :dx]
-        if eltype(dx_base) <: AbstractString
-            dx_base = parse.(Float64, dx_base)
+        dx_band = df[row_idx:(row_idx + max_age), :dx]
+        if eltype(dx_band) <: AbstractString
+            dx_band = parse.(Float64, dx_band)
         end
-        total_sum = sum(dx_base)
+        total_deaths = sum(dx_band)
 
-        weights[i, 2] = dx_infant / total_sum
+        weights[i, 2] = dx_infant / total_deaths
         weights[i, 1] = 1.0 - weights[i, 2]
     end
     return atoms, weights
 end
 
 
+
+
+
+
+
+
+
+
+
+group1 = ["belarus", "Bulgaria", "Czechia", "Estonia", "Hungary", "Latvia", "Poland", "Lithuania", "Russia", "Slovakia", "Ukraine"]
+
+group2 = ["Australia", "Austria", "Belgium", "Canada", "Denmark", "Finland", "France", "Iceland", "Ireland", "Italy", 
+"Japan", "Luxembourg", "Netherlands", "NewZealand", "Norway", "Spain", "Sweden",
+"Switzerland", "UnitedKingdom" , "UnitedStatesofAmerica"]
+
+all_countries = vcat(group1, group2)
+
+
+data_bank = load_mortality_data(["males", "females"], all_countries)
+
+
+
+atoms_1, weights_1 = group_pmf_per_year(data_bank["females"], group2, 1960, 0, 110)
+
+atoms_2, weights_2 = group_infant_pmf(data_bank["females"], group2, 1960, 110)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Exploratory data analysis
 
 
+
+using RCall
+using FLoops
+using Plots
+using Distributions, Random
+using LinearAlgebra
+using HypothesisTests
+include("../distances/hipm.jl")
 
 function p_value_hipm(atoms_1::Matrix{Float64},atoms_2::Matrix{Float64}, 
                     weights_1::Matrix{Float64},weights_2::Matrix{Float64}, n_samples::Int, bootstrap::Bool, maxTime::Float64)
