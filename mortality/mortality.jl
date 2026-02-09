@@ -12,8 +12,7 @@ include("../distances/hipm.jl")
 """
     load_mortality_data
 
-Loads all data into memory from each group. This is done because of the specific organization of files into the folder. 
-We store DataFrame per each country and gender. 
+Loads all data into memory from each group. We store DataFrame per each country and gender. 
 
 # Arguments
     groups_configs::Vector{Tuple{Vector{String}, Int}}  
@@ -145,41 +144,6 @@ function group_infant_pmf(gender_data::Dict{String, DataFrame}, group::Vector{St
     end
     return atoms, weights
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# needs polishing.
-
-
-
-
-
-
-
-
-
-
-
 
 
 # Exploratory data analysis
