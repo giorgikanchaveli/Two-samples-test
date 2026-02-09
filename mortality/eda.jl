@@ -1,4 +1,94 @@
+using Plots
+include("data_extractors.jl")
+
+
+
+group_1 = ["belarus", "Bulgaria", "Czechia", "Estonia", "Hungary", "Latvia", "Poland", "Lithuania", "Russia", "Slovakia", "Ukraine"]
+
+group_2 = ["Australia", "Austria", "Belgium", "Canada", "Denmark", "Finland", "France", "Iceland", "Ireland", "Italy", 
+"Japan", "Luxembourg", "Netherlands", "NewZealand", "Norway", "Spain", "Sweden",
+"Switzerland", "UnitedKingdom" , "UnitedStatesofAmerica"]
+
+all_countries = vcat(group_1, group_2)
+
+
+data_bank = load_mortality_data(["males", "females"], all_countries)
+
+max_age = 110
+gender_data = data_bank["females"]
+
+
+
+
+
+
+"""
+How many percent of data is lost if we truncate maximum age?
+
+For that we look at maximum percent of data lost in countries per year time period.
+
+
+"""
+
+function country_with_max_data_lost(gender_data::Dict{String, DataFrame}, t::Int, age_truncation::Int)
+
+    deaths_counts_all = group_deaths_count(gender_data, all_countries, t, 0, max_age)
+    max_data_lost = 0.0
+    arg_max = 1
+    for i in 1:size(deaths_counts_all,1)
+        data_lost = 1.0 - sum(deaths_counts_all[i, 1:age_truncation+1]) / sum(deaths_counts_all[i,:])
+        if data_lost > max_data_lost
+
+            max_data_lost = data_lost
+            arg_max = i
+        end
+    end
+    return max_data_lost, arg_max
+end
+
+
+
+function country_with_max_data_lost(gender_data::Dict{String, DataFrame}, time_periods::Vector{Int}, age_truncation::Int)
+    data_lost_per_year = Dict{Int, Tuple}()
+    
+    for time in time_periods
+        data_lost_per_year[time] = country_with_max_data_lost(gender_data, time, age_truncation)
+    end
+    return data_lost_per_year
+end
+
+time_periods = collect(1960:1:2010)
+age_truncations = [75, 80,85,95,100]
+function save_percentage_data_lost(age_truncations)
+    for age in age_truncations
+    data_lost = country_with_max_data_lost(data_bank["females"], time_periods, age)
+
+    data_lost = [100.0*data_lost[t][1] for t in time_periods]
+    sc = scatter(time_periods, data_lost, xlabel = "Time periods", ylabel = "% lost", ylims = (0.0,100.0),
+                            legend = false, title = "Max % lost using truncation at $(age)")
+    filepath = joinpath(pwd(), "mortality", "eda_plots")
+    filepath = joinpath(filepath, "data_lost_$(age).png")
+    savefig(sc, filepath)
+    end
+end
+
+#save_percentage_data_lost(age_truncations)
+println("done: data lost")
+
+
+
+
+
+
+#
+
+
+
+
+
 # To do
+
+
 
 
 """
@@ -18,7 +108,7 @@
 
 # Exploratory data analysis
 
-include("mortality.jl")
+include("data_extractors.jl")
 using RCall
 using Distributions
 using Plots
@@ -82,15 +172,15 @@ function frechet_means(atoms_per_year::Array{Float64,3}, weights_per_year::Array
     return dout_list, dsup_list
 end
 
-function kde_group(atoms::Matrix{Float64}, weights::Matrix{Float64}, min_age::Int, max_age::Int)
+function kde_group(atoms::Matrix{Float64}, weights::Matrix{Float64}, min_age::Int, age_truncation::Int)
     n_countries = size(atoms,1)
-    return [kde(atoms[i,:]; boundary = (min_age, max_age), weights = weights[i,:]) for i in 1:n_countries]
+    return [kde(atoms[i,:]; boundary = (min_age, age_truncation), weights = weights[i,:]) for i in 1:n_countries]
 end
 
 function plot_pmfs(gender_data::Dict{String, DataFrame}, groups::Tuple{Vector{String}, Vector{String}},
-            t::Int, min_age::Int, max_age::Int)
-    atoms_1, weights_1 = group_pmf_per_year(gender_data, groups[1], t, min_age, max_age)
-    atoms_2, weights_2 = group_pmf_per_year(gender_data, groups[2], t, min_age, max_age)
+            t::Int, min_age::Int, age_truncation::Int)
+    atoms_1, weights_1 = group_pmf_per_year(gender_data, groups[1], t, min_age, age_truncation)
+    atoms_2, weights_2 = group_pmf_per_year(gender_data, groups[2], t, min_age, age_truncation)
     color_1, color_2 = "green", "brown"
 
     n_countries_1, n_countries_2 = size(atoms_1, 1), size(atoms_2, 1)
@@ -110,9 +200,9 @@ end
 
 
 function plot_kde(gender_data::Dict{String, DataFrame}, groups::Tuple{Vector{String}, Vector{String}},
-            t::Int, min_age::Int, max_age::Int)
-    atoms_1, weights_1 = group_pmf_per_year(gender_data, groups[1], t, min_age, max_age)
-    atoms_2, weights_2 = group_pmf_per_year(gender_data, groups[2], t, min_age, max_age)
+            t::Int, min_age::Int, age_truncation::Int)
+    atoms_1, weights_1 = group_pmf_per_year(gender_data, groups[1], t, min_age, age_truncation)
+    atoms_2, weights_2 = group_pmf_per_year(gender_data, groups[2], t, min_age, age_truncation)
     color_1, color_2 = "green", "brown"
 
     n_countries_1, n_countries_2 = size(atoms_1, 1), size(atoms_2, 1)
@@ -120,21 +210,21 @@ function plot_kde(gender_data::Dict{String, DataFrame}, groups::Tuple{Vector{Str
     pl = plot(title = "KDE", xlabel = "age", ylabel = "density")
     for i in 1:n_countries_1
         label = (i == 1) ? "group1" : ""
-        kde_country = kde(atoms_1[i,:]; boundary = (min_age, max_age), weights = weights_1[i,:])
+        kde_country = kde(atoms_1[i,:]; boundary = (min_age, age_truncation), weights = weights_1[i,:])
         plot!(pl, kde_country.x, kde_country.density, color = color_1, label = label, alpha = 0.5)
     end
     for i in 1:n_countries_2
         label = (i == 1) ? "group2" : ""
-        kde_country = kde(atoms_2[i,:]; boundary = (min_age, max_age), weights = weights_2[i,:])
+        kde_country = kde(atoms_2[i,:]; boundary = (min_age, age_truncation), weights = weights_2[i,:])
         plot!(pl, kde_country.x, kde_country.density, color = color_2, label = label, alpha = 0.5)
     end
     return pl
 end
 
 function plot_frechetmean(gender_data::Dict{String, DataFrame}, groups::Tuple{Vector{String}, Vector{String}},
-            t::Int, min_age::Int, max_age::Int)
-    atoms_1, weights_1 = group_pmf_per_year(gender_data, groups[1], t, min_age, max_age)
-    atoms_2, weights_2 = group_pmf_per_year(gender_data, groups[2], t, min_age, max_age)
+            t::Int, min_age::Int, age_truncation::Int)
+    atoms_1, weights_1 = group_pmf_per_year(gender_data, groups[1], t, min_age, age_truncation)
+    atoms_2, weights_2 = group_pmf_per_year(gender_data, groups[2], t, min_age, age_truncation)
 
 
     dout_1, dsup_1 = frechet_mean(atoms_1, weights_1)
@@ -147,21 +237,21 @@ function plot_frechetmean(gender_data::Dict{String, DataFrame}, groups::Tuple{Ve
 end
 
 function plot_frechetmeans(gender_data::Dict{String, DataFrame}, groups::Tuple{Vector{String}, Vector{String}},
-            time_periods::Vector{Int}, min_age::Int, max_age::Int)
+            time_periods::Vector{Int}, min_age::Int, age_truncation::Int)
 
     pl = plot(title = "Frechet mean", xlabel = "age", ylabel = "density", ylims = (0.0, 0.07))
     n_years = length(time_periods)
 
     # collect all atoms and weights
-    atoms_per_year_1 = zeros(n_years, length(groups[1]), max_age - min_age + 1)
-    weights_per_year_1 = zeros(n_years, length(groups[1]), max_age - min_age + 1)
+    atoms_per_year_1 = zeros(n_years, length(groups[1]), age_truncation - min_age + 1)
+    weights_per_year_1 = zeros(n_years, length(groups[1]), age_truncation - min_age + 1)
 
-    atoms_per_year_2 = zeros(n_years, length(groups[2]), max_age - min_age + 1)
-    weights_per_year_2 = zeros(n_years, length(groups[2]), max_age - min_age + 1)
+    atoms_per_year_2 = zeros(n_years, length(groups[2]), age_truncation - min_age + 1)
+    weights_per_year_2 = zeros(n_years, length(groups[2]), age_truncation - min_age + 1)
 
     for (i, t) in enumerate(time_periods)
-        atoms_per_year_1[i, :, :], weights_per_year_1[i, :, :] = group_pmf_per_year(gender_data, groups[1], t, min_age, max_age)
-        atoms_per_year_2[i, :, :], weights_per_year_2[i, :, :] = group_pmf_per_year(gender_data, groups[2], t, min_age, max_age)
+        atoms_per_year_1[i, :, :], weights_per_year_1[i, :, :] = group_pmf_per_year(gender_data, groups[1], t, min_age, age_truncation)
+        atoms_per_year_2[i, :, :], weights_per_year_2[i, :, :] = group_pmf_per_year(gender_data, groups[2], t, min_age, age_truncation)
         
     end
     dout_1, dsup_1 = frechet_means(atoms_per_year_1, weights_per_year_1)
@@ -179,19 +269,19 @@ end
 
 function plot_frechet_grid(gender_data::Dict{String, DataFrame}, 
                            groups::Tuple{Vector{String}, Vector{String}},
-                           time_periods::Vector{Int}, min_age::Int, max_age::Int)
+                           time_periods::Vector{Int}, min_age::Int, age_truncation::Int)
     n_years = length(time_periods)
 
     # collect all atoms and weights
-    atoms_per_year_1 = zeros(n_years, length(groups[1]), max_age - min_age + 1)
-    weights_per_year_1 = zeros(n_years, length(groups[1]), max_age - min_age + 1)
+    atoms_per_year_1 = zeros(n_years, length(groups[1]), age_truncation - min_age + 1)
+    weights_per_year_1 = zeros(n_years, length(groups[1]), age_truncation - min_age + 1)
 
-    atoms_per_year_2 = zeros(n_years, length(groups[2]), max_age - min_age + 1)
-    weights_per_year_2 = zeros(n_years, length(groups[2]), max_age - min_age + 1)
+    atoms_per_year_2 = zeros(n_years, length(groups[2]), age_truncation - min_age + 1)
+    weights_per_year_2 = zeros(n_years, length(groups[2]), age_truncation - min_age + 1)
 
     for (i, t) in enumerate(time_periods)
-        atoms_per_year_1[i, :, :], weights_per_year_1[i, :, :] = group_pmf_per_year(gender_data, groups[1], t, min_age, max_age)
-        atoms_per_year_2[i, :, :], weights_per_year_2[i, :, :] = group_pmf_per_year(gender_data, groups[2], t, min_age, max_age)
+        atoms_per_year_1[i, :, :], weights_per_year_1[i, :, :] = group_pmf_per_year(gender_data, groups[1], t, min_age, age_truncation)
+        atoms_per_year_2[i, :, :], weights_per_year_2[i, :, :] = group_pmf_per_year(gender_data, groups[2], t, min_age, age_truncation)
     end
     dout_1, dsup_1 = frechet_means(atoms_per_year_1, weights_per_year_1)
     dout_2, dsup_2 = frechet_means(atoms_per_year_2, weights_per_year_2)
@@ -213,9 +303,9 @@ function plot_frechet_grid(gender_data::Dict{String, DataFrame},
 end
 
 function plot_pooled_pmfs(gender_data::Dict{String, DataFrame}, groups::Tuple{Vector{String}, Vector{String}},
-            t::Int, min_age::Int, max_age::Int)
-    atoms_1, weights_1 = group_pmf_per_year(gender_data, groups[1], t, min_age, max_age)
-    atoms_2, weights_2 = group_pmf_per_year(gender_data, groups[2], t, min_age, max_age)
+            t::Int, min_age::Int, age_truncation::Int)
+    atoms_1, weights_1 = group_pmf_per_year(gender_data, groups[1], t, min_age, age_truncation)
+    atoms_2, weights_2 = group_pmf_per_year(gender_data, groups[2], t, min_age, age_truncation)
 
     atoms_1 = atoms_1[1,:]
     atoms_2 = atoms_1[:]
@@ -233,7 +323,7 @@ end
 
 function plot_kdes_grid(gender_data::Dict{String, DataFrame}, 
                            groups::Tuple{Vector{String}, Vector{String}},
-                           time_periods::Vector{Int}, min_age::Int, max_age::Int)
+                           time_periods::Vector{Int}, min_age::Int, age_truncation::Int)
 
     
     n_years = length(time_periods)
@@ -243,11 +333,11 @@ function plot_kdes_grid(gender_data::Dict{String, DataFrame},
 
     for (i, t) in enumerate(time_periods)
         @info "Progess: $i / $(n_years)"
-        atoms_1, weights_1 = group_pmf_per_year(gender_data, groups[1], t, min_age, max_age)
-        atoms_2, weights_2 = group_pmf_per_year(gender_data, groups[2], t, min_age, max_age)
+        atoms_1, weights_1 = group_pmf_per_year(gender_data, groups[1], t, min_age, age_truncation)
+        atoms_2, weights_2 = group_pmf_per_year(gender_data, groups[2], t, min_age, age_truncation)
 
-        kde_1 = kde_group(atoms_1, weights_1, min_age, max_age)
-        kde_2 = kde_group(atoms_2, weights_2, min_age, max_age)
+        kde_1 = kde_group(atoms_1, weights_1, min_age, age_truncation)
+        kde_2 = kde_group(atoms_2, weights_2, min_age, age_truncation)
         
         
         # Create a subplot for this specific year
@@ -285,22 +375,22 @@ data_bank = load_mortality_data(group_config, genders)
 
 
 min_age = 0
-max_age = 85
+age_truncation = 85
 t = 1960
 
 gender = "males"
-# pl_pmfs = plot_pmfs(data_bank[gender], (group1, group2), t, min_age, max_age)
-# pl_kdes = plot_kde(data_bank[gender], (group1, group2), t, min_age, max_age)
+# pl_pmfs = plot_pmfs(data_bank[gender], (group1, group2), t, min_age, age_truncation)
+# pl_kdes = plot_kde(data_bank[gender], (group1, group2), t, min_age, age_truncation)
 
-# pl_frechet = plot_frechetmean(data_bank[gender], (group1, group2), t, min_age, max_age)
-# pl_pooled = plot_pooled_pmfs(data_bank[gender], (group1, group2), t, min_age, max_age)
+# pl_frechet = plot_frechetmean(data_bank[gender], (group1, group2), t, min_age, age_truncation)
+# pl_pooled = plot_pooled_pmfs(data_bank[gender], (group1, group2), t, min_age, age_truncation)
 
 time_periods = collect(1963:3:2010)
 
 function save_plots(time_periods, gender)
-    pl_frechets_grid = plot_frechet_grid(data_bank[gender], (group1, group2), time_periods, min_age, max_age)
-    pl_frechetmeans = plot_frechetmeans(data_bank[gender], (group1, group2), time_periods, min_age, max_age)
-    pl_kdes = plot_kdes_grid(data_bank[gender], (group1, group2), time_periods, min_age, max_age)
+    pl_frechets_grid = plot_frechet_grid(data_bank[gender], (group1, group2), time_periods, min_age, age_truncation)
+    pl_frechetmeans = plot_frechetmeans(data_bank[gender], (group1, group2), time_periods, min_age, age_truncation)
+    pl_kdes = plot_kdes_grid(data_bank[gender], (group1, group2), time_periods, min_age, age_truncation)
     output_dir = joinpath(pwd(), "applications", "plots")
     mkpath(output_dir)
     savefig(pl_kdes, joinpath(output_dir, "$(gender)_kdes.png"))

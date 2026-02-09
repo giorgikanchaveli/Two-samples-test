@@ -3,10 +3,6 @@ using CSV, DataFrames
 
 
 
-
-
-
-
 """
     load_mortality_data
 
@@ -42,7 +38,7 @@ end
 
 
 """
-    country_deaths
+    country_deaths_count
 
 Given dataframe for some country, returns number of deaths per ages from min_age to max_age.
 # Arguments: 
@@ -51,7 +47,7 @@ Given dataframe for some country, returns number of deaths per ages from min_age
     min_age::Int
     max_age::Int
 """
-function country_deaths(df::DataFrame, t::Int, min_age::Int, max_age::Int)
+function country_deaths_count(df::DataFrame, t::Int, min_age::Int, max_age::Int)
     # Find the year in the already loaded DataFrame
     row_idx = findfirst(==(t), df[!, :Year]) # data for year t starts from row_idx.
     @assert row_idx !== nothing "Year $t not found."
@@ -66,7 +62,7 @@ function country_deaths(df::DataFrame, t::Int, min_age::Int, max_age::Int)
 end
 
 """
-    group_deaths
+    group_deaths_count
 
 Given specific year, collects number of deaths at ages per each country in the group.
 
@@ -77,16 +73,16 @@ Given specific year, collects number of deaths at ages per each country in the g
     min_age::Int
     max_age::Int
 """
-function group_deaths(gender_data::Dict{String, DataFrame}, group::Vector{String}, 
+function group_deaths_count(gender_data::Dict{String, DataFrame}, group::Vector{String}, 
                                     t::Int, min_age::Int, max_age::Int)
     @assert min_age < max_age "minimum age must be strictly smaller than maximum age."
-    deaths = Matrix{Float64}(undef, length(group), max_age - min_age + 1)
+    deaths_count = Matrix{Float64}(undef, length(group), max_age - min_age + 1)
 
     for i in 1:length(group)
         country_df = gender_data[group[i]]
-        deaths[i, :] .= country_deaths(country_df, t, min_age, max_age)
+        deaths_count[i, :] .= country_deaths_count(country_df, t, min_age, max_age)
     end
-    return deaths
+    return deaths_count
 end
 
 
@@ -109,8 +105,8 @@ function group_pmf(gender_data::Dict{String, DataFrame}, group::Vector{String},
     ages = Float64.(collect(min_age:max_age))
     atoms = repeat(ages', length(group), 1) # Each row contains ages from min_age to max_age.
 
-    deaths = group_deaths(gender_data, group, t, min_age, max_age)
-    weights = deaths ./ sum(deaths, dims = 2)
+    deaths_count = group_deaths_count(gender_data, group, t, min_age, max_age)
+    weights = deaths_count ./ sum(deaths_count, dims = 2)
 
     return atoms, weights
 end
@@ -169,18 +165,18 @@ end
 
 
 
-group1 = ["belarus", "Bulgaria", "Czechia", "Estonia", "Hungary", "Latvia", "Poland", "Lithuania", "Russia", "Slovakia", "Ukraine"]
+# group1 = ["belarus", "Bulgaria", "Czechia", "Estonia", "Hungary", "Latvia", "Poland", "Lithuania", "Russia", "Slovakia", "Ukraine"]
 
-group2 = ["Australia", "Austria", "Belgium", "Canada", "Denmark", "Finland", "France", "Iceland", "Ireland", "Italy", 
-"Japan", "Luxembourg", "Netherlands", "NewZealand", "Norway", "Spain", "Sweden",
-"Switzerland", "UnitedKingdom" , "UnitedStatesofAmerica"]
+# group2 = ["Australia", "Austria", "Belgium", "Canada", "Denmark", "Finland", "France", "Iceland", "Ireland", "Italy", 
+# "Japan", "Luxembourg", "Netherlands", "NewZealand", "Norway", "Spain", "Sweden",
+# "Switzerland", "UnitedKingdom" , "UnitedStatesofAmerica"]
 
-all_countries = vcat(group1, group2)
-
-
-data_bank = load_mortality_data(["males", "females"], all_countries)
+# all_countries = vcat(group1, group2)
 
 
+# data_bank = load_mortality_data(["males", "females"], all_countries)
+
+# atoms_1, weights_1 = group_pmf(data_bank["males"], group1, 1960, 0, 110)
 
 
 
