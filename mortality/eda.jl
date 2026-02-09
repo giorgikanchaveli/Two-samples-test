@@ -80,10 +80,42 @@ println("done: data lost")
 
 
 
-#
+"""
 
+Should we do age truncation? 
 
+We should expect pmf to be left-skewed and monotonically decreasing after peak. If this happens in ages 0-100, then we do not truncate.
 
+# Conclusion after plots: do not truncate.
+
+"""
+
+time_periods = [1965,1975, 1992, 2010]
+
+function save_pmf_country(time_periods, country::String)
+    min_age = 0
+    max_age = 110
+    gender = "males"
+    data_gender = data_bank[gender]
+    country_index = Bool.(all_countries .== country)
+    country_index = collect(1:length(all_countries))[country_index][1]
+    
+    ages = collect(min_age:1:max_age)
+
+    pl = scatter(title = "PMFs for $(country)", xlabel = "age", ylabel = "pmf")
+
+    for time in time_periods
+        _, pmf_all = group_pmf(data_gender, all_countries, time, min_age, max_age)
+        pmf_country = pmf_all[country_index,:]
+        scatter!(pl, ages, pmf_country, label = "$(time)")
+    end
+    filepath = joinpath(pwd(), "mortality", "eda_plots")
+    filepath = joinpath(filepath, "pmf_$(country)_$(min_age)_$(max_age).png")
+    savefig(pl, filepath)
+end
+
+#pl = save_pmf_country(time_periods, "France")
+println("done: one country pmf plots.")
 
 
 # To do
