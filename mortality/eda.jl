@@ -1,4 +1,5 @@
 using Plots
+using Distributions
 include("data_extractors.jl")
 
 
@@ -14,11 +15,13 @@ all_countries = vcat(group_1, group_2)
 
 data_bank = load_mortality_data(["males", "females"], all_countries)
 
+min_age = 0
 max_age = 110
 gender_data = data_bank["females"]
 
 
-
+females_data = data_bank["females"]
+males_data = data_bank["males"]
 
 
 
@@ -67,13 +70,13 @@ function save_percentage_data_lost(age_truncations)
     sc = scatter(time_periods, data_lost, xlabel = "Time periods", ylabel = "% lost", ylims = (0.0,100.0),
                             legend = false, title = "Max % lost using truncation at $(age)")
     filepath = joinpath(pwd(), "mortality", "eda_plots")
-    filepath = joinpath(filepath, "data_lost_$(age).png")
+    filepath = joinpath(filepath, "females_data_lost_$(age).png")
     savefig(sc, filepath)
     end
 end
 
 #save_percentage_data_lost(age_truncations)
-println("done: data lost")
+# println("done: data lost")
 
 
 
@@ -94,7 +97,6 @@ time_periods = [1965,1975, 1992, 2010]
 
 function save_pmf_country(time_periods, country::String)
     min_age = 0
-    max_age = 110
     gender = "males"
     data_gender = data_bank[gender]
     country_index = Bool.(all_countries .== country)
@@ -110,19 +112,137 @@ function save_pmf_country(time_periods, country::String)
         scatter!(pl, ages, pmf_country, label = "$(time)")
     end
     filepath = joinpath(pwd(), "mortality", "eda_plots")
-    filepath = joinpath(filepath, "pmf_$(country)_$(min_age)_$(max_age).png")
+    filepath = joinpath(filepath, "females_pmf_$(country)_$(min_age)_$(max_age).png")
     savefig(pl, filepath)
 end
 
 #pl = save_pmf_country(time_periods, "France")
-println("done: one country pmf plots.")
+# println("done: one country pmf plots.")
 
 
 
 
+"""
+How do pmfs of counries in two groups differ accross time periods?
+
+For that, we have subplot per each time period. In each subplot, we plot pmfs per each group. 
+"""
+
+function pmfs_for_timeperiods(gender_data::Dict{String, DataFrame}, group_1::Vector{String}, group_2::Vector{String},
+                           time_periods::Vector{Int}, min_age::Int, age_truncation::Int)
+
+    n_years = length(time_periods)
+    # list of individual plots
+    plot_list = []
+
+    max_val = 0.0
+
+    for (i, t) in enumerate(time_periods)
+        @info "Progess: $i / $(n_years)"
+        atoms_1, weights_1 = group_pmf(gender_data, group_1, t, min_age, age_truncation)
+        _, weights_2 = group_pmf(gender_data, group_2, t, min_age, age_truncation)
+        atoms = atoms_1[1,:]
+
+        current_max = maximum((maximum(weights_1), maximum(weights_2)))
+        if max_val < current_max
+            max_val = current_max
+        end
+        # Create a subplot for this specific year
+        p = plot(title = "Year $t", titlefontsize=10) 
+        for j in 1:size(weights_1, 1)
+            lbl = (j == 1) ? "Sov" : ""
+            plot!(p, atoms, weights_1[j,:], color = "green", lw=2, label=lbl, alpha = 0.5)
+        end
+        for j in 1:size(weights_2, 1)
+            lbl = (j == 1) ? "NonSov" : ""
+            plot!(p, atoms, weights_2[j,:], color = "brown", lw=2, label=lbl, alpha = 0.5)
+        end 
+        push!(plot_list, p)
+    end
+    final_pl = plot(plot_list..., layout = (4, 4), size = (1200, 1200),
+                    xlabel = "Age", ylabel = "Density", ylims = (0.0,0.06))
+   # println("maximum is $(max_val)")
+    return final_pl
+end
+
+
+function save_pmfs_for_timeperiods(gender_data::Dict{String, DataFrame}, gender::String, group_1::Vector{String}, group_2::Vector{String},
+                           time_periods::Vector{Int}, min_age::Int, age_truncation::Int)
+
+    pl = pmfs_for_timeperiods(gender_data, group_1, group_2, time_periods, min_age, age_truncation)
+    filepath = joinpath(pwd(), "mortality", "eda_plots", "pmf_frechet_timeperiods")
+    filepath = joinpath(filepath, "$(gender)_allpmfs_$(min_age)_$(max_age).png")
+    savefig(pl, filepath)
+
+end
+
+# time_periods = collect(1963:3:2010)
+
+# save_pmfs_for_timeperiods(females_data, "females", group_1, group_2, time_periods, min_age, max_age)
+# save_pmfs_for_timeperiods(males_data, "males", group_1, group_2, time_periods, min_age, max_age)
+
+# println("done: pmf plots of all countries per each time period")
 
 
 
+
+"""
+Same as previous point, but now we plot quantiles instead of pmfs.
+"""
+
+function quantiles_for_timeperiods(gender_data::Dict{String, DataFrame}, group_1::Vector{String}, group_2::Vector{String},
+                           time_periods::Vector{Int}, min_age::Int, age_truncation::Int)
+
+    n_years = length(time_periods)
+    # list of individual plots
+    plot_list = []
+
+    αs = collect(0.0:0.01:1.0)
+
+    for (i, t) in enumerate(time_periods)
+        @info "Progess: $i / $(n_years)"
+        atoms_1, weights_1 = group_pmf(gender_data, group_1, t, min_age, age_truncation)
+        _, weights_2 = group_pmf(gender_data, group_2, t, min_age, age_truncation)
+        atoms = atoms_1[1,:]
+
+        
+        # Create a subplot for this specific year
+        p = plot(title = "Year $t", titlefontsize=10) 
+        for j in 1:size(weights_1, 1)
+            lbl = (j == 1) ? "Sov" : ""
+            pmf_obj = DiscreteNonParametric(atoms, weights_1[j,:])
+            q = quantile.(pmf_obj, αs)    
+            plot!(p, αs, q, color = "green", lw=2, label=lbl, alpha = 0.5)
+        end
+        
+        for j in 1:size(weights_2, 1)
+            lbl = (j == 1) ? "NonSov" : ""
+            pmf_obj = DiscreteNonParametric(atoms, weights_2[j,:])
+            q = quantile.(pmf_obj, αs)
+            plot!(p, αs, q, color = "brown", lw=2, label=lbl, alpha = 0.5)
+        end 
+        push!(plot_list, p)
+    end
+    final_pl = plot(plot_list..., layout = (4, 4), size = (1200, 1200),
+                    xlabel = "prob level", ylabel = "quantile")
+    #println("maximum is $(max_val)")
+    return final_pl
+end
+
+
+function save_quantiles_for_timeperiods(gender_data::Dict{String, DataFrame}, gender::String, group_1::Vector{String}, group_2::Vector{String},
+                           time_periods::Vector{Int}, min_age::Int, age_truncation::Int)
+
+    pl = quantiles_for_timeperiods(gender_data, group_1, group_2, time_periods, min_age, age_truncation)
+    filepath = joinpath(pwd(), "mortality", "eda_plots", "pmf_frechet_timeperiods")
+    filepath = joinpath(filepath, "$(gender)_allquantiles_$(min_age)_$(max_age).png")
+    savefig(pl, filepath)
+
+end
+
+# save_quantiles_for_timeperiods(females_data, "females", group_1, group_2, time_periods, min_age, max_age)
+# save_quantiles_for_timeperiods(males_data, "males", group_1, group_2, time_periods, min_age, max_age)
+# println("done: quantiles plots of all countries per each time period")
 
 
 
@@ -228,11 +348,11 @@ function plot_pmfs(gender_data::Dict{String, DataFrame}, groups::Tuple{Vector{St
     
     pl = scatter(title = "PMF", xlabel = "age", ylabel = "mass")
     for i in 1:n_countries_1
-        label = (i == 1) ? "group1" : ""
+        label = (i == 1) ? "Sov" : ""
         scatter!(pl, atoms_1[i,:], weights_1[i,:], color = color_1, label = label, alpha = 0.5)
     end
     for i in 1:n_countries_2
-        label = (i == 1) ? "group2" : ""
+        label = (i == 1) ? "West" : ""
         scatter!(pl, atoms_2[i,:], weights_2[i,:], color = color_2, label = label, alpha = 0.5)
     end
     return pl
