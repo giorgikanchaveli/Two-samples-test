@@ -116,8 +116,8 @@ function save_pmf_country(time_periods, country::String)
     savefig(pl, filepath)
 end
 
-pl = save_pmf_country(time_periods, "Australia")
-println("done: one country pmf plots.")
+# pl = save_pmf_country(time_periods, "Australia")
+# println("done: one country pmf plots.")
 
 
 
@@ -171,17 +171,21 @@ function save_pmfs_for_timeperiods(gender_data::Dict{String, DataFrame}, gender:
 
     pl = pmfs_for_timeperiods(gender_data, group_1, group_2, time_periods, min_age, age_truncation)
     filepath = joinpath(pwd(), "mortality", "eda_plots", "pmf_frechet_timeperiods")
-    filepath = joinpath(filepath, "$(gender)_allpmfs_$(min_age)_$(max_age).png")
+    filepath = joinpath(filepath, "$(gender)_allpmfs_$(min_age)_$(age_truncation).png")
     savefig(pl, filepath)
 
 end
 
 time_periods = collect(1963:3:2010)
 
-save_pmfs_for_timeperiods(females_data, "females", group_1, group_2, time_periods, min_age, max_age)
-save_pmfs_for_timeperiods(males_data, "males", group_1, group_2, time_periods, min_age, max_age)
+# save_pmfs_for_timeperiods(females_data, "females", group_1, group_2, time_periods, min_age, max_age)
+# save_pmfs_for_timeperiods(males_data, "males", group_1, group_2, time_periods, min_age, max_age)
 
- println("done: pmf plots of all countries per each time period")
+# save_pmfs_for_timeperiods(females_data, "females", group_1, group_2, time_periods, 18, 65)
+# save_pmfs_for_timeperiods(males_data, "males", group_1, group_2, time_periods, 18, 65)
+
+
+# println("done: pmf plots of all countries per each time period")
 
 
 
@@ -235,13 +239,15 @@ function save_quantiles_for_timeperiods(gender_data::Dict{String, DataFrame}, ge
 
     pl = quantiles_for_timeperiods(gender_data, group_1, group_2, time_periods, min_age, age_truncation)
     filepath = joinpath(pwd(), "mortality", "eda_plots", "pmf_frechet_timeperiods")
-    filepath = joinpath(filepath, "$(gender)_allquantiles_$(min_age)_$(max_age).png")
+    filepath = joinpath(filepath, "$(gender)_allquantiles_$(min_age)_$(age_truncation).png")
     savefig(pl, filepath)
 
 end
 
 # save_quantiles_for_timeperiods(females_data, "females", group_1, group_2, time_periods, min_age, max_age)
 # save_quantiles_for_timeperiods(males_data, "males", group_1, group_2, time_periods, min_age, max_age)
+# save_quantiles_for_timeperiods(females_data, "females", group_1, group_2, time_periods, 18, 65)
+# save_quantiles_for_timeperiods(males_data, "males", group_1, group_2, time_periods, 18, 65)
 # println("done: quantiles plots of all countries per each time period")
 
 
@@ -285,7 +291,7 @@ function save_quantiles_frechet_for_time_periods(gender_data::Dict{String, DataF
                 time_periods::Vector{Int}, min_age::Int, age_truncation::Int)
     pl = quantiles_frechet_means_for_timeperiods(gender_data, group_1, group_2, time_periods, min_age, age_truncation)
     filepath = joinpath(pwd(), "mortality", "eda_plots", "pmf_frechet_timeperiods")
-    filepath = joinpath(filepath, "$(gender)_frechet_$(min_age)_$(max_age).png")
+    filepath = joinpath(filepath, "$(gender)_frechet_$(min_age)_$(age_truncation).png")
     savefig(pl, filepath)
 end
 
@@ -293,6 +299,9 @@ time_periods = collect(1963:3:2010)
 
 # save_quantiles_frechet_for_time_periods(females_data, "females", group_1, group_2, time_periods, min_age, max_age)
 # save_quantiles_frechet_for_time_periods(males_data, "males", group_1, group_2, time_periods, min_age, max_age)
+
+# save_quantiles_frechet_for_time_periods(females_data, "females", group_1, group_2, time_periods, 18,65)
+# save_quantiles_frechet_for_time_periods(males_data, "males", group_1, group_2, time_periods, 18, 65)
 
 # println("done: FM quantile plots of all countries per each time period")
 
@@ -338,14 +347,16 @@ function save_pooled_pmfs_for_time_periods(gender_data::Dict{String, DataFrame},
                 time_periods::Vector{Int}, min_age::Int, age_truncation::Int)
     pl = pooled_pmfs_for_timeperiods(gender_data, group_1, group_2, time_periods, min_age, age_truncation)
     filepath = joinpath(pwd(), "mortality", "eda_plots", "pooled_pmfs")
-    filepath = joinpath(filepath, "$(gender)_pooled_pmf_$(min_age)_$(max_age).png")
+    filepath = joinpath(filepath, "$(gender)_pooled_pmf_$(min_age)_$(age_truncation).png")
     savefig(pl, filepath)
 end
 
-save_pooled_pmfs_for_time_periods(females_data, "females", group_1, group_2, time_periods, min_age, max_age)
-save_pooled_pmfs_for_time_periods(males_data, "males", group_1, group_2, time_periods, min_age, max_age)
+# save_pooled_pmfs_for_time_periods(females_data, "females", group_1, group_2, time_periods, min_age, max_age)
+# save_pooled_pmfs_for_time_periods(males_data, "males", group_1, group_2, time_periods, min_age, max_age)
+# save_pooled_pmfs_for_time_periods(females_data, "females", group_1, group_2, time_periods, 18, 65)
+# save_pooled_pmfs_for_time_periods(males_data, "males", group_1, group_2, time_periods, 18, 65)
 
-println("done: pooled_pmf plots of all countries per each time period")
+# println("done: pooled_pmf plots of all countries per each time period")
 
 
 
