@@ -473,8 +473,65 @@ end
 
 
 
+"""
 
+pvalue_hipm
 
+This function is specifically for mortality dataset. If pool is false, given atoms and weights associated to two Hierarchical estimators,
+we estimate the p-value for HIPM via permutation approach. otherwise, we pool the probability measures (average inside group) and then get the
+p-values using Wasserstein distance between them.
+
+# Arguments:
+    atoms_1::Matrix{Float64}
+    weights_1::Matrix{Float64}
+    atoms_2::Matrix{Float64}
+    weights_2::Matrix{Float64}
+    n_permutations::Int
+    max_time::Float  :  number of seconds for runnnig optimizaiton algorithm in HIPM
+    pooled::Bool  :  Boolean variable to denote whether to pool the probability measures in the group.
+"""
+
+function pvalue_hipm(atoms_1::Matrix{Float64}, weights_1::Matrix{Float64}, atoms_2::Matrix{Float64}, weights_2::Matrix{Float64},
+     n_permutations::Int, max_time::Float64, pooled::Bool)
+    n_1 = size(atoms_1,1)
+    n_2 = size(atoms_2,1)
+    n = n_1 + n_2
+    a = atoms_1[1,1]
+    b = atoms_1[1,end]
+    if pooled
+        pooled_weights_1 = vec(mean(weights_1, dims = 1))
+        pooled_weights_2 = vec(mean(weights_2, dims = 1))
+        cdf_diff =abs.(cumsum(pooled_weights_1) .- cumsum(pooled_weights_2))
+        T_observed = sum(cdf_diff)
+    else
+        T_observed = dlip(atoms_1,atoms_2, weights_1, weights_2, a, b; max_time = max_time)
+    end
+    samples = zeros(n_permutations)
+    total_weights = vcat(weights_1, weights_2) # collect all rows
+
+    if pooled
+        for i in 1:n_permutations
+            random_indices = randperm(n) # indices to distribute rows to new hierarchical meausures
+
+            new_weights_1 = total_weights[random_indices[1:n_1],:] # first rows indexed by n random indices to the atoms_1
+            new_weights_2 = total_weights[random_indices[n_1+1:end],:] # first rows indexed by n random indices to the atoms_2
+            pooled_weights_1 = vec(mean(new_weights_1, dims = 1))
+            pooled_weights_2 = vec(mean(new_weights_2, dims = 1))
+            cdf_diff =abs.(cumsum(pooled_weights_1) .- cumsum(pooled_weights_2))
+            samples[i] = sum(cdf_diff)
+        end
+    else
+        @floop ThreadedEx() for i in 1:n_permutations
+            random_indices = randperm(n) # indices to distribute rows to new hierarchical meausures
+
+            new_weights_1 = total_weights[random_indices[1:n_1],:] # first rows indexed by n random indices to the atoms_1
+            new_weights_2 = total_weights[random_indices[n_1+1:end],:] # first rows indexed by n random indices to the atoms_2
+
+            samples[i] = dlip(atoms_1, atoms_2, new_weights_1, new_weights_2, a, b; max_time = max_time)
+        end 
+    end
+    return mean(samples.>=T_observed)
+end 
 
 
 
