@@ -69,7 +69,7 @@ function save_percentage_data_lost(age_truncations)
     data_lost = [100.0*data_lost[t][1] for t in time_periods]
     sc = scatter(time_periods, data_lost, xlabel = "Time periods", ylabel = "% lost", ylims = (0.0,100.0),
                             legend = false, title = "Max % lost using truncation at $(age)")
-    filepath = joinpath(pwd(), "mortality", "eda_plots")
+    filepath = joinpath(pwd(), "mortality", "eda_plots", "datalost_under_truncation")
     filepath = joinpath(filepath, "females_data_lost_$(age).png")
     savefig(sc, filepath)
     end
@@ -104,20 +104,20 @@ function save_pmf_country(time_periods, country::String)
     
     ages = collect(min_age:1:max_age)
 
-    pl = scatter(title = "PMFs for $(country)", xlabel = "age", ylabel = "pmf")
+    pl = scatter(title = "PMFs for $(country)", xlabel = "age", ylabel = "pmf", ylims = (0.0,0.06))
 
     for time in time_periods
         _, pmf_all = group_pmf(data_gender, all_countries, time, min_age, max_age)
         pmf_country = pmf_all[country_index,:]
         scatter!(pl, ages, pmf_country, label = "$(time)")
     end
-    filepath = joinpath(pwd(), "mortality", "eda_plots")
+    filepath = joinpath(pwd(), "mortality", "eda_plots", "single_pmfs")
     filepath = joinpath(filepath, "females_pmf_$(country)_$(min_age)_$(max_age).png")
     savefig(pl, filepath)
 end
 
-#pl = save_pmf_country(time_periods, "France")
-# println("done: one country pmf plots.")
+pl = save_pmf_country(time_periods, "Australia")
+println("done: one country pmf plots.")
 
 
 
