@@ -47,22 +47,22 @@ time_periods = collect(1960:1:2010)
 
 
 n_permutations = 100
-max_time = 1.0
+max_time = 4.0
 
 pvalues_males_notpooled = pvalues_hipm(males_data, group_1, group_2, time_periods, min_age, max_age, n_permutations, max_time, false)
-pvalues_males_pooled = pvalues_hipm(males_data, group_1, group_2, time_periods, min_age, max_age, n_permutations, max_time, true)
+# pvalues_males_pooled = pvalues_hipm(males_data, group_1, group_2, time_periods, min_age, max_age, n_permutations, max_time, true)
 
 save_pvalues(pvalues_males_notpooled, time_periods, 
              "P-values, males, Not Pooled", "pvalues_males_not_pooled")
-save_pvalues(pvalues_males_pooled, time_periods, 
-             "P-values, males, Pooled", "pvalues_males_pooled")
+# save_pvalues(pvalues_males_pooled, time_periods, 
+#              "P-values, males, Pooled", "pvalues_males_pooled")
 
 pvalues_females_notpooled = pvalues_hipm(females_data, group_1, group_2, time_periods, min_age, max_age, n_permutations, max_time, false)
-pvalues_females_pooled = pvalues_hipm(females_data, group_1, group_2, time_periods, min_age, max_age, n_permutations, max_time, true)
+# pvalues_females_pooled = pvalues_hipm(females_data, group_1, group_2, time_periods, min_age, max_age, n_permutations, max_time, true)
 
 save_pvalues(pvalues_females_notpooled, time_periods, 
              "P-values, females, Not Pooled", "pvalues_females_not_pooled")
-save_pvalues(pvalues_females_pooled, time_periods, 
-             "P-values, females, Pooled", "pvalues_females_pooled")
+# save_pvalues(pvalues_females_pooled, time_periods, 
+            #  "P-values, females, Pooled", "pvalues_females_pooled")
 
 

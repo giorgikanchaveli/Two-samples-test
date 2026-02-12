@@ -275,7 +275,7 @@ function quantiles_frechet_means_for_timeperiods(gender_data::Dict{String, DataF
     for time in time_periods
         quantiles_1 = quantiles_frechet_means(gender_data, group_1, time, min_age, age_truncation, αs)
         quantiles_2 = quantiles_frechet_means(gender_data, group_2, time, min_age, age_truncation, αs)
-        pl = plot(αs, quantiles_1, xlabel = "prob level", ylabel = "quantile", label = "Sov", color = "green", title = "Quantile of FM")
+        pl = plot(αs, quantiles_1, xlabel = "prob level", ylabel = "quantile", label = "Sov", color = "green", title = "Year $(time)")
         plot!(pl, αs , quantiles_2, label = "NonSov", color = "brown")
         push!(plots, pl)
     end
@@ -297,13 +297,13 @@ end
 
 time_periods = collect(1963:3:2010)
 
-# save_quantiles_frechet_for_time_periods(females_data, "females", group_1, group_2, time_periods, min_age, max_age)
-# save_quantiles_frechet_for_time_periods(males_data, "males", group_1, group_2, time_periods, min_age, max_age)
+save_quantiles_frechet_for_time_periods(females_data, "females", group_1, group_2, time_periods, min_age, max_age)
+save_quantiles_frechet_for_time_periods(males_data, "males", group_1, group_2, time_periods, min_age, max_age)
 
-# save_quantiles_frechet_for_time_periods(females_data, "females", group_1, group_2, time_periods, 18,65)
-# save_quantiles_frechet_for_time_periods(males_data, "males", group_1, group_2, time_periods, 18, 65)
+save_quantiles_frechet_for_time_periods(females_data, "females", group_1, group_2, time_periods, 18,65)
+save_quantiles_frechet_for_time_periods(males_data, "males", group_1, group_2, time_periods, 18, 65)
 
-# println("done: FM quantile plots of all countries per each time period")
+println("done: FM quantile plots of all countries per each time period")
 
 
 
