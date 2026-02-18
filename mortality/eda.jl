@@ -13,7 +13,7 @@ group_2 = ["Australia", "Austria", "Belgium", "Canada", "Denmark", "Finland", "F
 all_countries = vcat(group_1, group_2)
 
 
-data_bank = load_mortality_data(["males", "females"], all_countries)
+data_bank = load_mortality_data(all_countries)
 
 min_age = 0
 max_age = 110

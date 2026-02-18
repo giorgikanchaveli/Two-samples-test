@@ -9,12 +9,13 @@ using CSV, DataFrames
 Loads all data into memory. We store DataFrame per each gender and country. 
 
 # Arguments
-    genders::Vector{String}
+    
     country_names::Vector{String}
 """
-function load_mortality_data(genders::Vector{String}, country_names::Vector{String})
+function load_mortality_data(country_names::Vector{String})
     # Structure: data_bank[gender][country_name] = DataFrame
     data_bank = Dict{String, Dict{String, DataFrame}}()
+    genders = ["males", "females"]
     for gender in genders
         data_bank[gender] = Dict{String, DataFrame}()
 
@@ -48,6 +49,7 @@ Given dataframe for some country, returns number of deaths per ages from min_age
     max_age::Int
 """
 function country_deaths_count(df::DataFrame, t::Int, min_age::Int, max_age::Int)
+    max_age < 111 || throw(ArgumentError("maximum age must be lower than 111."))
     # Find the year in the already loaded DataFrame
     row_idx = findfirst(==(t), df[!, :Year]) # data for year t starts from row_idx.
     @assert row_idx !== nothing "Year $t not found."
@@ -83,6 +85,29 @@ function group_deaths_count(gender_data::Dict{String, DataFrame}, group::Vector{
         deaths_count[i, :] .= country_deaths_count(country_df, t, min_age, max_age)
     end
     return deaths_count
+end
+
+"""
+    pool_group_deaths_count
+
+Given matrix of deaths counts per each country, create observations of ages at deaths pooled from each country.
+
+# Arguments:
+    deaths_count::Matrix{Float64}
+"""
+function pool_group_deaths_count(deaths_count::Matrix{Float64})
+    n_total = Int(sum(deaths_count)) # Total number of observations 
+    pooled_observations = Vector{Float64}(undef, n_total)
+    n, m = size(deaths_count) # n refers to countries, m refers to ages
+    index = 1
+    for i in 1:n
+        for j in 1:m
+            count = Int(deaths_count[i, j])
+            pooled_observations[index:index + count - 1] .= Float64(j-1)
+            index = index + count
+        end
+    end
+    return pooled_observations
 end
 
 
@@ -174,8 +199,14 @@ end
 # all_countries = vcat(group1, group2)
 
 
-# data_bank = load_mortality_data(["males", "females"], all_countries)
+# data_bank = load_mortality_data(all_countries)
 
+
+# data_males = data_bank["males"]
+# pooled_1 = pool_deaths_count(group_deaths_count(data_males, group1, 1960, 0, 110))
+
+
+# println("done")
 # atoms_1, weights_1 = group_pmf(data_bank["males"], group1, 1960, 0, 110)
 
 
