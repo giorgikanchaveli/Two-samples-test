@@ -243,20 +243,19 @@ function threshold_hipm(h_1::HierSample, h_2::HierSample, θ::Union{Float64, Vec
     return quantile(samples, 1 .- θ) .* sqrt(n_1*n_2 / n_total)
 end
 
-"""
-    decision_hipm
 
-Given two hierarchical samples, decides whether to reject H_0 using HIPM via bootstrap/permutation approach,
+"""
+    pvalue_hipm
+
+Given two hierarchical samples, computes p-value for HIPM.
 
 # Arguments:
     h_1::HierSample
     h_2::HierSample
-    θ::Float64       :  Significance level/s
     n_samples::Int   :  number of bootstrap/permutation samples
     bootstrap::Bool  :  Boolean variable. If true use bootstrap, otherwise permutation.
 """
-function decision_hipm(h_1::HierSample, h_2::HierSample, θ::Union{Float64, Vector{Float64}}, n_samples::Int, bootstrap::Bool)
-    
+function pvalue_hipm(h_1::HierSample, h_2::HierSample, n_samples::Int, bootstrap::Bool)
     atoms_1 = h_1.atoms
     atoms_2 = h_2.atoms
     n_1 = size(atoms_1)[1]
@@ -291,7 +290,25 @@ function decision_hipm(h_1::HierSample, h_2::HierSample, θ::Union{Float64, Vect
             samples[i] = dlip(new_atoms_1, new_atoms_2, a, b)
         end
     end
-    pvalue = mean(samples .>= observed_distance)
+    return mean(samples .>= observed_distance) # pvalue
+end
+
+
+
+"""
+    decision_hipm
+
+Given two hierarchical samples, decides whether to reject H_0 using HIPM via bootstrap/permutation approach,
+
+# Arguments:
+    h_1::HierSample
+    h_2::HierSample
+    θ::Float64       :  Significance level/s
+    n_samples::Int   :  number of bootstrap/permutation samples
+    bootstrap::Bool  :  Boolean variable. If true use bootstrap, otherwise permutation.
+"""
+function decision_hipm(h_1::HierSample, h_2::HierSample, θ::Union{Float64, Vector{Float64}}, n_samples::Int, bootstrap::Bool)
+    pvalue = pvalue_hipm(h_1, h_2, n_samples, bootstrap)
     return Float64.(pvalue .< θ)
 end
 
@@ -340,20 +357,18 @@ function threshold_wow(h_1::HierSample, h_2::HierSample, θ::Union{Float64, Vect
     return quantile(samples, 1 .- θ) .* sqrt(n_1*n_2 / n_total)
 end
 
-
 """
-    decision_wow
+    pvalue_wow
 
-Given two hierarchical samples, decides whether to reject H_0 using WoW via bootstrap/permutation approach,
+Given two hierarchical samples, computes p-value for WoW.
 
 # Arguments:
     h_1::HierSample
     h_2::HierSample
-    θ::Float64       :  Significance level/s
     n_samples::Int   :  number of bootstrap/permutation samples
     bootstrap::Bool  :  Boolean variable. If true use bootstrap, otherwise permutation.
 """
-function decision_wow(h_1::HierSample, h_2::HierSample, θ::Union{Float64, Vector{Float64}}, n_samples::Int, bootstrap::Bool)
+function pvalue_wow(h_1::HierSample, h_2::HierSample, n_samples::Int, bootstrap::Bool)
     
     atoms_1 = h_1.atoms
     atoms_2 = h_2.atoms
@@ -361,7 +376,6 @@ function decision_wow(h_1::HierSample, h_2::HierSample, θ::Union{Float64, Vecto
     n_2 = size(atoms_2)[1]
     n_total = n_1 + n_2
 
-  
     observed_distance = ww(h_1, h_2)
        
     # obtain bootstrap/permutation samples
@@ -388,7 +402,24 @@ function decision_wow(h_1::HierSample, h_2::HierSample, θ::Union{Float64, Vecto
             samples[i] = ww(new_atoms_1, new_atoms_2)
         end
     end
-    pvalue = mean(samples .>= observed_distance)
+    return mean(samples .>= observed_distance)
+end
+
+"""
+    decision_wow
+
+Given two hierarchical samples, decides whether to reject H_0 using WoW via bootstrap/permutation approach,
+
+# Arguments:
+    h_1::HierSample
+    h_2::HierSample
+    θ::Float64       :  Significance level/s
+    n_samples::Int   :  number of bootstrap/permutation samples
+    bootstrap::Bool  :  Boolean variable. If true use bootstrap, otherwise permutation.
+"""
+function decision_wow(h_1::HierSample, h_2::HierSample, θ::Union{Float64, Vector{Float64}}, n_samples::Int, bootstrap::Bool)
+    
+    pvalue = pvalue_wow(h_1, h_2, n_samples, bootstrap)
     return Float64.(pvalue .< θ)
 end
 
