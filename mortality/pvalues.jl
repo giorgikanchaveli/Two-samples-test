@@ -159,6 +159,7 @@ all_countries = vcat(group_1, group_2)
 
 data_bank = load_mortality_data(all_countries)
 females_data = data_bank["females"]
+males_data = data_bank["males"]
 
 
 min_age = 0
@@ -185,7 +186,7 @@ hline!(sc_females, [0.05], linestyle = :dash, label = "θ = 0.05")
 pvalues_males_hipm = pvalues_hipm(males_data, group_1, group_2, time_periods, min_age, max_age, n_permutations, max_time)
 pvalues_males_averaging = pvalues_averaging(males_data, group_1, group_2, time_periods, min_age, max_age, n_permutations)
 pvalues_males_pooling = pvalues_pooling(males_data, group_1, group_2, time_periods, min_age, max_age, n_permutations)
-sc = scatter(title = "P-values, males", xlabel = "time periods", ylabel = "p-value", ylims = (-0.015, 1.1))
+sc_males = scatter(title = "P-values, males", xlabel = "time periods", ylabel = "p-value", ylims = (-0.015, 1.1))
 scatter!(sc_males, time_periods, pvalues_males_averaging, label = "averaging")
 scatter!(sc_males, time_periods, pvalues_males_pooling, label = "pooling")
 scatter!(sc_males, time_periods, pvalues_males_hipm, label = "HIPM")
@@ -196,7 +197,7 @@ hline!(sc_males, [0.05], linestyle = :dash, label = "θ = 0.05")
 
 filepath = joinpath(pwd(), "mortality", "pvalues_plots")
 savefig(sc_females,filepath*"/females_pvalues_poolingaveraginghipm.png")
-savefig(sc_females,filepath*"/males_pvalues_poolingaveraginghipm.png")
+savefig(sc_males,filepath*"/males_pvalues_poolingaveraginghipm.png")
 
 
 
