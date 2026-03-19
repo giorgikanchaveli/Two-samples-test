@@ -174,14 +174,76 @@ end
 
 
 
+# In the mortality dataset, we might have hierarchical sample where each row has different length. For that
+# we write new code.
+
+
+"""
+    ww
+Computes Wasserstein over Wasserstein distance between two hierarchical samples (definition from paper)
+with possibly different row lengths in each h.s. 
+
+# Arguments:
+    atoms_1::Vector{Vector{Float64}}  :  first hierarchical sample
+    atoms_2::Vector{Vector{Float64}}  :  second hierarchical sample 
+
+# Warning: This function assumes that atoms are sorted.
+"""
+
+function ww(atoms_1::Vector{Vector{Float64}}, atoms_2::Vector{Vector{Float64}})
+    # elements in each row of the both arrays must be sorted.
+    
+    n_rows_1 = length(atoms_1)
+    n_rows_2 = length(atoms_2)
+
+
+    # Compute matrix of pairwise distances which will be a cost function 
+    
+    C = zeros(n_rows_1, n_rows_2)
+    for i=1:n_rows_1
+        a = view(atoms_1, i, :)
+        for j = 1:n_rows_2
+            C[i,j] = wasserstein_1d(atoms_1[i], atoms_2[j])
+        end
+    end
+  
+    # Build the weights: uniform 
+    weight_1 = fill(1 / n_rows_1, n_rows_1)
+    weight_2 = fill(1 / n_rows_2, n_rows_2)
+
+    # Solving the optimal transport problem 
+    gamma = ExactOptimalTransport.emd(weight_1, weight_2, C, Tulip.Optimizer() )
+
+    #output = sum( gamma .* C )
+    return sum(gamma[i,j] * C[i,j] for i in 1:n_rows_1, j in 1:n_rows_2)
+end 
 
 
 
 
 
+# n_rows_1 = 50
+# n_rows_2 = 50
+# rows_1 = [sort(rand(n_rows_1)) for i in 1:n_rows_1]
+# rows_2 = [sort(rand(n_rows_2)) for i in 1:n_rows_2]
 
 
+# ww_vector_vector = ww(rows_1, rows_2)
+# atoms_1 = zeros(n_rows_1, n_rows_1)
+# atoms_2 = zeros(n_rows_2, n_rows_2)
 
+# for i in 1:n_rows_1
+#     atoms_1[i,:] .= rows_1[i]
+# end
+
+
+# for i in 1:n_rows_2
+#     atoms_2[i,:] .= rows_2[i]
+# end
+
+# ww_hier_sample = ww(atoms_1, atoms_2)
+# ww_vector_vector = ww(rows_1, rows_2)
+# println("diff = $(abs(ww_hier_sample - ww_vector_vector))")
 
 
 
