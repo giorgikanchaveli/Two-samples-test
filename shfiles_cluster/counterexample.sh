@@ -41,7 +41,7 @@ n_samples=${params[3]}
 export JULIA_NUM_THREADS=$SLURM_CPUS_PER_TASK # set number of threads for julia
 
 # Warning: write this in login node before running sh file.
-# julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile(); println("Threads.nthreads() = ", Threads.nthreads())'
+julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile(); println("Threads.nthreads() = ", Threads.nthreads())'
 # IMPORTANT: Use the flags defined in your Julia parse_commandline() function
 julia --project=. simulations/counterexample.jl --n ${n} --m ${m} --S ${S} --n_samples ${n_samples}
 
