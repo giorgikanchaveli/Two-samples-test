@@ -26,7 +26,7 @@ echo "Running from: $(pwd)"                    # print the current working direc
 # --- Simulation parameter configuration ---
 # Format: "n m S n_samples"
 configs=(
-    "35 100 90 45"
+    "100 100 10 100"
 )
 
 # Extract parameters for the current task (0-indexed array)
