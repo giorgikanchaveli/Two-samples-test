@@ -88,6 +88,36 @@ function group_deaths_count(gender_data::Dict{String, DataFrame}, group::Vector{
 end
 
 """
+    hier_sample_from_counts
+
+Given matrix of deaths counts per each country, create observations of ages at deaths for each country. This way we obtain
+hierarchical sample where rows might have different length.
+
+# Arguments:
+    deaths_count::Matrix{Float64}
+"""
+
+function hier_sample_from_counts(deaths_count::Matrix{Float64})
+    n_rows, n_columns = size(deaths_count)
+    row_lengths = Int.(vec(sum(deaths_count, dims = 2)))
+    hier_sample = []
+    for i in 1:n_rows
+        observations = Vector{Float64}(undef, row_lengths[i])
+        index = 1
+        for j in 1:n_columns
+            n_obs_at_age = Int(deaths_count[i, j])
+            observations[index:index+n_obs_at_age-1] .= Float64(j-1)
+            index = index + n_obs_at_age
+        end
+        push!(hier_sample, observations)
+    end
+    return hier_sample
+end
+
+
+
+
+"""
     pool_group_deaths_count
 
 Given matrix of deaths counts per each country, create observations of ages at deaths pooled from each country.
@@ -199,10 +229,14 @@ end
 # all_countries = vcat(group1, group2)
 
 
-# data_bank = load_mortality_data(all_countries)
-
-
+# data_bank = load_mortality_data(group1)
 # data_males = data_bank["males"]
+# group_1_death_counts = group_deaths_count(data_males, group1, 1960, 0, 110)
+# hier_sample = hier_sample_from_counts(group_1_death_counts)
+# sums = [length(v) for v in hier_sample]
+
+
+# println("done")
 # pooled_1 = pool_deaths_count(group_deaths_count(data_males, group1, 1960, 0, 110))
 
 
