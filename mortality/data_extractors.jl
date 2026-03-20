@@ -100,7 +100,7 @@ hierarchical sample where rows might have different length.
 function hier_sample_from_counts(deaths_count::Matrix{Float64})
     n_rows, n_columns = size(deaths_count)
     row_lengths = Int.(vec(sum(deaths_count, dims = 2)))
-    hier_sample = []
+    hier_sample = Vector{Vector{Float64}}()
     for i in 1:n_rows
         observations = Vector{Float64}(undef, row_lengths[i])
         index = 1
@@ -226,7 +226,7 @@ end
 # "Japan", "Luxembourg", "Netherlands", "NewZealand", "Norway", "Spain", "Sweden",
 # "Switzerland", "UnitedKingdom" , "UnitedStatesofAmerica"]
 
-# all_countries = vcat(group1, group2)
+# # all_countries = vcat(group1, group2)
 
 
 # data_bank = load_mortality_data(group1)

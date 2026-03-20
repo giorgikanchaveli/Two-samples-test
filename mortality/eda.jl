@@ -60,8 +60,8 @@ function country_with_max_data_lost(gender_data::Dict{String, DataFrame}, time_p
     return data_lost_per_year
 end
 
-time_periods = collect(1960:1:2010)
-age_truncations = [75, 80,85,95,100]
+# time_periods = collect(1960:1:2010)
+# age_truncations = [75, 80,85,95,100]
 function save_percentage_data_lost(age_truncations)
     for age in age_truncations
     data_lost = country_with_max_data_lost(data_bank["females"], time_periods, age)
@@ -93,7 +93,7 @@ We should expect pmf to be left-skewed and monotonically decreasing after peak. 
 
 """
 
-time_periods = [1965,1975, 1992, 2010]
+# time_periods = [1965,1975, 1992, 2010]
 
 function save_pmf_country(time_periods, country::String)
     min_age = 0
@@ -176,7 +176,7 @@ function save_pmfs_for_timeperiods(gender_data::Dict{String, DataFrame}, gender:
 
 end
 
-time_periods = collect(1963:3:2010)
+# time_periods = collect(1963:3:2010)
 
 # save_pmfs_for_timeperiods(females_data, "females", group_1, group_2, time_periods, min_age, max_age)
 # save_pmfs_for_timeperiods(males_data, "males", group_1, group_2, time_periods, min_age, max_age)
@@ -216,19 +216,18 @@ function quantiles_for_timeperiods(gender_data::Dict{String, DataFrame}, group_1
             lbl = (j == 1) ? "Sov" : ""
             pmf_obj = DiscreteNonParametric(atoms, weights_1[j,:])
             q = quantile.(pmf_obj, αs)    
-            plot!(p, αs, q, color = "green", lw=2, label=lbl, alpha = 0.5)
+            plot!(p, αs, q, xlabel = "prob level",color = "green",ylabel = "quantile", lw=2, label=lbl, alpha = 0.5)
         end
         
         for j in 1:size(weights_2, 1)
             lbl = (j == 1) ? "NonSov" : ""
             pmf_obj = DiscreteNonParametric(atoms, weights_2[j,:])
             q = quantile.(pmf_obj, αs)
-            plot!(p, αs, q, color = "brown", lw=2, label=lbl, alpha = 0.5)
+            plot!(p, αs, q,xlabel = "prob level", color = "brown",ylabel = "quantile", lw=2, label=lbl, alpha = 0.5)
         end 
         push!(plot_list, p)
     end
-    final_pl = plot(plot_list..., layout = (4, 4), size = (1200, 1200),
-                    xlabel = "prob level", ylabel = "quantile")
+    final_pl = plot(plot_list..., layout = (1, 3), size = (700, 360))
     #println("maximum is $(max_val)")
     return final_pl
 end
@@ -241,14 +240,15 @@ function save_quantiles_for_timeperiods(gender_data::Dict{String, DataFrame}, ge
     filepath = joinpath(pwd(), "mortality", "eda_plots", "pmf_frechet_timeperiods")
     filepath = joinpath(filepath, "$(gender)_allquantiles_$(min_age)_$(age_truncation).png")
     savefig(pl, filepath)
-
 end
 
-# save_quantiles_for_timeperiods(females_data, "females", group_1, group_2, time_periods, min_age, max_age)
-# save_quantiles_for_timeperiods(males_data, "males", group_1, group_2, time_periods, min_age, max_age)
+time_periods = [1960, 1992, 2008]
+
+save_quantiles_for_timeperiods(females_data, "females", group_1, group_2, time_periods, min_age, max_age)
+save_quantiles_for_timeperiods(males_data, "males", group_1, group_2, time_periods, min_age, max_age)
 # save_quantiles_for_timeperiods(females_data, "females", group_1, group_2, time_periods, 18, 65)
 # save_quantiles_for_timeperiods(males_data, "males", group_1, group_2, time_periods, 18, 65)
-# println("done: quantiles plots of all countries per each time period")
+println("done: quantiles plots of all countries per each time period")
 
 
 
@@ -295,15 +295,15 @@ function save_quantiles_frechet_for_time_periods(gender_data::Dict{String, DataF
     savefig(pl, filepath)
 end
 
-time_periods = collect(1963:3:2010)
+# time_periods = collect(1963:3:2010)
 
-save_quantiles_frechet_for_time_periods(females_data, "females", group_1, group_2, time_periods, min_age, max_age)
-save_quantiles_frechet_for_time_periods(males_data, "males", group_1, group_2, time_periods, min_age, max_age)
+# save_quantiles_frechet_for_time_periods(females_data, "females", group_1, group_2, time_periods, min_age, max_age)
+# save_quantiles_frechet_for_time_periods(males_data, "males", group_1, group_2, time_periods, min_age, max_age)
 
-save_quantiles_frechet_for_time_periods(females_data, "females", group_1, group_2, time_periods, 18,65)
-save_quantiles_frechet_for_time_periods(males_data, "males", group_1, group_2, time_periods, 18, 65)
+# save_quantiles_frechet_for_time_periods(females_data, "females", group_1, group_2, time_periods, 18,65)
+# save_quantiles_frechet_for_time_periods(males_data, "males", group_1, group_2, time_periods, 18, 65)
 
-println("done: FM quantile plots of all countries per each time period")
+# println("done: FM quantile plots of all countries per each time period")
 
 
 
@@ -363,18 +363,18 @@ end
 
 
 
-"""
-4 things to consider: pmf, kde, frechet mean, pooled pmf.
+# """
+# 4 things to consider: pmf, kde, frechet mean, pooled pmf.
 
-1) how do KDEs for each country change over time?   (do maybe subplots on grid)
-2) how do frechet means change over time?  (subplots on grid and also intensity change over time)
-3) how do pmfs from pooled data change over time? are they same as frechet means? (subplots on grid
-                                             and also intensity change over time)
-4) obtain p values without pooling on the whole age range
-5) obtain p values with pooling on the whole age range. Does it match with 4?
-6) obtain p values without pooling on different age bands.
+# 1) how do KDEs for each country change over time?   (do maybe subplots on grid)
+# 2) how do frechet means change over time?  (subplots on grid and also intensity change over time)
+# 3) how do pmfs from pooled data change over time? are they same as frechet means? (subplots on grid
+#                                              and also intensity change over time)
+# 4) obtain p values without pooling on the whole age range
+# 5) obtain p values with pooling on the whole age range. Does it match with 4?
+# 6) obtain p values without pooling on different age bands.
 
-"""
+# """
 
 
 

@@ -1,6 +1,7 @@
 # In this file we do Two sample test for two groups of countries per each time period.
 
 using Plots
+using DelimitedFiles
 
 include("../methods.jl")
 include("data_extractors.jl")
@@ -37,6 +38,44 @@ function pvalues_hipm(gender_data::Dict{String, DataFrame}, group_1::Vector{Stri
     end
     return pvalues
 end    
+
+
+
+
+"""
+    pvalues_wow
+
+Given mortality data for specific gender, calculates p values per each time for given groups using WoW.
+
+# Arguments:
+    gender_data::Dict{String, DataFrame}
+    group_1::Vector{String}
+    group_2::Vector{String}
+    time_periods::Vector{Int}
+    min_age::Int
+    age_truncation::Int
+    n_permutations::Int
+"""
+
+function pvalues_wow(gender_data::Dict{String, DataFrame}, group_1::Vector{String}, group_2::Vector{String},
+                 time_periods::Vector{Int}, min_age::Int, age_truncation::Int,
+                 n_permutations::Int) 
+    n_years = length(time_periods) 
+    pvalues = Vector{Float64}(undef, n_years) # store p values per each time
+
+    for (i, time) in enumerate(time_periods)
+        @info "Progess $i / $(n_years)"
+        deaths_count_1 = group_deaths_count(gender_data, group_1, time, min_age, age_truncation)
+        deaths_count_2 = group_deaths_count(gender_data, group_2, time, min_age, age_truncation)
+        atoms_1 = hier_sample_from_counts(deaths_count_1)
+        atoms_2 = hier_sample_from_counts(deaths_count_2)
+       
+        pvalues[i] = pvalue_wow(atoms_1, atoms_2, n_permutations)
+    end
+    return pvalues
+end 
+
+
 
 
 """
@@ -139,9 +178,35 @@ function pvalues_pooling(gender_data::Dict{String, DataFrame}, group_1::Vector{S
 end    
 
 
+function save_pvalues(pvalues::Vector{Float64}, time_periods::Vector{Int}, file_name::String)
+    filepath = joinpath(pwd(), "values", "mortality_dataset")
+    mkpath(filepath)
+    filepath = joinpath(filepath, "$(file_name).txt")
+    open(filepath, "w") do io
+        # Write the column names separated by a space (matching the delimiter)
+        println(io, "p_value time_period")
+        # Write the actual data below the header
+        writedlm(io, hcat(pvalues, time_periods), ' ')
+    end
+    println("Values successfully saved to: $filepath")
+end
+
+function save_pvalues_plot_hipm_wow(pvalues_hipm::Vector{Float64}, pvalues_wow::Vector{Float64}, time_periods::Vector{Int},
+                 title::String, file_name::String)
+    sc = scatter(title = title, xlabel = "time periods", ylabel = "p-value", ylims = (-0.015, 1.1))
+    scatter!(sc, time_periods, pvalues_hipm, label = "hipm")
+    scatter!(sc, time_periods, pvalues_wow, label = "wow")
+    hline!(sc, [0.05], linestyle = :dash, label = "θ = 0.05")
+    filepath = joinpath(pwd(), "plots", "mortality_dataset")
+    mkpath(filepath)
+    filepath = joinpath(filepath, "$(file_name).png")
+    savefig(sc,filepath)
+    println("Plot successfully saved to: $filepath")
+end
 
 
-function save_pvalues(pvalues::Vector{Float64}, time_periods::Vector{Int},
+
+function save_pvalues_plot(pvalues::Vector{Float64}, time_periods::Vector{Int},
                  title::String, file_name::String)
     sc = scatter(title = title, xlabel = "time periods", ylabel = "p-value", ylims = (-0.015, 1.1))
     scatter!(sc, time_periods, pvalues, label = "hipm")
@@ -173,31 +238,57 @@ max_time = 1.0
 # for females
 t = time()
 pvalues_females_hipm = pvalues_hipm(females_data, group_1, group_2, time_periods, min_age, max_age, n_permutations, max_time)
-pvalues_females_averaging = pvalues_averaging(females_data, group_1, group_2, time_periods, min_age, max_age, n_permutations)
-pvalues_females_pooling = pvalues_pooling(females_data, group_1, group_2, time_periods, min_age, max_age, n_permutations)
+pvalues_females_wow = pvalues_wow(females_data, group_1, group_2, time_periods, min_age, max_age, n_permutations)
+save_pvalues(pvalues_females_hipm, time_periods, "pvalues_females_hipm")
+save_pvalues(pvalues_females_wow, time_periods, "pvalues_females_wow")
+save_pvalues_plot_hipm_wow(pvalues_females_hipm, pvalues_females_wow, time_periods, "P-values, females", "pvalues_females")
 dur = time() - t
-sc_females = scatter(title = "P-values, females", xlabel = "time periods", ylabel = "p-value", ylims = (-0.015, 1.1))
-scatter!(sc_females, time_periods, pvalues_females_averaging, label = "averaging")
-scatter!(sc_females, time_periods, pvalues_females_pooling, label = "pooling")
-scatter!(sc_females, time_periods, pvalues_females_hipm, label = "HIPM")
-hline!(sc_females, [0.05], linestyle = :dash, label = "θ = 0.05")
+# pvalues_females_averaging = pvalues_averaging(females_data, group_1, group_2, time_periods, min_age, max_age, n_permutations)
+# pvalues_females_pooling = pvalues_pooling(females_data, group_1, group_2, time_periods, min_age, max_age, n_permutations)
+
+# sc_females = scatter(title = "P-values, females", xlabel = "time periods", ylabel = "p-value", ylims = (-0.015, 1.1))
+# scatter!(sc_females, time_periods, pvalues_females_averaging, label = "averaging")
+# scatter!(sc_females, time_periods, pvalues_females_pooling, label = "pooling")
+# scatter!(sc_females, time_periods, pvalues_females_hipm, label = "HIPM")
+# scatter!(sc_females, time_periods, pvalues_females_wow, label = "wow")
+# hline!(sc_females, [0.05], linestyle = :dash, label = "θ = 0.05")
+
+
+
+
+
 
 # for males
+
+t = time()
 pvalues_males_hipm = pvalues_hipm(males_data, group_1, group_2, time_periods, min_age, max_age, n_permutations, max_time)
-pvalues_males_averaging = pvalues_averaging(males_data, group_1, group_2, time_periods, min_age, max_age, n_permutations)
-pvalues_males_pooling = pvalues_pooling(males_data, group_1, group_2, time_periods, min_age, max_age, n_permutations)
-sc_males = scatter(title = "P-values, males", xlabel = "time periods", ylabel = "p-value", ylims = (-0.015, 1.1))
-scatter!(sc_males, time_periods, pvalues_males_averaging, label = "averaging")
-scatter!(sc_males, time_periods, pvalues_males_pooling, label = "pooling")
-scatter!(sc_males, time_periods, pvalues_males_hipm, label = "HIPM")
-hline!(sc_males, [0.05], linestyle = :dash, label = "θ = 0.05")
+pvalues_males_wow = pvalues_wow(males_data, group_1, group_2, time_periods, min_age, max_age, n_permutations)
+save_pvalues(pvalues_males_hipm, time_periods, "pvalues_males_hipm")
+save_pvalues(pvalues_males_wow, time_periods, "pvalues_males_wow")
+save_pvalues_plot_hipm_wow(pvalues_males_hipm, pvalues_males_wow, time_periods, "P-values, males", "pvalues_males")
+dur = time() - t
+
+
+
+
+
+
+
+# pvalues_males_hipm = pvalues_hipm(males_data, group_1, group_2, time_periods, min_age, max_age, n_permutations, max_time)
+# pvalues_males_averaging = pvalues_averaging(males_data, group_1, group_2, time_periods, min_age, max_age, n_permutations)
+# pvalues_males_pooling = pvalues_pooling(males_data, group_1, group_2, time_periods, min_age, max_age, n_permutations)
+# sc_males = scatter(title = "P-values, males", xlabel = "time periods", ylabel = "p-value", ylims = (-0.015, 1.1))
+# scatter!(sc_males, time_periods, pvalues_males_averaging, label = "averaging")
+# scatter!(sc_males, time_periods, pvalues_males_pooling, label = "pooling")
+# scatter!(sc_males, time_periods, pvalues_males_hipm, label = "HIPM")
+# hline!(sc_males, [0.05], linestyle = :dash, label = "θ = 0.05")
 
 
 # save Plots
 
-filepath = joinpath(pwd(), "mortality", "pvalues_plots")
-savefig(sc_females,filepath*"/females_pvalues_poolingaveraginghipm.png")
-savefig(sc_males,filepath*"/males_pvalues_poolingaveraginghipm.png")
+# filepath = joinpath(pwd(), "mortality", "pvalues_plots")
+# savefig(sc_females,filepath*"/females_pvalues_poolingaveraginghipm.png")
+# savefig(sc_males,filepath*"/males_pvalues_poolingaveraginghipm.png")
 
 
 
@@ -253,3 +344,21 @@ savefig(sc_males,filepath*"/males_pvalues_poolingaveraginghipm.png")
             #  "P-values, females, Pooled", "pvalues_females_pooled")
 
 
+
+            # function load_pvalues(file_name::String)
+#     # 1. Reconstruct the path
+#     filepath = joinpath(pwd(), "values", "mortality_dataset", "$(file_name).txt")
+    
+#     # 2. Read the file
+#     # 'header=true' returns a tuple: (data_matrix, header_array)
+#     # 'skipstart=0' is default, but header=true handles the first line automatically
+#     data, headers = readdlm(filepath, ' ', Float64; header=true)
+    
+#     # 3. Extract the columns into vectors
+#     # [:, 1] means "all rows, first column"
+#     # [:, 2] means "all rows, second column"
+#     pvalues = data[:, 1]
+#     time_periods = Int.(data[:, 2]) # Convert back to Integers since readdlm defaults to Float
+    
+#     return pvalues, time_periods
+# end
