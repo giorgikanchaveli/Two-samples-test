@@ -27,11 +27,11 @@ function parse_commandline()
         "--n"
             help = "number of rows n"
             arg_type = Int
-            default = 1
+            default = 100
         "--m"
             help = "number of columns m"
             arg_type = Int
-            default = 4
+            default = 100
         "--S"
             help = "Number of MCMC iterations S"
             arg_type = Int
@@ -39,7 +39,7 @@ function parse_commandline()
         "--n_samples"
             help = "Number of bootstrap/permutation samples n_samples"
             arg_type = Int
-            default = 1
+            default = 100
     end
     return parse_args(s)
 end
