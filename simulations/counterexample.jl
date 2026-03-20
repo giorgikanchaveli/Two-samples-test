@@ -2,6 +2,13 @@ using Plots
 using DataFrames
 using ArgParse
 using ExtractMacro
+using CSV
+
+
+
+# Note that I have ommitted simulation results for Energy statistics. To include it just uncomment in function save_results things related
+# to energy.
+
 
 
 
@@ -79,28 +86,32 @@ function save_results(df::DataFrame, config::SimConfig)
     
     @extract config : n m S n_samples θ bootstrap
     
-    output_dir = "plotscluster"
-    mkpath(output_dir) # create folder if it's missing
-
+    values_path = joinpath(pwd(), "cluster_outputs", "values")
+    plots_path = joinpath(pwd(), "cluster_outputs", "plots")
+    mkpath(values_path) # create folder if it's missing
+    mkpath(plots_path) 
   
    
     file_name = "counterexample_n=$(n)_m=$(m)_S=$(S)_bootstrap=$(bootstrap)_n_samples=$(n_samples)"
+    values_path = joinpath(values_path, file_name * ".csv")
+    CSV.write(values_path, df)
+    @info "Dataframe saved successfully" path=values_path
+
 
     fig = plot(
-            title = "Rejection rates for 4 schemes",
+            title = "Rejection rates for 3 schemes",
             xlabel = "λ",
             ylabel = "Rej rate",
             xlims=(minimum(df.λs) - 0.05, maximum(df.λs)+ 0.05),
             ylims = (-0.1, 1.1))
     plot!(fig, df.λs, df.dm, label = "DM", color = "red")
-    plot!(fig, df.λs, df.energy, label = "Energy", color = "blue")
+   # plot!(fig, df.λs, df.energy, label = "Energy", color = "blue")
     plot!(fig, df.λs, df.hipm, label = "HIPM", color = "green")
     plot!(fig, df.λs, df.wow, label = "WoW", color = "brown")
     
-    full_path = joinpath(output_dir, file_name * ".png")
-    savefig(fig, full_path)
-    # csv_path  = joinpath(output_dir, file_base * ".csv") # to save also returned values
-    @info "Plot saved successfully" path=full_path
+    plots_path = joinpath(plots_path, file_name * ".png")
+    savefig(fig, plots_path)
+    @info "Plot saved successfully" path=plots_path
 end
 
 
