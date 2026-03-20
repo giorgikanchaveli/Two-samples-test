@@ -548,6 +548,46 @@ end
 
 
 
+
+
+"""
+
+pvalue_wow
+
+This function is specifically for mortality dataset. Given hierarchical sample obtained from death counts,
+we estimate the p-value for WoW via permutation approach. 
+
+# Arguments:
+    atoms_1::Vector{Vector{Float64}}
+    atoms_2::Vector{Vector{Float64}}
+    n_permutations::Int
+"""
+
+function pvalue_wow(atoms_1::Vector{Vector{Float64}}, atoms_2::Vector{Vector{Float64}},
+                     n_permutations::Int)
+    n_1 = length(atoms_1)
+    n_2 = length(atoms_2)
+    n = n_1 + n_2
+   
+    T_observed = ww(atoms_1, atoms_2)
+  
+    samples = zeros(n_permutations)
+    total_atoms = vcat(atoms_1, atoms_2) # collect all rows
+
+    @floop ThreadedEx() for i in 1:n_permutations
+        random_indices = randperm(n) # indices to distribute rows to new hierarchical meausures
+        new_atoms_1 = [total_atoms[i] for i in random_indices[1:n_1]]
+        new_atoms_2 = [total_atoms[i] for i in random_indices[n_1+1:end]]
+
+        samples[i] = ww(new_atoms_1, new_atoms_2)
+    end 
+    return mean(samples.>=T_observed)
+end 
+
+
+
+
+
 """
 
 pvalue_averaging
@@ -573,9 +613,9 @@ function pvalue_averaging(atoms_1::Matrix{Float64}, weights_1::Matrix{Float64}, 
 
     # compute observed distance
     # Note that atoms are same for each measure and spacing between them is 1.
-    pooled_weights_1 = vec(mean(weights_1, dims = 1))
-    pooled_weights_2 = vec(mean(weights_2, dims = 1))
-    T_observed = sum(abs.(cumsum(pooled_weights_1) .- cumsum(pooled_weights_2)))
+    average_weights_1 = vec(mean(weights_1, dims = 1))
+    average_weights_2 = vec(mean(weights_2, dims = 1))
+    T_observed = sum(abs.(cumsum(average_weights_1) .- cumsum(average_weights_2)))
 
     # obtain samples of distances using Permutation approach
     samples = zeros(n_permutations)
@@ -586,9 +626,9 @@ function pvalue_averaging(atoms_1::Matrix{Float64}, weights_1::Matrix{Float64}, 
 
         new_weights_1 = view(total_weights, random_indices[1:n_1], :) # first rows indexed by n random indices to the atoms_1
         new_weights_2 = view(total_weights, random_indices[n_1+1:end], :) # first rows indexed by n random indices to the atoms_2
-        pooled_weights_1 = vec(mean(new_weights_1, dims = 1))
-        pooled_weights_2 = vec(mean(new_weights_2, dims = 1))
-        samples[i] = sum(abs.(cumsum(pooled_weights_1) .- cumsum(pooled_weights_2)))
+        average_weights_1 = vec(mean(new_weights_1, dims = 1))
+        average_weights_2 = vec(mean(new_weights_2, dims = 1))
+        samples[i] = sum(abs.(cumsum(average_weights_1) .- cumsum(average_weights_2)))
     end
     return mean(samples.>=T_observed)
 end 
