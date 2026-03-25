@@ -93,7 +93,7 @@ We should expect pmf to be left-skewed and monotonically decreasing after peak. 
 
 """
 
-# time_periods = [1965,1975, 1992, 2010]
+time_periods = [2000]
 
 function save_pmf_country(time_periods, country::String)
     min_age = 0
@@ -104,7 +104,7 @@ function save_pmf_country(time_periods, country::String)
     
     ages = collect(min_age:1:max_age)
 
-    pl = scatter(title = "PMFs for $(country)", xlabel = "age", ylabel = "pmf", ylims = (0.0,0.06))
+    pl = scatter(title = "PMF for $(country)", xlabel = "age", ylabel = "pmf", ylims = (0.0,0.06), legend = false)
 
     for time in time_periods
         _, pmf_all = group_pmf(data_gender, all_countries, time, min_age, max_age)
@@ -116,8 +116,8 @@ function save_pmf_country(time_periods, country::String)
     savefig(pl, filepath)
 end
 
-# pl = save_pmf_country(time_periods, "Australia")
-# println("done: one country pmf plots.")
+pl = save_pmf_country(time_periods, "Denmark")
+println("done: one country pmf plots.")
 
 
 
@@ -216,18 +216,18 @@ function quantiles_for_timeperiods(gender_data::Dict{String, DataFrame}, group_1
             lbl = (j == 1) ? "Sov" : ""
             pmf_obj = DiscreteNonParametric(atoms, weights_1[j,:])
             q = quantile.(pmf_obj, αs)    
-            plot!(p, αs, q, xlabel = "prob level",color = "green",ylabel = "quantile", lw=2, label=lbl, alpha = 0.5)
+            plot!(p, q, αs, xlabel = "quantile",color = "green",ylabel = "probability level", lw=2, label=lbl, alpha = 0.5)
         end
         
         for j in 1:size(weights_2, 1)
             lbl = (j == 1) ? "NonSov" : ""
             pmf_obj = DiscreteNonParametric(atoms, weights_2[j,:])
             q = quantile.(pmf_obj, αs)
-            plot!(p, αs, q,xlabel = "prob level", color = "brown",ylabel = "quantile", lw=2, label=lbl, alpha = 0.5)
+            plot!(p, q, αs,  xlabel = "quantile", color = "brown",ylabel = "probability level", lw=2, label=lbl, alpha = 0.5)
         end 
         push!(plot_list, p)
     end
-    final_pl = plot(plot_list..., layout = (1, 3), size = (700, 360))
+    final_pl = plot(plot_list..., layout = (1, 3), size = (700, 360), legend = false)
     #println("maximum is $(max_val)")
     return final_pl
 end
