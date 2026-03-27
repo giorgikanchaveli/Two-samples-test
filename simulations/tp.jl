@@ -8,18 +8,25 @@ using CSV
 
 include(joinpath(pwd(),"methods.jl"))
 
-# In this file we run simulations to estimate the false positive rate.
+# In this file we run simulations to estimate the True positive rate.
 
-# The list of random probability meaures we use in the simulations are the following:
-rpms = [beta_beta(1.0, 1.0), 
+# In the following we write list of RPMs. 
+rpms_1 = [beta_beta(1.0, 1.0), 
         normal_normal(0.0, 1.0), 
         DP(1.0, Uniform(0,1)),
         DP(1.0, Normal(0.0, 1.0))]
 
-names_of_rpms = ["beta_beta_1_1", 
-                "normal_normal_0_1",
-                "dp_1_uniform",
-                "dp_1_normal_0_1"]
+
+rpms_2 = [beta_beta_B(1.0, 1.0),
+          beta_beta(2.0, 1.0),
+          normal_normal_varying_variance(0.0, 1.0, sqrt(2)),
+          normal_normal(1.0, 1.0),
+          DP(2.0, Uniform(0.0, 1.0)),
+          DP(1.0, Beta(2.0,2.0)),
+          DP(2.0, Normal(0.0, 1.0)),
+          DP(1.0, Normal(1.0, 1.0))]
+
+    
 
 # Julia always provides the global variable ARGS.
 # When this file is run from the terminal, ARGS contains things writen next to the run command,
@@ -28,13 +35,17 @@ names_of_rpms = ["beta_beta_1_1",
 # so the default values are used.
 function parse_commandline()
     
-    s = ArgParseSettings(description = "Run Simulations for FP,TP,ROC")
+    s = ArgParseSettings(description = "Run Simulations for tp,TP,ROC")
 
     @add_arg_table! s begin
-        "--label_q"
-            help = "label for law of RPM"
+        "--label_q_1"
+            help = "label for first law of RPM"
             arg_type = Int
-            default = 3
+            default = 1
+        "--label_q_2"
+            help = "label for second law of RPM"
+            arg_type = Int
+            default = 2
         "--n"
             help = "number of rows n"
             arg_type = Int
@@ -57,7 +68,8 @@ end
 
 
 struct SimulationConfig
-    Q::LawRPM
+    Q_1::LawRPM
+    Q_2::LawRPM
     n::Int
     m::Int
     S::Int
@@ -66,21 +78,23 @@ end
 
 
 function run_simulation(config::SimulationConfig)
-    @extract config : Q n m S n_perm
+    @extract config : Q_1 Q_2 n m S n_perm
     θs = collect(0.0:0.01:1.0)
-    fp_hipm, fp_wow = rejection_rate_hipm_wow(Q, Q, n, m, S, θs, n_perm, false)
-    return DataFrame(θs = θs, fp_hipm = fp_hipm, fp_wow = fp_wow)
+    tp_hipm, tp_wow = rejection_rate_hipm_wow(Q_1, Q_2, n, m, S, θs, n_perm, false)
+    return DataFrame(θs = θs, tp_hipm = tp_hipm, tp_wow = tp_wow)
 end
 
 function main()
     parsed_args = parse_commandline()
-    label_q = parsed_args["label_q"]
-    Q = rpms[label_q]
+    label_q_1 = parsed_args["label_q_1"]
+    label_q_2 = parsed_args["label_q_2"]
+    Q_1 = rpms_1[label_q_1]
+    Q_2 = rpms_2[label_q_2]
     n, m, S, n_perm = parsed_args["n"], parsed_args["m"], parsed_args["S"], parsed_args["n_perm"]
-    config = SimulationConfig(Q, n, m, S, n_perm)
+    config = SimulationConfig(Q_1, Q_2, n, m, S, n_perm)
     df = run_simulation(config)
 
-    file_name = "fp_"*names_of_rpms[label_q]*"_"*"n=$(n)_m=$(m)_S=$(S)_n_perm=$(n_perm)"
+    file_name = "tp_label_1=$(label_q_1)_label_2=$(label_q_2)_n=$(n)_m=$(m)_S=$(S)_n_perm=$(n_perm)"
     file_path = joinpath(pwd(), "cluster_outputs", "values")
     mkpath(file_path) # create folder if it's missing
     file_path = joinpath(file_path, file_name * ".csv")
