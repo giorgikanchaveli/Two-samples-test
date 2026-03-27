@@ -59,7 +59,7 @@ end
 """
     normal_normal
 
-Struct for law of RPM where P ∼ Normal(𝄊, 1) and δ∼Normal(μ, σ^2)).
+Struct for law of RPM where P ∼ Normal(δ, 1) and δ∼Normal(μ, σ^2)).
 
 # Arguments:
     μ::Float64  :  mean for outer normal distribution.
@@ -78,7 +78,7 @@ end
 """
     normal_normal_varying_variance
 
-Struct for law of RPM where P ∼ Normal(δ, σ_inner^2) and δ∼Normal(μ, σ_outer^2)).
+Struct for law of RPM where P ∼ Normal(δ, σ_inner^2) and δ∼Normal(μ, σ_outer^2).
 
 # Arguments:
     μ::Float64  :  mean for outer normal distribution.
