@@ -1,0 +1,51 @@
+
+This file describes the meaning of labels associated to the laws of RPMs in the fp and tp files.
+Labels are 1-indexed to match Julia array positions.
+
+---------------------------------------------------------------------------
+LIST 1: rpms_1
+---------------------------------------------------------------------------
+
+Label 1: beta_beta(1.0, 1.0)
+    - Law: P ∼ Beta(μ, 1-μ) and μ∼Beta(a, b)
+    
+
+Label 2: normal_normal(0.0, 1.0)
+    - Law: P ∼ Normal(δ, 1) and δ∼Normal(μ, σ^2)
+
+Label 3: DP(1.0, Uniform(0,1))
+   
+Label 4: DP(1.0, Normal(0.0, 1.0))
+   
+
+---------------------------------------------------------------------------
+LIST 2: rpms_2
+---------------------------------------------------------------------------
+
+Label 1: beta_beta_B(1.0, 1.0)
+    - Law: P ∼ Beta(2μ, 2*(1-μ)) and μ∼Beta(a, b)
+
+Label 2: beta_beta(2.0, 1.0)
+    - Law: P ∼ Beta(μ, 1-μ) and μ∼Beta(a, b)
+
+Label 3: normal_normal_varying_variance(0.0, 1.0, sqrt(2))
+    - Law: P ∼ Normal(δ, σ_inner^2) and δ∼Normal(μ, σ_outer^2)
+    - Note: second and third arguments corresponds to σ outer and σ inner respectively.   
+
+Label 4: normal_normal(1.0, 1.0)
+    - Law: P ∼ Normal(δ, 1) and δ∼Normal(μ, σ^2)
+
+Label 5: DP(2.0, Uniform(0.0, 1.0))
+
+Label 6: DP(1.0, Beta(2.0, 2.0))
+    
+Label 7: DP(2.0, Normal(0.0, 1.0))
+   
+Label 8: DP(1.0, Normal(1.0, 1.0))
+
+===========================================================================
+Notes on Simulation Logic:
+- Hierarchical samples generate n rows and m columns.
+- n_perm defines the number of permutations used in the WoW/HIPM tests.
+- S defines the total number of Monte Carlo replicates to estimate FPR and TPR.
+===========================================================================
