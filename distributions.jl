@@ -13,6 +13,47 @@ include("structures.jl")
 
 using Distributions, Random, StatsBase
 
+"""
+    beta_beta
+
+Struct for law of RPM where P ∼ Beta(μ, 1-μ) and μ∼Beta(a, b).
+
+# Arguments:
+    a::Float64  :  Parameter for outer beta distribution.
+    b::Float64  :  Parameter for outer beta distribution.
+
+"""
+struct beta_beta<:LawRPM
+    a::Float64
+    b::Float64
+    function beta_beta(a::Float64, b::Float64)
+        a > 0 || throw(ArgumentError("a must be larger than 0"))
+        b > 0 || throw(ArgumentError("b must be larger than 0"))
+        return new(a, b)
+    end
+end
+
+"""
+    normal_normal
+
+Struct for law of RPM where P ∼ Normal(𝄊, 1) and δ∼Normal(μ, σ^2)).
+
+# Arguments:
+    μ::Float64  :  mean for outer normal distribution.
+    σ::Float64  :  standard deviation for outer normal distribution.
+
+"""
+struct normal_normal<:LawRPM
+    μ::Float64
+    σ::Float64
+    function normal_normal(μ::Float64, σ::Float64)
+        σ > 0 || throw(ArgumentError("σ must be larger than 0"))
+        return new(μ, σ)
+    end
+end
+
+
+
 
 """
     tnormal_normal
@@ -157,6 +198,49 @@ from base distribution P_0, otherwise we choose uniformly from the previous samp
     end
     return samples
 end
+
+
+
+"""
+    sample_exch_seq
+Function to generate m samples from beta_beta law of RPM. Firstly, μ is generated from beta distribution and then i.i.d observations
+are generated from beta(μ, 1-μ).
+
+# Arguments:
+    law_rpm::beta_beta
+    m::Int  :  number of samples to generate.
+"""
+
+function sample_exch_seq(law_rpm::beta_beta, m::Int)
+
+    μ = rand(Beta(law_rpm.a, law_rpm.b)) 
+    return rand(Beta(μ, 1-μ), m) # generate obseravtions from Beta(μ, 1-μ).
+end
+
+
+"""
+    sample_exch_seq
+Function to generate m samples from normal_normal law of RPM. Firstly, δ is generated from normal distribution
+and then i.i.d observations are generated from Gaussian(δ, 1).
+
+# Arguments:
+    law_rpm::normal_normal
+    m::Int  : number of samples to generate.
+"""
+
+function sample_exch_seq(law_rpm::normal_normal, m::Int)
+    δ = rand(Normal(law_rpm.μ, law_rpm.σ)) 
+    return rand(Normal(δ, 1.0), m) # generate obseravtions from Gaussian(δ, 1).
+end
+
+
+
+
+
+
+
+
+
 
 """
     sample_exch_seq
