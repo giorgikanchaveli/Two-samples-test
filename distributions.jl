@@ -14,7 +14,7 @@ include("structures.jl")
 using Distributions, Random, StatsBase
 
 """
-    beta_beta
+    beta_beta_A
 
 Struct for law of RPM where P ∼ Beta(μ, 1-μ) and μ∼Beta(a, b).
 
@@ -23,10 +23,10 @@ Struct for law of RPM where P ∼ Beta(μ, 1-μ) and μ∼Beta(a, b).
     b::Float64  :  Parameter for outer beta distribution.
 
 """
-struct beta_beta<:LawRPM
+struct beta_beta_A<:LawRPM
     a::Float64
     b::Float64
-    function beta_beta(a::Float64, b::Float64)
+    function beta_beta_A(a::Float64, b::Float64)
         a > 0 || throw(ArgumentError("a must be larger than 0"))
         b > 0 || throw(ArgumentError("b must be larger than 0"))
         return new(a, b)
@@ -57,7 +57,7 @@ end
 
 
 """
-    normal_normal
+    normal_normal_A
 
 Struct for law of RPM where P ∼ Normal(δ, 1) and δ∼Normal(μ, σ^2)).
 
@@ -66,17 +66,17 @@ Struct for law of RPM where P ∼ Normal(δ, 1) and δ∼Normal(μ, σ^2)).
     σ::Float64  :  standard deviation for outer normal distribution.
 
 """
-struct normal_normal<:LawRPM
+struct normal_normal_A<:LawRPM
     μ::Float64
     σ::Float64
-    function normal_normal(μ::Float64, σ::Float64)
+    function normal_normal_A(μ::Float64, σ::Float64)
         σ > 0 || throw(ArgumentError("σ must be larger than 0"))
         return new(μ, σ)
     end
 end
 
 """
-    normal_normal_varying_variance
+    normal_normal_B
 
 Struct for law of RPM where P ∼ Normal(δ, σ_inner^2) and δ∼Normal(μ, σ_outer^2).
 
@@ -86,11 +86,11 @@ Struct for law of RPM where P ∼ Normal(δ, σ_inner^2) and δ∼Normal(μ, σ_
     σ_inner::Float64  :  standard deviation for innter normal distribution.
 
 """
-struct normal_normal_varying_variance<:LawRPM
+struct normal_normal_B<:LawRPM
     μ::Float64
     σ_outer::Float64
     σ_inner::Float64
-    function normal_normal_varying_variance(μ::Float64,σ_outer::Float64, σ_inner::Float64)
+    function normal_normal_B(μ::Float64,σ_outer::Float64, σ_inner::Float64)
         σ_inner > 0 || throw(ArgumentError("σ_inner must be larger than 0"))
         σ_outer > 0 || throw(ArgumentError("σ_outer must be larger than 0"))
         return new(μ, σ_outer, σ_inner)
@@ -248,15 +248,15 @@ end
 
 """
     sample_exch_seq
-Function to generate m samples from beta_beta law of RPM. Firstly, μ is generated from beta distribution and then i.i.d observations
+Function to generate m samples from beta_beta_A law of RPM. Firstly, μ is generated from beta distribution and then i.i.d observations
 are generated from beta(μ, 1-μ).
 
 # Arguments:
-    law_rpm::beta_beta
+    law_rpm::beta_beta_A
     m::Int  :  number of samples to generate.
 """
 
-function sample_exch_seq(law_rpm::beta_beta, m::Int)
+function sample_exch_seq(law_rpm::beta_beta_A, m::Int)
 
     μ = rand(Beta(law_rpm.a, law_rpm.b)) 
     return rand(Beta(μ, 1-μ), m) # generate obseravtions from Beta(μ, 1-μ).
@@ -285,15 +285,15 @@ end
 
 """
     sample_exch_seq
-Function to generate m samples from normal_normal law of RPM. Firstly, δ is generated from normal distribution
+Function to generate m samples from normal_normal_A law of RPM. Firstly, δ is generated from normal distribution
 and then i.i.d observations are generated from Gaussian(δ, 1).
 
 # Arguments:
-    law_rpm::normal_normal
+    law_rpm::normal_normal_A
     m::Int  : number of samples to generate.
 """
 
-function sample_exch_seq(law_rpm::normal_normal, m::Int)
+function sample_exch_seq(law_rpm::normal_normal_A, m::Int)
     δ = rand(Normal(law_rpm.μ, law_rpm.σ)) 
     return rand(Normal(δ, 1.0), m) # generate obseravtions from Gaussian(δ, 1).
 end
@@ -301,15 +301,15 @@ end
 
 """
     sample_exch_seq
-Function to generate m samples from normal_normal_varying_variance law of RPM. Firstly, δ is generated from normal distribution
+Function to generate m samples from normal_normal_B law of RPM. Firstly, δ is generated from normal distribution
 and then i.i.d observations are generated from Gaussian(δ, σ_inner^2).
 
 # Arguments:
-    law_rpm::normal_normal_varying_variance
+    law_rpm::normal_normal_B
     m::Int  : number of samples to generate.
 """
 
-function sample_exch_seq(law_rpm::normal_normal_varying_variance, m::Int)
+function sample_exch_seq(law_rpm::normal_normal_B, m::Int)
     δ = rand(Normal(law_rpm.μ, law_rpm.σ_outer)) 
     return rand(Normal(δ, law_rpm.σ_inner), m) # generate obseravtions from Gaussian(δ, σ_inner^2).
 end
