@@ -5,10 +5,10 @@ using CSV
 
 
 
+# In this file we run simulations to estimate the True positive rate.
 
 include(joinpath(pwd(),"methods.jl"))
 
-# In this file we run simulations to estimate the True positive rate.
 
 # In the following we write list of RPMs. 
 rpms_1 = [beta_beta_A(1.0, 1.0), 
