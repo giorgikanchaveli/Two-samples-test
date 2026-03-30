@@ -11,8 +11,8 @@ include(joinpath(pwd(),"methods.jl"))
 # In this file we run simulations to estimate the false positive rate.
 
 # The list of random probability meaures we use in the simulations are the following:
-rpms = [beta_beta(1.0, 1.0), 
-        normal_normal(0.0, 1.0), 
+rpms = [beta_beta_A(1.0, 1.0), 
+        normal_normal_A(0.0, 1.0), 
         DP(1.0, Uniform(0,1)),
         DP(1.0, Normal(0.0, 1.0))]
 
