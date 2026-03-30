@@ -6,11 +6,11 @@ Labels are 1-indexed to match Julia array positions.
 LIST 1: rpms_1
 ---------------------------------------------------------------------------
 
-Label 1: beta_beta(1.0, 1.0)
+Label 1: beta_beta_A(1.0, 1.0)
     - Law: P ∼ Beta(μ, 1-μ) and μ∼Beta(a, b)
     
 
-Label 2: normal_normal(0.0, 1.0)
+Label 2: normal_normal_A(0.0, 1.0)
     - Law: P ∼ Normal(δ, 1) and δ∼Normal(μ, σ^2)
 
 Label 3: DP(1.0, Uniform(0,1))
@@ -25,14 +25,14 @@ LIST 2: rpms_2
 Label 1: beta_beta_B(1.0, 1.0)
     - Law: P ∼ Beta(2μ, 2*(1-μ)) and μ∼Beta(a, b)
 
-Label 2: beta_beta(2.0, 1.0)
+Label 2: beta_beta_A(2.0, 1.0)
     - Law: P ∼ Beta(μ, 1-μ) and μ∼Beta(a, b)
 
-Label 3: normal_normal_varying_variance(0.0, 1.0, sqrt(2))
+Label 3: normal_normal_B(0.0, 1.0, sqrt(2))
     - Law: P ∼ Normal(δ, σ_inner^2) and δ∼Normal(μ, σ_outer^2)
     - Note: second and third arguments corresponds to σ outer and σ inner respectively.   
 
-Label 4: normal_normal(1.0, 1.0)
+Label 4: normal_normal_A(1.0, 1.0)
     - Law: P ∼ Normal(δ, 1) and δ∼Normal(μ, σ^2)
 
 Label 5: DP(2.0, Uniform(0.0, 1.0))

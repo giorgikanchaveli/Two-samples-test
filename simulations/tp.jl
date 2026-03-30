@@ -11,16 +11,16 @@ include(joinpath(pwd(),"methods.jl"))
 # In this file we run simulations to estimate the True positive rate.
 
 # In the following we write list of RPMs. 
-rpms_1 = [beta_beta(1.0, 1.0), 
-        normal_normal(0.0, 1.0), 
+rpms_1 = [beta_beta_A(1.0, 1.0), 
+        normal_normal_A(0.0, 1.0), 
         DP(1.0, Uniform(0,1)),
         DP(1.0, Normal(0.0, 1.0))]
 
 
 rpms_2 = [beta_beta_B(1.0, 1.0),
-          beta_beta(2.0, 1.0),
-          normal_normal_varying_variance(0.0, 1.0, sqrt(2)),
-          normal_normal(1.0, 1.0),
+          beta_beta_A(2.0, 1.0),
+          normal_normal_B(0.0, 1.0, sqrt(2)),
+          normal_normal_A(1.0, 1.0),
           DP(2.0, Uniform(0.0, 1.0)),
           DP(1.0, Beta(2.0,2.0)),
           DP(2.0, Normal(0.0, 1.0)),
