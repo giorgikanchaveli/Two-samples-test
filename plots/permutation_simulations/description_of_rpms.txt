@@ -1,6 +1,10 @@
 
 This file describes the meaning of labels associated to the laws of RPMs in the fp and tp files.
-Labels are 1-indexed to match Julia array positions.
+
+We have two lists of laws of RPMS. 
+
+For files starting with fp we only have one Label and the laws of rpms are taken from LIST 1.
+For files starting with tp we have two labels: label_1 and label_2 and they refer to the laws of rpms in LIST 1 and LIST 2 respectively,
 
 ---------------------------------------------------------------------------
 LIST 1: rpms_1

@@ -16,10 +16,10 @@ rpms = [beta_beta_A(1.0, 1.0),
         DP(1.0, Uniform(0,1)),
         DP(1.0, Normal(0.0, 1.0))]
 
-names_of_rpms = ["beta_beta_1_1", 
-                "normal_normal_0_1",
-                "dp_1_uniform",
-                "dp_1_normal_0_1"]
+names_of_rpms = ["label=1", 
+                "label=2",
+                "label=3",
+                "label=4"]
 
 # Julia always provides the global variable ARGS.
 # When this file is run from the terminal, ARGS contains things writen next to the run command,
