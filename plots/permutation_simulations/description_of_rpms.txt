@@ -41,7 +41,7 @@ Label 4: normal_normal_A(1.0, 1.0)
 
 Label 5: DP(2.0, Uniform(0.0, 1.0))
 
-Label 6: DP(1.0, Beta(2.0, 2.0))
+Label 6: DP(1.0, Beta(1.0, 2.0))
     
 Label 7: DP(2.0, Normal(0.0, 1.0))
    

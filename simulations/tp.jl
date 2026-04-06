@@ -22,7 +22,7 @@ rpms_2 = [beta_beta_B(1.0, 1.0),
           normal_normal_B(0.0, 1.0, sqrt(2)),
           normal_normal_A(1.0, 1.0),
           DP(2.0, Uniform(0.0, 1.0)),
-          DP(1.0, Beta(2.0,2.0)),
+          DP(1.0, Beta(1.0,2.0)),
           DP(2.0, Normal(0.0, 1.0)),
           DP(1.0, Normal(1.0, 1.0))]
 
