@@ -1,5 +1,31 @@
 using CSV, DataFrames, Plots
 
+# df = CSV.read("values/permutation_simulations/tp_label_1=3_label_2=6_n=100_m=100_S=1000_n_perm=100.csv", DataFrame)
+# p = plot(
+#         df[!, "θs"],
+#         df[!, "tp_hipm"],
+#         label = "hipm",
+#         linewidth = 2,
+#         marker = :circle,
+#         xlabel = "θ",
+#         ylabel = "True Positive Rate",
+#         title = "tp_3b",
+#         legend = :best,
+#         aspect_ratio = :equal,
+#         xlims = (0, 1),
+#         ylims = (0, 1)
+#     )
+# plot!(
+#         p,
+#         df[!, "θs"],
+#         df[!, "tp_wow"],
+#         label = "wow",
+#         linewidth = 2,
+#         marker = :square
+#     )
+
+# savefig(p, "tp_label_3b_n=100_m=100_S=1000_n_perm=100.png")
+
 # read data
 df = CSV.read("values/counterexample_n=100_m=200_S=1000_bootstrap=false_n_samples=100.csv", DataFrame)
 
