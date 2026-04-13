@@ -5,11 +5,57 @@ using CSV
 
 
 
-
-include(joinpath(pwd(),"methods.jl"))
-
 # In this file we run simulations to estimate the false positive rate. In particular
 # we fix θ = 0.05 and report FPR per each m ∈ {10, 20, 30, 40, 50}
+include(joinpath(pwd(),"methods.jl"))
+
+
+
+function rejection_rate_hipm_wow_per_m(
+    q_1::LawRPM,
+    q_2::LawRPM,
+    n::Int,
+    m::Vector{Int},
+    S::Int,
+    θ::Vector{Float64},
+    n_samples::Int,
+    bootstrap::Bool
+)
+
+    rates_hipm = zeros(length(m))
+    rates_wow = zeros(length(m))
+
+    @floop ThreadedEx() for s in 1:S
+        h_1 = generate_hiersample(q_1, n, m[end])
+        h_2 = generate_hiersample(q_2, n, m[end])
+
+        local_hipm = zeros(length(m))
+        local_wow = zeros(length(m))
+
+        for i in eachindex(m)
+            if i == length(m)
+                local_hipm[i] = decision_hipm(h_1, h_2, θ, n_samples, bootstrap)[1]
+                local_wow[i] = decision_wow(h_1, h_2, θ, n_samples, bootstrap)[1]
+            else
+                h_1_m = HierSample(h_1.atoms[:, 1:m[i]], h_1.a, h_1.b)
+                h_2_m = HierSample(h_2.atoms[:, 1:m[i]], h_2.a, h_2.b)
+
+                local_hipm[i] = decision_hipm(h_1_m, h_2_m, θ, n_samples, bootstrap)[1]
+                local_wow[i] = decision_wow(h_1_m, h_2_m, θ, n_samples, bootstrap)[1]
+            end
+        end
+
+        @reduce rates_hipm .+= local_hipm
+        @reduce rates_wow .+= local_wow
+    end
+
+    rates_hipm ./= S
+    rates_wow ./= S
+
+    return rates_hipm, rates_wow
+end
+
+
 
 # The list of random probability meaures we use in the simulations are the following:
 rpms = [beta_beta_A(1.0, 1.0), 
@@ -65,13 +111,18 @@ function run_simulation(config::SimulationConfig)
     @extract config : Q n S n_perm
     θ = 0.05
     ms = [10, 20, 30, 40, 50]
-    fp_hipm = zeros(length(ms))
-    fp_wow = zeros(length(ms))
-
-    for (i, m) in enumerate(ms)
-        fp_hipm[i], fp_wow[i] = rejection_rate_hipm_wow(Q, Q, n, m, S, [θ], n_perm, false)
+    n_repeat = 10
+    results = DataFrame(repeat = Int[], m = Int[], fp_hipm = Float64[], fp_wow = Float64[])
+    for r in 1:n_repeat
+        fp_hipm_per_m, fp_wow_per_m = rejection_rate_hipm_wow_per_m(Q, Q, n, ms, S, [θ], n_perm, false)
+        append!(results, DataFrame(
+        repeat = fill(r, length(ms)),
+        m = ms,
+        fp_hipm = fp_hipm_per_m,
+        fp_wow = fp_wow_per_m
+        ))
     end
-    return DataFrame(ms = ms, fp_hipm = fp_hipm, fp_wow = fp_wow)
+    return results
 end
 
 function main()
