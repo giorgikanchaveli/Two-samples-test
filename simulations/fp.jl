@@ -14,7 +14,9 @@ include(joinpath(pwd(),"methods.jl"))
 rpms = [beta_beta_A(1.0, 1.0), 
         normal_normal_A(0.0, 1.0), 
         DP(1.0, Uniform(0,1)),
-        DP(1.0, Normal(0.0, 1.0))]
+        DP(1.0, Normal(0.0, 1.0)),
+        normal_normal_B(0.0, 10.0, 10.0),
+        normal_normal_B(0.0, 50.0, 50.0)]
 
 names_of_rpms = ["label=1", 
                 "label=2",

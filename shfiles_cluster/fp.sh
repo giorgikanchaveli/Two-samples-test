@@ -3,7 +3,7 @@
 #SBATCH --partition=defq                       # which partition/queue to use
 #SBATCH --ntasks=1                                # number of tasks (1 is fine for Julia)
 #SBATCH --cpus-per-task=20  					  # number of cores
-#SBATCH --array=1-4                               # To run several jobs
+#SBATCH --array=1-2                               # To run several jobs
 #SBATCH --output=/home/3049277/logs/%x_%A_%a.out  # standard output log file
 #SBATCH --error=/home/3049277/logs/%x_%A_%a.err   # standard error log file
 #SBATCH --chdir=/home/3049277/Two-samples-test # working directory for the job
@@ -20,10 +20,8 @@ echo "Running from: $(pwd)"                    # print the current working direc
 # --- Simulation parameter configuration ---
 # Format: "label_q n m S n_perm"
 configs=(
-    "1 100 100 1000 100"
-    "2 100 100 1000 100"
-    "3 100 100 1000 100"
-    "4 100 100 1000 100"
+    "5 100 100 1000 100"
+    "6 100 100 1000 100"
 )
 
 # Extract parameters for the current task (0-indexed array)
