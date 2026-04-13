@@ -24,7 +24,7 @@ function make_title(filename::String)
 end
 
 function make_permutation_plots(; 
-    input_dir = joinpath(pwd(), "values", "permutation_simulations"),
+    input_dir = joinpath(pwd(), "values", "permutation_simulations", "fp_tp"),
     output_dir = joinpath(pwd(), "plots", "permutation_simulations", "fp_tp")
 )
 
