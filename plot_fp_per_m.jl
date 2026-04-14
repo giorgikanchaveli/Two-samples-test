@@ -1,5 +1,7 @@
 using CSV
 using DataFrames
+using Statistics
+using Distributions
 using Plots
 
 function extract_label(filename::AbstractString)
@@ -7,39 +9,113 @@ function extract_label(filename::AbstractString)
     return m === nothing ? "unknown" : m.captures[1]
 end
 
-function make_plot_for_file(folder::String, filename::String, outdir::String)
+function mean_ci(x)
+    n = length(x)
+    μ = mean(x)
+
+    if n == 1
+        return (mean = μ, lower = μ, upper = μ)
+    end
+
+    s = std(x)
+    se = s / sqrt(n)
+    tcrit = quantile(TDist(n - 1), 0.975)
+
+    lower = μ - tcrit * se
+    upper = μ + tcrit * se
+
+    return (mean = μ, lower = lower, upper = upper)
+end
+
+function summarize_by_m(df::DataFrame, value_col::Symbol)
+    gdf = groupby(df, :m)
+    out = combine(gdf, value_col => mean_ci => AsTable)
+    sort!(out, :m)
+    return out
+end
+
+# ------------------------------------------------------------
+# NEW: compute global y-limits across all files
+# ------------------------------------------------------------
+function compute_global_ylims(folder::String)
+    ymin, ymax = Inf, -Inf
+
+    for filename in readdir(folder)
+        if startswith(filename, "fp_per_m") && endswith(filename, ".csv")
+            df = CSV.read(joinpath(folder, filename), DataFrame)
+
+            if all(col -> col in names(df), ["repeat","m","fp_hipm","fp_wow"])
+                hipm = summarize_by_m(df, :fp_hipm)
+                wow  = summarize_by_m(df, :fp_wow)
+
+                ymin = min(ymin,
+                    minimum(hipm.lower), minimum(wow.lower)
+                )
+                ymax = max(ymax,
+                    maximum(hipm.upper), maximum(wow.upper)
+                )
+            end
+        end
+    end
+
+    return (ymin, ymax)
+end
+
+function make_plot_for_file(folder::String, filename::String, outdir::String, ylims)
     base = splitext(filename)[1]
     filepath = joinpath(folder, filename)
     df = CSV.read(filepath, DataFrame)
-    required_cols = ["ms", "fp_hipm", "fp_wow"]
+
+    required_cols = ["repeat", "m", "fp_hipm", "fp_wow"]
     missing_cols = setdiff(required_cols, names(df))
     if !isempty(missing_cols)
         @warn "Skipping $filename because required columns are missing: $missing_cols"
         return
     end
 
+    hipm_summary = summarize_by_m(df, :fp_hipm)
+    wow_summary  = summarize_by_m(df, :fp_wow)
+
     label = extract_label(filename)
     plot_title = "fp_per_m_$(label)"
 
-    p = scatter(
-        df.ms,
-        df.fp_hipm;
-        label = "fp_hipm",
-        xlabel = "ms",
-        ylabel = "value",
+    p = plot(
+        hipm_summary.m,
+        hipm_summary.mean;
+        ribbon = (
+            hipm_summary.mean .- hipm_summary.lower,
+            hipm_summary.upper .- hipm_summary.mean
+        ),
+        label = "HIPM",
+        xlabel = "m",
+        ylabel = "false positive rate",
         title = plot_title,
-        markersize = 4
+        linewidth = 2,
+        marker = :circle,
+        markersize = 4,
+        ylim = ylims
     )
 
-    scatter!(
+    plot!(
         p,
-        df.ms,
-        df.fp_wow;
-        label = "fp_wow",
+        wow_summary.m,
+        wow_summary.mean;
+        ribbon = (
+            wow_summary.mean .- wow_summary.lower,
+            wow_summary.upper .- wow_summary.mean
+        ),
+        label = "WOW",
+        linewidth = 2,
+        marker = :square,
         markersize = 4
     )
 
-    outfile = joinpath(outdir, base*".png")
+    # ------------------------------------------------------------
+    # NEW: horizontal reference line at 0.05
+    # ------------------------------------------------------------
+    hline!(p, [0.05]; linestyle = :dash, label = "0.05")
+
+    outfile = joinpath(outdir, base * ".png")
     savefig(p, outfile)
 
     println("Saved plot: $outfile")
@@ -47,12 +123,18 @@ end
 
 function make_plots_from_folder(folder::String, outdir::String)
     mkpath(outdir)
+
+    # compute shared y-limits once
+    ylims = compute_global_ylims(folder)
+
     for filename in readdir(folder)
-        if startswith(filename, "fp_per_m")
-            make_plot_for_file(folder, filename, outdir)
+        if startswith(filename, "fp_per_m") && endswith(filename, ".csv")
+            make_plot_for_file(folder, filename, outdir, ylims)
         end
     end
 end
 
-make_plots_from_folder(joinpath(pwd(), "values", "permutation_simulations"),
-                        joinpath(pwd(), "plots", "permutation_simulations", "fp_per_m"))
+make_plots_from_folder(
+    joinpath(pwd(), "values", "permutation_simulations", "fp_per_m"),
+    joinpath(pwd(), "plots", "permutation_simulations", "fp_per_m")
+)

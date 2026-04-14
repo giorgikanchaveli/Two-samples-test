@@ -20,7 +20,10 @@ Label 2: normal_normal_A(0.0, 1.0)
 Label 3: DP(1.0, Uniform(0,1))
    
 Label 4: DP(1.0, Normal(0.0, 1.0))
-   
+
+Label 5: normal_normal_B(0.0, 10.0, 10.0)
+
+Label 6: normal_normal_B(0.0, 50.0, 50.0)
 
 ---------------------------------------------------------------------------
 LIST 2: rpms_2
