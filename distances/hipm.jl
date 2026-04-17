@@ -346,7 +346,7 @@ function dlip_projected_measures(weights_atoms_1::AbstractArray{Float64,2}, weig
         # Best run 
         index = argmax(valueFunction[:,end])
         # Change only return best run
-        return valueFunction[index]
+        return valueFunction[index, end]
         #return maximum(valueFunction[index,end]), Q *unknownArray[index,:] 
     else
         function obj(g::Vector{Float64})
