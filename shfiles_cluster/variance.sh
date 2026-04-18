@@ -1,6 +1,6 @@
 #!/bin/bash -l
 #SBATCH --job-name=variance                        # name of the SLURM job (shows up in queue)
-#SBATCH --partition=compute                       # which partition/queue to use
+#SBATCH --partition=defq                       # which partition/queue to use
 #SBATCH --ntasks=1                                # number of tasks (1 is fine for Julia)
 #SBATCH --cpus-per-task=20  					  # number of cores
 #SBATCH --time=96:00:00                           # maximum run time (hh:mm:ss)
