@@ -143,7 +143,7 @@ end
 # Function for the new HIPM distance 
 # -----------------------------------------------------------------------------------
 
-function dlip_hugo(measure1, measure2, a,b, nGrid,nSteps=1000,nRerun = 5,tol = 1e-4)
+function dlip_hugo_marta(measure1, measure2, a,b; nGrid = 250, nSteps=1000,nRerun = 5,tol = 1e-4)
 
     s1 = size(measure1)
     s2 = size(measure2)

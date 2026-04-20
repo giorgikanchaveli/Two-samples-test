@@ -1,59 +1,95 @@
-using Random
-using Distributions
 using Test
+include("distances/hipm.jl")
+include("distributions.jl")
+include("hugo_marta_hipm.jl")
 
-include("methods.jl")
-include("hugo_hipm.jl")
 
-# ----------------------------
-# Helpers
-# ----------------------------
 
-function hiersample_to_measure(h)
-    nTop, nBottom = size(h.atoms)
-    measure = zeros(nTop, nBottom, 2)
-    measure[:, :, 1] .= h.atoms
-    measure[:, :, 2] .= 1.0 / nBottom
-    return measure
+function to_hugo_marta(atoms_1, weights_1, atoms_2, weights_2)
+    s = size(atoms_1)
+    measure_1 = zeros(s[1], s[2], 2)
+    measure_2 = zeros(s[1], s[2], 2)
+
+    measure_1[:,:,1] = atoms_1
+    measure_2[:,:,1] = atoms_2
+
+    measure_1[:,:,2] = weights_1
+    measure_2[:,:,2] = weights_2
+
+    a = min(minimum(atoms_1), minimum(atoms_2))
+    b = max(maximum(atoms_1), maximum(atoms_2))
+
+    return measure_1, measure_2, a, b
+end
+
+function to_mine(atoms_1, weights_1, atoms_2, weights_2)
+    a = min(minimum(atoms_1), minimum(atoms_2))
+    b = max(maximum(atoms_1), maximum(atoms_2)) 
+    return atoms_1, atoms_2, weights_1, weights_2, a, b
 end
 
 
-function compare_on_hiersamples(h1, h2; n_grid=250, seed=2024,
-                                n_steps=1000, n_rerun=5, tol=1e-4, verbose=true)
 
-    m1 = hiersample_to_measure(h1)
-    m2 = hiersample_to_measure(h2)
-    a = minimum((h1.a, h2.a))
-    b = maximum((h1.b, h2.b))
+function weights_uniform_diff_atoms()
+    atoms_1 = fill(2.0, (10,15))
+    atoms_2 = fill(3.0, (10,15))
+    weights = fill(1.0/15, (10, 15))
+    return atoms_1, weights, atoms_2, weights
+end
 
-    Random.seed!(seed)
-    v_mine = dlip(h1, h2, a, b; n_grid=n_grid, n_steps=n_steps, n_rerun=n_rerun, tol=tol)
+function weights_random_random_atoms()
+    n, m = 150, 200
+    atoms_1 = rand(n, m)
+    atoms_2 = rand(n, m)
+    weights_1 = rand(n, m)
+    weights_1 ./= sum(weights_1, dims = 2)
+    weights_2 = rand(n, m)
+    weights_2 ./= sum(weights_2, dims = 2)
 
-    Random.seed!(seed)
-    v_hugo = dlip_hugo(m1, m2, a, b, n_grid, n_steps, n_rerun, tol)[1]
+    return atoms_1, weights_1, atoms_2, weights_2
+end
 
-    diff = abs(v_mine - v_hugo)
 
-    if verbose
-        println("mine  = ", v_mine)
-        println("hugo  = ", v_hugo)
-        println("diff  = ", diff)
-        println("close = ", isapprox(v_mine, v_hugo; atol=1e-4, rtol=1e-4))
+function random_h_s(q::LawRPM) 
+    n, m = 100, 200
+    h_1, h_2 = generate_hiersample(q, n, m), generate_hiersample(q, n, m)
+    atoms_1, atoms_2 = h_1.atoms, h_2.atoms
+    weights_1 = fill(1.0 / m, (n, m))
+    weights_2 = fill(1.0 / m, (n, m))
+    return atoms_1, weights_1, atoms_2, weights_2
+end
+
+
+
+function create_test_cases()
+    test_cases = []
+
+    push!(test_cases, weights_random_random_atoms())
+    push!(test_cases, weights_uniform_diff_atoms())
+    push!(test_cases, random_h_s(DP(1.0, Uniform(0.0,1.0))))
+    push!(test_cases, random_h_s(normal_normal_B(1.0,2.0,3.0)))
+    for i in 1:7
+        push!(test_cases, random_h_s(DP(i * 1.0 + 1.0, Normal(i*1.0, i*1.2))))
     end
-
-    return v_mine, v_hugo, diff
+    return test_cases
 end
 
-Random.seed!(42)
-q1 = normal_normal_A(1.0,2.0)
-q2 = normal_normal_B(1.0,1.0,9.0)
+@testset "Checking new HIPM" begin
+  
 
-for (n, m) in [(1,1), (10,2), (20,3),(90,90)]
-    h1 = generate_hiersample(q1, n, m)
-    h2 = generate_hiersample(q2, n, m)
+    test_inputs = create_test_cases()
 
-    println("\nCase n = $n, m = $m")
-    compare_on_hiersamples(h1, h2; n_grid=250, seed=2024, n_steps=300, n_rerun=5, tol=1e-4, verbose=true)
+    for x in test_inputs
+        old_output = dlip_hugo_marta(to_hugo_marta(x...)...; nRerun=25)[1]
+        new_output = dlip(to_mine(x...)...; n_rerun=25)
+     
+        @test isapprox(old_output, new_output; atol=1e-4, rtol=1e-12)
+    end
 end
 
-println("\nAll tests completed.")
+
+
+
+
+
+

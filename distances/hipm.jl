@@ -25,28 +25,6 @@ function project_atom(atom::Float64, a::Float64, b::Float64, n_grid::Int)
     return round(Int,(atom - a) / (b-a) * n_grid)+1
 end
 
-"""
-    project_weights
-
-Projects uniform weights of atoms on the grid on [a,b]. Firstly, we obtain the point on the grid that is closest to given atom and then
-associate uniform weight for it.
-
-# Arguments:
-    atoms::Vector{Float64}  :  atoms to project
-    a::Float64              :  left end of interval
-    b::Float64              :  right end of interval
-    n_grid::Int             :  number of grid points on [a,b].
-"""
-function project_weights(atoms::Vector{Float64}, a::Float64, b::Float64, n_grid::Int)
-    
-    weights_on_grid = zeros(n_grid+1)
-    m = length(atoms)
-    for i=1:m 
-        weights_on_grid[project_atom(atoms[i],a,b,n_grid)] += 1.0 / m
-    end
-
-    return weights_on_grid
-end 
 
 """
     project_weights
@@ -73,36 +51,28 @@ function project_weights(atoms::Vector{Float64}, weights::Vector{Float64}, a::Fl
     return weights_on_grid
 end 
 
-
-
 """
-    project_weights_atoms
+    project_weights
 
-Projects set of atoms and uniform weights on the grid.
+Projects uniform weights of atoms on the grid on [a,b]. Firstly, we obtain the point on the grid that is closest to given atom and then
+associate uniform weight for it.
 
 # Arguments:
-    atoms::AbstractArray{Float64,2}
-    a::Float64
-    b::Float64
-    n_grid::Int
+    atoms::Vector{Float64}  :  atoms to project
+    a::Float64              :  left end of interval
+    b::Float64              :  right end of interval
+    n_grid::Int             :  number of grid points on [a,b].
 """
-function project_weights_atoms(atoms::AbstractArray{Float64,2},
-                a::Float64, b::Float64, n_grid::Int)
-    n = size(atoms)[1]
-    
-    weights_atoms = zeros(n, n_grid + 1)
-    for i in 1:n
-        weights_atoms[i, :] .= project_weights(atoms[i, :], a, b, n_grid)
-    end
-    return weights_atoms
-end
+function project_weights(atoms::Vector{Float64}, a::Float64, b::Float64, n_grid::Int)
+    return project_weights(atoms, fill(1.0 / length(atoms),length(atoms) ), a, b, n_grid)
+end 
 
 
 
 """
-    project_weights_atoms
+    project_weights
 
-Projects set of atoms and specified weights on the grid.
+Projects vectors of weights on the grid.
 
 # Arguments:
     atoms::AbstractArray{Float64,2}
@@ -111,7 +81,7 @@ Projects set of atoms and specified weights on the grid.
     b::Float64
     n_grid::Int
 """
-function project_weights_atoms(atoms::AbstractArray{Float64,2}, weights::AbstractArray{Float64,2},
+function project_weights(atoms::AbstractArray{Float64,2}, weights::AbstractArray{Float64,2},
                 a::Float64, b::Float64, n_grid::Int)
     
     n = size(atoms)[1]
@@ -123,6 +93,27 @@ function project_weights_atoms(atoms::AbstractArray{Float64,2}, weights::Abstrac
 
     return weights_atoms
 end
+
+"""
+    project_weights
+
+Projects vectors of uniform weights on the grid.
+
+# Arguments:
+    atoms::AbstractArray{Float64,2}
+    a::Float64
+    b::Float64
+    n_grid::Int
+"""
+function project_weights(atoms::AbstractArray{Float64,2},
+                a::Float64, b::Float64, n_grid::Int)
+    return project_weights(atoms, fill(1.0 / size(atoms)[2], size(atoms)), a, b, n_grid)
+end
+
+
+
+
+
 
 function build_eval_matrix_grid(a::Float64, b::Float64, n_grid::Int)
 
@@ -385,8 +376,8 @@ Function to compute HIPM when only atoms are given.
 function dlip(atoms_1::AbstractArray{Float64,2}, atoms_2::AbstractArray{Float64,2}, a::Float64, b::Float64; n_grid::Int = 250,
                 n_steps::Int=1000, n_rerun::Int = 5,tol::Float64 = 1e-4, max_time::Float64 = 0.5)
     
-    weights_atoms_1 = project_weights_atoms(atoms_1, a, b, n_grid)
-    weights_atoms_2 = project_weights_atoms(atoms_2, a, b, n_grid)
+    weights_atoms_1 = project_weights(atoms_1, a, b, n_grid)
+    weights_atoms_2 = project_weights(atoms_2, a, b, n_grid)
 
     return dlip_projected_measures(weights_atoms_1, weights_atoms_2, a, b; n_grid, n_steps, n_rerun, tol, max_time)
 end
@@ -437,7 +428,7 @@ function dlip(atoms_1::AbstractArray{Float64,2}, atoms_2::AbstractArray{Float64,
               a::Float64, b::Float64; n_grid::Int = 250,
                 n_steps::Int=1000, n_rerun::Int = 5,tol::Float64 = 1e-4, max_time::Float64 = 0.5)
     
-    weights_atoms_1 = project_weights_atoms(atoms_1, weights_1, a, b, n_grid)
-    weights_atoms_2 = project_weights_atoms(atoms_2, weights_2, a, b, n_grid)
+    weights_atoms_1 = project_weights(atoms_1, weights_1, a, b, n_grid)
+    weights_atoms_2 = project_weights(atoms_2, weights_2, a, b, n_grid)
     return dlip_projected_measures(weights_atoms_1, weights_atoms_2, a, b; n_grid, n_steps, n_rerun, tol, max_time)
 end
