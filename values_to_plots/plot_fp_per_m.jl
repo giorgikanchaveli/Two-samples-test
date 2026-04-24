@@ -34,9 +34,8 @@ function summarize_by_m(df::DataFrame, value_col::Symbol)
     return out
 end
 
-# ------------------------------------------------------------
-# NEW: compute global y-limits across all files
-# ------------------------------------------------------------
+
+
 function compute_global_ylims(folder::String)
     ymin, ymax = Inf, -Inf
 
@@ -61,7 +60,7 @@ function compute_global_ylims(folder::String)
     return (ymin, ymax)
 end
 
-function make_plot_for_file(folder::String, filename::String, outdir::String, ylims)
+function make_plot_for_file(folder::String, filename::String, output_dir::String, ylims)
     base = splitext(filename)[1]
     filepath = joinpath(folder, filename)
     df = CSV.read(filepath, DataFrame)
@@ -115,26 +114,27 @@ function make_plot_for_file(folder::String, filename::String, outdir::String, yl
     # ------------------------------------------------------------
     hline!(p, [0.05]; linestyle = :dash, label = "0.05")
 
-    outfile = joinpath(outdir, base * ".png")
+    outfile = joinpath(output_dir, base * ".png")
     savefig(p, outfile)
 
     println("Saved plot: $outfile")
 end
 
-function make_plots_from_folder(folder::String, outdir::String)
-    mkpath(outdir)
+function make_plots_from_folder(; 
+    input_dir = joinpath(pwd(), "values", "fp_per_m"),
+    output_dir = joinpath(pwd(), "plots", "fp_per_m")
+)   
+    mkpath(output_dir)
 
     # compute shared y-limits once
-    ylims = compute_global_ylims(folder)
+    ylims = compute_global_ylims(input_dir)
 
-    for filename in readdir(folder)
+    for filename in readdir(input_dir)
         if startswith(filename, "fp_per_m") && endswith(filename, ".csv")
-            make_plot_for_file(folder, filename, outdir, ylims)
+            make_plot_for_file(input_dir, filename, output_dir, ylims)
         end
     end
 end
 
-make_plots_from_folder(
-    joinpath(pwd(), "values", "permutation_simulations", "fp_per_m"),
-    joinpath(pwd(), "plots", "permutation_simulations", "fp_per_m")
+make_plots_from_folder(    
 )
