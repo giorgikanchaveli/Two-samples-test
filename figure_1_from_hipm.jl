@@ -26,12 +26,12 @@ end
 
 
 
-function values_for_fig_1()
+function values_for_fig_left()
     Q_1 = DP(1.0, Uniform(-0.5, 0.5))
     Q_2 = DP(1.0, MixtureModel([Uniform(-1.0, -0.75), Uniform(0.75, 1.0)]))
 
-    nReps = 5
-    ns = [16, 32, 64, 128, 256,512]
+    nReps = 24
+    ns = [16, 32, 64, 128, 256, 512]
     m = 5000
     
     mean_distances_wow = zeros(length(ns))
@@ -61,11 +61,11 @@ end
 
 
 
-function values_for_fig_2()
+function values_for_fig_right()
     Q = DP(1.0, Uniform(0.0, 1.0))
 
     nReps = 24
-    ns = [16, 32, 64, 128, 256,512]
+    ns = [16, 32, 64, 128, 256, 512]
     m = 5000
     
     mean_distances_wow = zeros(length(ns))
@@ -93,8 +93,8 @@ function values_for_fig_2()
         )
 end
 
-function plot_fig_1(df::DataFrame)
-    nReps = 5
+function plot_fig_left(df::DataFrame)
+    nReps = 24
     plot_title = "Fig 1, Left"
 
     hipm_band = 1.96 .* df.std_distances_hipm ./ sqrt(nReps)
@@ -139,8 +139,8 @@ function plot_fig_1(df::DataFrame)
 end
 
 
-function plot_fig_2(df::DataFrame)
-    nReps = 5
+function plot_fig_right(df::DataFrame)
+    nReps = 24
     plot_title = "Fig 1, Right"
 
     hipm_band = 1.96 .* df.std_distances_hipm ./ sqrt(nReps)
@@ -180,9 +180,10 @@ function plot_fig_2(df::DataFrame)
 end
 
 
-df = values_for_fig_2()
-plot_fig_2(df)
-
+df_fig_left = values_for_fig_left()
+df_fig_right = values_for_fig_right()
+plot_left = plot_fig_left(df_fig_left)
+plot_right = plot_fig_right(df_fig_right)
 
 
 
