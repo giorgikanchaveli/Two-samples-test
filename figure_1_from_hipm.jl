@@ -188,3 +188,6 @@ plot_right = plot_fig_right(df_fig_right)
 
 
 
+
+savefig(plot_left, "fig_left.png")
+savefig(plot_right, "fig_right.png")
