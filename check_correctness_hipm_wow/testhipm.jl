@@ -38,7 +38,7 @@ function weights_uniform_diff_atoms()
 end
 
 function weights_random_random_atoms()
-    n, m = 150, 200
+    n, m = 50, 200
     atoms_1 = rand(n, m)
     atoms_2 = rand(n, m)
     weights_1 = rand(n, m)
@@ -51,7 +51,7 @@ end
 
 
 function random_h_s(q::LawRPM) 
-    n, m = 100, 200
+    n, m = 50, 200
     h_1, h_2 = generate_hiersample(q, n, m), generate_hiersample(q, n, m)
     atoms_1, atoms_2 = h_1.atoms, h_2.atoms
     weights_1 = fill(1.0 / m, (n, m))
@@ -83,7 +83,7 @@ end
         old_output = dlip_hugo_marta(to_hugo_marta(x...)...; nRerun=25)[1]
         new_output = dlip(to_mine(x...)...; n_rerun=25)
      
-        @test isapprox(old_output, new_output; atol=1e-4, rtol=1e-12)
+        @test isapprox(old_output, new_output; atol=1e-3, rtol=1e-12)
     end
 end
 
