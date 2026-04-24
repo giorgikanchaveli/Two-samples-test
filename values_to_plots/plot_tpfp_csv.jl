@@ -23,7 +23,7 @@ function make_title(filename::String)
     return isempty(values) ? prefix : prefix * "_" * join(values, "_")
 end
 
-function make_permutation_plots(; 
+function make_plots(; 
     input_dir = joinpath(pwd(), "values", "fp_tp"),
     output_dir = joinpath(pwd(), "plots", "fp_tp")
 )
@@ -102,4 +102,4 @@ function make_permutation_plots(;
 end
 
 # Run
-make_permutation_plots()
+make_plots()
