@@ -4,11 +4,11 @@ using Plots
 
 function make_title(filename::String)
     name = splitext(filename)[1]
-    parts = split(name, "_")
+    parts = split(name, "_") # Breaks the string into pieces
 
     prefix = parts[1]
 
-    skip_keys = Set(["n", "m", "S", "n_perm", "perm"])
+    skip_keys = Set(["n", "m", "S", "n_perm", "perm"]) # keys to ignore
 
     values = String[]
     for p in parts
@@ -24,16 +24,19 @@ function make_title(filename::String)
 end
 
 function make_permutation_plots(; 
-    input_dir = joinpath(pwd(), "values", "permutation_simulations", "fp_tp"),
-    output_dir = joinpath(pwd(), "plots", "permutation_simulations", "fp_tp")
+    input_dir = joinpath(pwd(), "values", "fp_tp"),
+    output_dir = joinpath(pwd(), "plots", "fp_tp")
 )
 
     mkpath(output_dir)
 
+    # readdir: returns list of file and folders in that folder as strings.
+    # f -> endswith(lowercase(f), ".csv"): for a file name (string) f, return true iff ends with .csv
+    # filter: keeps only the elements of a collection that satisfy a condition
     csv_files = filter(f -> endswith(lowercase(f), ".csv"), readdir(input_dir))
 
     for file in csv_files
-        lower_file = lowercase(file)
+        lower_file = lowercase(file) # Converts the current filename to lowercase
         filepath = joinpath(input_dir, file)
 
         # Determine prefix (fp or tp)
@@ -90,6 +93,7 @@ function make_permutation_plots(;
         )
 
         # Save
+        # splitext(file)[1]: splits file name with two elements one before "." and one after (including ".").
         output_path = joinpath(output_dir, splitext(file)[1] * ".png")
         savefig(p, output_path)
 
