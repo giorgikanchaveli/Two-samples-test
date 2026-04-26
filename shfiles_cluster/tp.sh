@@ -1,9 +1,9 @@
 #!/bin/bash -l
 #SBATCH --job-name=tp                        # name of the SLURM job (shows up in queue)
-#SBATCH --partition=defq                       # which partition/queue to use
+#SBATCH --partition=compute                       # which partition/queue to use
 #SBATCH --ntasks=1                                # number of tasks (1 is fine for Julia)
 #SBATCH --cpus-per-task=20  					  # number of cores
-#SBATCH --array=1-8                               # To run several jobs
+#SBATCH --array=1-1                               # To run several jobs
 #SBATCH --output=/home/3049277/logs/%x_%A_%a.out  # standard output log file
 #SBATCH --error=/home/3049277/logs/%x_%A_%a.err   # standard error log file
 #SBATCH --chdir=/home/3049277/Two-samples-test # working directory for the job
@@ -20,14 +20,7 @@ echo "Running from: $(pwd)"                    # print the current working direc
 # --- Simulation parameter configuration ---
 # Format: "label_q n m S n_perm"
 configs=(
-    "1 1 100 10 1000 100"
-    "1 2 100 10 1000 100"
-    "2 3 100 10 1000 100"
-    "2 4 100 10 1000 100"
     "3 5 100 10 1000 100"
-    "3 6 100 10 1000 100"
-    "4 7 100 10 1000 100"
-    "4 8 100 10 1000 100"
 )
 
 # Extract parameters for the current task (0-indexed array)
