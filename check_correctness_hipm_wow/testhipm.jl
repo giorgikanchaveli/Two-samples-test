@@ -1,6 +1,6 @@
 using Test
-include("distances/hipm.jl")
-include("distributions.jl")
+include("../distances/hipm.jl")
+include("../distributions.jl")
 include("hugo_marta_hipm.jl")
 
 
@@ -51,7 +51,7 @@ end
 
 
 function random_h_s(q::LawRPM) 
-    n, m = 50, 200
+    n, m = 30, 200
     h_1, h_2 = generate_hiersample(q, n, m), generate_hiersample(q, n, m)
     atoms_1, atoms_2 = h_1.atoms, h_2.atoms
     weights_1 = fill(1.0 / m, (n, m))
@@ -80,10 +80,10 @@ end
     test_inputs = create_test_cases()
 
     for x in test_inputs
-        old_output = dlip_hugo_marta(to_hugo_marta(x...)...; nRerun=25)[1]
-        new_output = dlip(to_mine(x...)...; n_rerun=25)
+        old_output = dlip_hugo_marta(to_hugo_marta(x...)...; nRerun=5)[1]
+        new_output = dlip(to_mine(x...)...; n_rerun=5)
      
-        @test isapprox(old_output, new_output; atol=1e-3, rtol=1e-12)
+        @test isapprox(old_output, new_output; atol=1e-7, rtol=1e-12)
     end
 end
 
