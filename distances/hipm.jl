@@ -242,8 +242,8 @@ function dlip_projected_measures(weights_atoms_1::AbstractArray{Float64,2}, weig
             else 
                 # Random guess via the first few Fourier coefficients
                 coeff = 2*rand(3) .- 1.
-                unknown = coeff[1]/2 * cos.( LinRange(0,pi,n_grid) ) .+ coeff[2]/4 * cos.( 2 .* LinRange(0,pi,n_grid) ) 
-                                    .+ coeff[3]/8 * cos.( 3 .* LinRange(0,pi,n_grid) ) 
+                unknown = coeff[1]/2 * cos.( LinRange(0,pi,n_grid) ) .+ coeff[2]/4 * cos.( 2 .* LinRange(0,pi,n_grid) ) .+ coeff[3]/8 * cos.( 3 .* LinRange(0,pi,n_grid) ) 
+
                 unknown = clamp.(unknown,-1,1)
             end
 
