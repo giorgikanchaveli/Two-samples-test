@@ -51,7 +51,7 @@ end
 
 
 function random_h_s(q::LawRPM) 
-    n, m = 30, 200
+    n, m = 15, 200
     h_1, h_2 = generate_hiersample(q, n, m), generate_hiersample(q, n, m)
     atoms_1, atoms_2 = h_1.atoms, h_2.atoms
     weights_1 = fill(1.0 / m, (n, m))
@@ -68,7 +68,7 @@ function create_test_cases()
     push!(test_cases, weights_uniform_diff_atoms())
     push!(test_cases, random_h_s(DP(1.0, Uniform(0.0,1.0))))
     push!(test_cases, random_h_s(normal_normal_B(1.0,2.0,3.0)))
-    for i in 1:7
+    for i in 1:10
         push!(test_cases, random_h_s(DP(i * 1.0 + 1.0, Normal(i*1.0, i*1.2))))
     end
     return test_cases
@@ -80,10 +80,12 @@ end
     test_inputs = create_test_cases()
 
     for x in test_inputs
+        Random.seed!(1234)
         old_output = dlip_hugo_marta(to_hugo_marta(x...)...; nRerun=5)[1]
+        Random.seed!(1234)
         new_output = dlip(to_mine(x...)...; n_rerun=5)
      
-        @test isapprox(old_output, new_output; atol=1e-7, rtol=1e-12)
+        @test isapprox(old_output, new_output; atol=1e-9, rtol=1e-12)
     end
 end
 
