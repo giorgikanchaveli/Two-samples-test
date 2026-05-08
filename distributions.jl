@@ -173,8 +173,32 @@ end
 
 
 """
+    discr_law
+
+Struct for a discrete law of RPM. The latent probability measure is selected from a finite list of
+distributions according to a weight vector, and sequence is generated from it.
+
+# Arguments:
+    weights::Vector{Float64}       :  probability of selecting each distribution; must be non-negative and sum to 1.
+    distributions::Vector{<:UnivariateDistribution}  :  list of distributions to choose from (e.g. Normal(0,1), Uniform(0,1)).
+
+"""
+struct discr_law <: LawRPM
+    weights::Vector{Float64}
+    distributions::Vector{UnivariateDistribution}
+    function discr_law(weights::Vector{Float64}, distributions::Vector{<:UnivariateDistribution})
+        length(weights) == length(distributions) || throw(ArgumentError("Length of weights and distributions must be equal. Got $(length(weights)) and $(length(distributions))."))
+        all(w >= 0 for w in weights) || throw(ArgumentError("All weights must be non-negative."))
+        sum_weights = sum(weights)
+        abs(sum_weights - 1.0) < 1e-8 || throw(ArgumentError("Weights must sum to 1. Got sum = $sum_weights."))
+        return new(weights, Vector{UnivariateDistribution}(distributions))
+    end
+end
+
+
+"""
     mixture
-    
+
 struct for Q, law of RPM, defined as Q = λQ_1 + (1 - λ)Q_2 where Q_1,Q_2 are another laws of RPM.
 
 # Arguments:
@@ -370,6 +394,21 @@ function sample_exch_seq(law_rpm::mixture, m::Int)
     else
         return sample_exch_seq(law_rpm.law_rpm_2, m) # generate samples from law_rpm_2
     end
+end
+
+
+"""
+    sample_exch_seq
+Function to generate m samples from discr_law law of RPM. A distribution is selected from the list
+according to the weight vector, and then m i.i.d. observations are generated from it.
+
+# Arguments:
+    law_rpm::discr_law  :  discrete law of RPM.
+    m::Int              :  number of samples to generate.
+"""
+function sample_exch_seq(law_rpm::discr_law, m::Int)
+    idx = sample(1:length(law_rpm.distributions), Weights(law_rpm.weights))
+    return rand(law_rpm.distributions[idx], m)
 end
 
 
