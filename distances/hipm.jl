@@ -22,6 +22,7 @@ Projects atom into the closest point on the grid on [a,b]. Grid is equally space
 function project_atom(atom::Float64, a::Float64, b::Float64, n_grid::Int)
 
     atom>=a && atom <= b || throw(ArgumentError("PROBLEM with the projection: Atom location $(atom) is outside of bounds [$a, $b]"))
+    a == b && return 1
     return round(Int,(atom - a) / (b-a) * n_grid)+1
 end
 
@@ -135,7 +136,7 @@ end
 function eval_objective_grid(unknown::Vector{Float64}, weights_atoms_1::AbstractArray{Float64, 2},
                 weights_atoms_2::AbstractArray{Float64, 2}, Q::Matrix{Float64},derivative::Bool)
     # derivative: true or false, to decide if to output the derivative
-    # assumes that number of rows in weights_atoms_1 and weights_atoms_1 are the same.
+    # assumes that number of rows in weights_atoms_1 and weights_atoms_2 are the same.
     
     n = size(weights_atoms_1)[1]
     n_grid = size(Q)[2]
@@ -151,7 +152,7 @@ function eval_objective_grid(unknown::Vector{Float64}, weights_atoms_1::Abstract
 
     # Compute the value of the integral of f 
     integral_f = zeros(2,n)  
-    w_1 = view(weights_atoms_1, :, :) # Matrix (n x n_grid)
+    w_1 = view(weights_atoms_1, :, :) # Matrix (n x n_grid+1)
     mul!(view(integral_f, 1, :), w_1, f)
     w_2 = view(weights_atoms_2, :, :)
     mul!(view(integral_f, 2, :), w_2, f)
@@ -204,13 +205,13 @@ Function to compute HIPM after all the weights and atoms are projected on the gr
     a::Float64                                       
     n_grid::Int = 250                                     
     n_steps::Int=1000                          :  number of steps for Gradient ascent.
-    n_rerun::Int = 100                           :  number of times to do optimization algorithm when n_1 = n_2.
+    n_rerun::Int = 10                           :  number of times to do optimization algorithm when n_1 = n_2.
     tol::Float64 = 1e-4                        :  tolerance level to stop optimization process when n_1 = n_2.
     max_time::Float64 = 10.0                   :  maximum amount of time to run optimization algorithm when n_1 != n_2.
 """
 function dlip_projected_measures(weights_atoms_1::AbstractArray{Float64,2}, weights_atoms_2::AbstractArray{Float64,2},
          a::Float64, b::Float64; 
-         n_grid::Int = 250, n_steps::Int=1000, n_rerun::Int = 100,tol::Float64 = 1e-4,
+         n_grid::Int = 250, n_steps::Int=1000, n_rerun::Int = 10,tol::Float64 = 1e-4,
          max_time::Float64 = 10.0)
     size_1 = size(weights_atoms_1)
     size_2 = size(weights_atoms_2)
@@ -369,12 +370,12 @@ Function to compute HIPM when only atoms are given.
     a::Float64                                        
     n_grid::Int = 250                                    
     n_steps::Int=1000                          :  number of steps for Gradient ascent.
-    n_rerun::Int = 100                           :  number of times to do optimization algorithm when n_1 = n_2.
+    n_rerun::Int = 10                           :  number of times to do optimization algorithm when n_1 = n_2.
     tol::Float64 = 1e-4                        :  tolerance level to stop optimization process when n_1 = n_2.
     max_time::Float64 = 0.5                   :  maximum amount of time to run optimization algorithm when n_1 != n_2.
 """
 function dlip(atoms_1::AbstractArray{Float64,2}, atoms_2::AbstractArray{Float64,2}, a::Float64, b::Float64; n_grid::Int = 250,
-                n_steps::Int=1000, n_rerun::Int = 100,tol::Float64 = 1e-4, max_time::Float64 = 0.5)
+                n_steps::Int=1000, n_rerun::Int = 10, tol::Float64 = 1e-4, max_time::Float64 = 0.5)
     
     weights_atoms_1 = project_weights(atoms_1, a, b, n_grid)
     weights_atoms_2 = project_weights(atoms_2, a, b, n_grid)
@@ -394,12 +395,12 @@ Function to compute HIPM when only hierarchical sample objects are given.
     a::Float64                                         
     n_grid::Int = 250                                     
     n_steps::Int=1000                          :  number of steps for Gradient ascent.
-    n_rerun::Int = 100                           :  number of times to do optimization algorithm when n_1 = n_2.
+    n_rerun::Int = 10                           :  number of times to do optimization algorithm when n_1 = n_2.
     tol::Float64 = 1e-4                        :  tolerance level to stop optimization process when n_1 = n_2.
     max_time::Float64 = 10.0                   :  maximum amount of time to run optimization algorithm when n_1 != n_2.
 """
 function dlip(h_1::HierSample, h_2::HierSample, a::Float64, b::Float64; n_grid::Int = 250,
-                n_steps::Int=1000, n_rerun::Int = 100,tol::Float64 = 1e-4, max_time::Float64 = 0.5)
+                n_steps::Int=1000, n_rerun::Int = 10,tol::Float64 = 1e-4, max_time::Float64 = 0.5)
     return dlip(h_1.atoms, h_2.atoms, a, b; n_grid, n_steps, n_rerun, tol, max_time)
 end
 
@@ -419,14 +420,14 @@ Function to compute HIPM when weights are specified.
     a::Float64                                         
     n_grid::Int = 250                                     
     n_steps::Int=1000                          :  number of steps for Gradient ascent.
-    n_rerun::Int = 100                           :  number of times to do optimization algorithm when n_1 = n_2.
+    n_rerun::Int = 10                           :  number of times to do optimization algorithm when n_1 = n_2.
     tol::Float64 = 1e-4                        :  tolerance level to stop optimization process when n_1 = n_2.
     max_time::Float64 = 10.0                   :  maximum amount of time to run optimization algorithm when n_1 != n_2.
 """
 function dlip(atoms_1::AbstractArray{Float64,2}, atoms_2::AbstractArray{Float64,2},
               weights_1::AbstractArray{Float64,2}, weights_2::AbstractArray{Float64,2},
               a::Float64, b::Float64; n_grid::Int = 250,
-                n_steps::Int=1000, n_rerun::Int = 100,tol::Float64 = 1e-4, max_time::Float64 = 0.5)
+                n_steps::Int=1000, n_rerun::Int = 10,tol::Float64 = 1e-4, max_time::Float64 = 0.5)
     
     weights_atoms_1 = project_weights(atoms_1, weights_1, a, b, n_grid)
     weights_atoms_2 = project_weights(atoms_2, weights_2, a, b, n_grid)

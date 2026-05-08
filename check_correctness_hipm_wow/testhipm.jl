@@ -59,8 +59,8 @@ function random_h_s(q::LawRPM)
     return atoms_1, weights_1, atoms_2, weights_2
 end
 
-function random_h_s(q_1::LawRPM, q_2::LawRPM) 
-    n, m = 100, 200
+function random_h_s(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int) 
+    
     h_1, h_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
     atoms_1, atoms_2 = h_1.atoms, h_2.atoms
     weights_1 = fill(1.0 / m, (n, m))
@@ -78,7 +78,7 @@ function create_test_cases()
     # push!(test_cases, random_h_s(normal_normal_B(1.0,2.0,3.0)))
     for i in 1:20
         # push!(test_cases, random_h_s(normal_normal_B(1.0,2.0,1.5), normal_normal_A(1.5,1.0)))
-        push!(test_cases, random_h_s(DP(1.0, Uniform(0.0,1.0)), DP(2.0, Uniform(0.0,1.0))))
+        push!(test_cases, random_h_s(DP(1.0, Uniform(0.0,1.0)), DP(2.0, Uniform(0.0,5.0)), 10, 20))
     end
     return test_cases
 end
@@ -90,12 +90,12 @@ end
 
     for x in test_inputs
    
-        old_output = dlip(to_mine(x...)...; n_rerun=100)
-        # old_output = dlip_hugo_marta(to_hugo_marta(x...)...; nRerun=5)[1]
-
-        new_output = dlip(to_mine(x...)...; n_rerun=100)
+        Random.seed!(12345)
+        old_output = dlip_hugo_marta(to_hugo_marta(x...)...; nRerun=10)[1]
+        Random.seed!(12345)
+        new_output = dlip(to_mine(x...)...; n_rerun=10)
      
-        @test isapprox(old_output, new_output; atol=1e-3, rtol=1e-12)
+        @test isapprox(old_output, new_output; atol=1e-9, rtol=1e-12)
     end
 end
 

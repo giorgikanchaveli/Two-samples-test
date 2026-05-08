@@ -208,7 +208,7 @@ Given hierchical samples, obtains the threshold using HIPM via bootstrap/permuta
     bootstrap::Bool                     :  Boolean variable. If true use bootstrap, otherwise permutation.
 
 """
-function threshold_hipm(h_1::HierSample, h_2::HierSample, θ::Union{Float64, Vector{Float64}}, n_samples::Int, bootstrap::Bool)
+function threshold_hipm(h_1::HierSample, h_2::HierSample, θ::Union{Float64, Vector{Float64}}, n_samples::Int, bootstrap::Bool; n_rerun::Int = 10)
     # Obtains threshold for HIPM via permutation or bootstrap approach.
     n_1 = size(h_1.atoms)[1]
     n_2 = size(h_2.atoms)[1]
@@ -216,7 +216,7 @@ function threshold_hipm(h_1::HierSample, h_2::HierSample, θ::Union{Float64, Vec
 
     a = minimum((h_1.a,h_2.a))
     b = maximum((h_1.b,h_2.b))
-   
+
     samples = zeros(n_samples) # storing bootstrap/permutation samples
     pooled_atoms = vcat(h_1.atoms, h_2.atoms) # collect all rows
 
@@ -225,10 +225,10 @@ function threshold_hipm(h_1::HierSample, h_2::HierSample, θ::Union{Float64, Vec
             indices_1 = sample(1:n_total, n_1; replace = true)
             indices_2 = sample(1:n_total, n_2; replace = true)
 
-            new_atoms_1 = @view pooled_atoms[indices_1,:] 
-            new_atoms_2 = @view pooled_atoms[indices_2,:] 
+            new_atoms_1 = @view pooled_atoms[indices_1,:]
+            new_atoms_2 = @view pooled_atoms[indices_2,:]
 
-            samples[i] = dlip(new_atoms_1, new_atoms_2, a, b)
+            samples[i] = dlip(new_atoms_1, new_atoms_2, a, b; n_rerun)
         end
     else
         for i in 1:n_samples
@@ -236,8 +236,8 @@ function threshold_hipm(h_1::HierSample, h_2::HierSample, θ::Union{Float64, Vec
 
             new_atoms_1 = @view pooled_atoms[random_indices[1:n_1],:] # rows indexed by first n_1 random indices to the atoms_1
             new_atoms_2 = @view pooled_atoms[random_indices[n_1+1:end],:] # rows indexed by the rest of random indices to the atoms_2
-        
-            samples[i] = dlip(new_atoms_1, new_atoms_2, a, b)
+
+            samples[i] = dlip(new_atoms_1, new_atoms_2, a, b; n_rerun)
         end
     end
     return quantile(samples, 1 .- θ) .* sqrt(n_1*n_2 / n_total)
