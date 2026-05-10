@@ -4,10 +4,10 @@ using Plots, StatsPlots
 
 
 # --- parameters ---
-const N_RERUNS  = [5, 10, 20, 50, 100]  # n_rerun values to compare
+const N_RERUNS  = [5, 20, 50]  # n_rerun values to compare
 const θ         = 0.05                   # significance level for the threshold
 const N_SAMPLES = 1000                   # number of permutation samples in threshold_hipm
-const S         = 50                    # number of dlip recomputations to measure variability
+const S         = 100                    # number of dlip recomputations to measure variability
 # ------------------
 
 
@@ -44,12 +44,13 @@ function get_thresholds_distances(n::Int, m::Int)
     distances = Dict{Int, Vector{Float64}}()
 
     for (i, n_rerun) in enumerate(N_RERUNS)
+        @info "n_rerun = $n_rerun"
         # permutation threshold at significance level θ
         thresholds[i] = threshold_hipm(h_1, h_2, θ, N_SAMPLES, false; n_rerun = n_rerun) / sqrt(n / 2)
         # recompute dlip S times on the same fixed h_1, h_2: variability reflects
         # only the randomness of the optimization (controlled by n_rerun)
         distances[N_RERUNS[i]] = [dlip(h_1, h_2, a, b; n_rerun = n_rerun) for _ in 1:S]
-    end
+    end 
     return thresholds, distances
 end
 
@@ -77,7 +78,7 @@ function plot_thresholds_distances(thresholds::Vector{Float64}, distances::Dict{
 
     fig = boxplot(x_box, y_box, label = "distances", color = :steelblue, alpha = 0.6,
                   xlabel = "n_rerun", ylabel = "value",
-                  xticks = (positions, string.(n_reruns)))
+                  xticks = (positions, string.(n_reruns)), legend = false)
     scatter!(fig, positions, thresholds, label = "threshold",
              color = :red, markersize = 6, marker = :circle)
     return fig
@@ -88,7 +89,6 @@ Random.seed!(1234)
 @time thresholds, distances = get_thresholds_distances(100, 100)
 fig = plot_thresholds_distances(thresholds, distances)
 savefig(fig, joinpath(@__DIR__, "nrerun_boxplots.png"))
-
 
 
 
