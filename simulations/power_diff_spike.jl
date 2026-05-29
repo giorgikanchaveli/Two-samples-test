@@ -21,11 +21,11 @@ const S         = 15
 const n_perm    = 70
 const bootstrap = false
 
-const n = 40
+const n = 30
 const m = 50
 
-const Q_2    = unif_spike(100.0, 0.2,  0.0)
-const Q_1_fn = g -> unif_spike(100.0, 0.2, -g)
+const Q_2    = unif_spike(50.0, 0.2,  0.0)
+const Q_1_fn = g -> unif_spike(50.0, 0.2, -g)
 
 const gs = collect(0.0:2.0:10.0)   # spike gap: 0, 2, 4, 6, 8, 10
 
