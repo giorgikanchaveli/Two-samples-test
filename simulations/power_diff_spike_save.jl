@@ -47,8 +47,8 @@ function run_simulation(config::SimConfig)
 
     @info "Starting simulation for power_diff_spike with parameters: n=$n, m=$m, S=$S, n_samples=$n_samples."
 
-    Q_2    = unif_spike(100.0, 0.2,  0.0)
-    Q_1_fn = g -> unif_spike(100.0, 0.2, -g)
+    Q_2    = unif_spike(50.0, 0.2,  0.0)
+    Q_1_fn = g -> unif_spike(50.0, 0.2, -g)
 
     results = map(gs) do g
         hipm, wow = rejection_rate_hipm_wow(Q_1_fn(g), Q_2, n, m, S, θ_vec, n_samples, bootstrap)
