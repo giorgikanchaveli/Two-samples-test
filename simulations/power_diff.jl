@@ -10,19 +10,19 @@ using Plots
 
 include(joinpath(pwd(), "methods.jl"))
 
-const θ_fixed   = 0.05
+const θ_fixed   = 0.1
 const θ_vec     = [θ_fixed]
 const S         = 15
 const n_perm    = 70
 const bootstrap = false
 
-const n = 50
+const n = 30
 const m = 100
 
-const Q_1    = discr_law([0.5, 0.5], [Normal(0.0, 0.2), Normal(0.0, 7.0)])
-const Q_2_fn = δ -> discr_law([0.5, 0.5], [Normal(δ, 0.2), Normal(δ, 7.0)])
+const Q_1    = discr_law([0.5, 0.5], [Normal(0.0, 0.1), Normal(0.0, 7.0)])
+const Q_2_fn = δ -> discr_law([0.5, 0.5], [Normal(δ, 0.1), Normal(δ, 7.0)])
 
-const δs = collect(0.0:0.5:2.0)
+const δs = collect(0.0:0.5:1.5)
 
 @info "Running scale_mix power vs δ experiment (n=$n, m=$m, S=$S)"
 t_start = time()

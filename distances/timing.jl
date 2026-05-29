@@ -11,7 +11,7 @@ include(joinpath(pwd(), "methods.jl"))
 
 const n      = 100
 const m      = 500
-const N_REPS = 50
+const N_REPS = 7
 
 function time_methods(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, n_reps::Int)
     # warmup: one call to each method to avoid measuring JIT compilation

@@ -39,14 +39,18 @@ tp_experiments = [
     #   so between-cluster variance = 0 → SNR_HIPM ≈ 15.9.
     # Grid step ≈ 0.48 on [-10,110] → 21 grid points cover the signal region,
     #   so the optimizer reliably finds the witness.
-    (label = "unif_spike_hipm_win",
-     Q_1 = unif_spike(100.0, 0.2, -10.0),
-     Q_2 = unif_spike(100.0, 0.2,   0.0),
-     n = 40, m = 50),
+    # (label = "unif_spike_hipm_win",
+    #  Q_1 = unif_spike(100.0, 0.2, -10.0),
+    #  Q_2 = unif_spike(100.0, 0.2,   0.0),
+    #  n = 40, m = 50),
     (label = "scale_mix",
      Q_1 = discr_law([0.5, 0.5], [Normal(0.0, 0.2), Normal(0.0, 7.0)]),
      Q_2 = discr_law([0.5, 0.5], [Normal(1.3, 0.2), Normal(1.3, 7.0)]),
-     n = 50, m = 100)
+     n = 30, m = 250),
+     (label = "scale_mix",
+     Q_1 = discr_law([0.5, 0.5], [Normal(0.0, 0.2), Normal(0.0, 7.0)]),
+     Q_2 = discr_law([0.5, 0.5], [Normal(1.3, 0.2), Normal(1.3, 7.0)]),
+     n = 50, m = 250)
     # (label = "normal_shift",
     #  Q_1 = normal_normal_A(0.0, 1.0),
     #  Q_2 = normal_normal_A(0.5, 1.0),
