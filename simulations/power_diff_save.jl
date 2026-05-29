@@ -41,7 +41,7 @@ end
 
 
 function run_simulation(config::SimConfig)
-    δs = collect(0.0:0.2:2.0)
+    δs = collect(0.0:0.1:2.0)
     θ_vec = [config.θ]
     @extract config : n m S n_samples bootstrap
 
