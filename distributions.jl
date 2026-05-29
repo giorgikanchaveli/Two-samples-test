@@ -172,6 +172,33 @@ struct discr_normal<:LawRPM
 end
 
 
+
+"""
+    unif_spike
+
+Struct for a law of RPM where ν = Unif[10, 10+L] and the latent measure is P_u = (1-a)δ_u + aδ_{spike}.
+
+Concretely, given U ~ ν each observation equals U with probability (1-a) and spike with probability a.
+Use spike=0.0 for the first population (Q^1) and spike=1.0 for the second population (Q^2).
+
+# Arguments:
+    L::Float64      :  length of the uniform support interval [10, 10+L]; must be positive.
+    a::Float64      :  weight on the spike atom; must be in (0, 1).
+    spike::Float64  :  location of the spike atom (e.g. 0.0 or 1.0).
+"""
+struct unif_spike <: LawRPM
+    L::Float64
+    a::Float64
+    spike::Float64
+    function unif_spike(L::Float64, a::Float64, spike::Float64)
+        L > 0 || throw(ArgumentError("L must be positive (got L=$L)"))
+        0 < a < 1 || throw(ArgumentError("a must be in (0,1) (got a=$a)"))
+        return new(L, a, spike)
+    end
+end
+
+
+
 """
     discr_law
 
@@ -340,6 +367,19 @@ end
 
 
 
+"""
+    sample_exch_seq
+Function to generate m samples from unif_spike law of RPM. First U is drawn from Unif[10, 10+L],
+then each observation independently equals U with probability (1-a) and spike with probability a.
+
+# Arguments:
+    law_rpm::unif_spike
+    m::Int  :  number of samples to generate.
+"""
+function sample_exch_seq(law_rpm::unif_spike, m::Int)
+    U = rand(Uniform(10.0, 10.0 + law_rpm.L))
+    return [rand() < law_rpm.a ? law_rpm.spike : U for _ in 1:m]
+end
 
 
 
@@ -410,6 +450,8 @@ function sample_exch_seq(law_rpm::discr_law, m::Int)
     idx = sample(1:length(law_rpm.distributions), Weights(law_rpm.weights))
     return rand(law_rpm.distributions[idx], m)
 end
+
+
 
 
 
