@@ -16,10 +16,10 @@ echo "Running from: $(pwd)"
 # --- Simulation parameter configuration ---
 # Format: "n m S n_samples"
 configs=(
-    "20 100 50 70"
-    "30 100 50 70"
-    "50 100 50 70"
-    "100 100 50 70"
+    "20 500 50 100"
+    "30 500 50 100"
+    "50 500 50 100"
+    "100 500 50 100"
 )
 
 # Extract parameters for the current task (0-indexed array)
