@@ -44,7 +44,7 @@ function plot_variance(;
 
     plot!(
         fig, df.τs, df.dm;
-        label = "DM",
+        label = "Fréchet",
         color = :red,
         marker = :circle
     )

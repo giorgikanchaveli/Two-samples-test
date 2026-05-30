@@ -44,7 +44,7 @@ function plot_mean(;
 
     plot!(
         fig, df.δs, df.dm;
-        label = "DM",
+        label = "Fréchet",
         color = :red,
         marker = :circle
     )

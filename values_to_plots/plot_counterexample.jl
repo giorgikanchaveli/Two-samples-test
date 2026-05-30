@@ -44,7 +44,7 @@ function plot_counterexample(;
 
     plot!(
         fig, df.λs, df.dm;
-        label = "DM",
+        label = "Fréchet",
         color = :red,
         marker = :circle
     )
