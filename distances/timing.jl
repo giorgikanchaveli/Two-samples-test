@@ -10,8 +10,8 @@
 include(joinpath(pwd(), "methods.jl"))
 
 const n      = 100
-const m      = 500
-const N_REPS = 7
+const m      = 100
+const N_REPS = 10
 
 function time_methods(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, n_reps::Int)
     # warmup: one call to each method to avoid measuring JIT compilation
@@ -38,7 +38,7 @@ end
 cases = [
     ("Dirichlet Process",
      DP(1.0, Normal(0.0, 1.0)),
-     DP(2.0, Normal(0.0, 1.0)))
+     DP(1.0, Normal(0.0, 1.0)))
 ]
 
 println("n = $n,  m = $m,  N_REPS = $N_REPS\n")
