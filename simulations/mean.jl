@@ -95,7 +95,7 @@ function save_results(df::DataFrame, config::SimConfig)
     fig = plot(
             title = "Rejection rates for 3 schemes",
             xlabel = "δ",
-            ylabel = "Rej rate",
+            ylabel = "Rejection rate",
             xlims=(minimum(df.δs) - 0.05, maximum(df.δs)+ 0.05),
             ylims = (-0.1, 1.1))
     plot!(fig, df.δs, df.dm, label = "DM", color = "red")

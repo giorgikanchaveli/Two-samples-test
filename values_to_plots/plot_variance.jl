@@ -29,7 +29,7 @@ function plot_variance(;
     fig = plot(
         title = "Rejection rates for 3 schemes",
         xlabel = "τs",
-        ylabel = "Rej rate",
+        ylabel = "Rejection rate",
         xlims = (minimum(df.τs) - 0.05, maximum(df.τs) + 0.05),
         ylims = (-0.05, 1.05),
         legend = :right,

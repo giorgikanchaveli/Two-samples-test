@@ -29,7 +29,7 @@ function plot_counterexample(;
     fig = plot(
         title = "Rejection rates for 3 schemes",
         xlabel = "λ",
-        ylabel = "Rej rate",
+        ylabel = "Rejection rate",
         xlims = (minimum(df.λs) - 0.05, maximum(df.λs) + 0.05),
         ylims = (-0.05, 1.05),
         legend = :right,
