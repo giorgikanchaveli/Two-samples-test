@@ -7,18 +7,14 @@ include(joinpath(pwd(),"methods.jl"))
 rpms_1 = [beta_beta_A(1.0, 1.0),
         normal_normal_A(0.0, 1.0),
         DP(1.0, Uniform(0,1)),
-        DP(1.0, Normal(0.0, 1.0)),
-        discr_law([1.0], [DiscreteNonParametric([-1.0, 1.0], [0.5, 0.5])])]
+        DP(1.0, Normal(0.0, 1.0))
+       ]
 
-rpms_2 = [beta_beta_B(1.0, 1.0),
-          beta_beta_A(2.0, 1.0),
-          normal_normal_B(0.0, 1.0, sqrt(2)),
-          normal_normal_A(1.0, 1.0),
+rpms_2 = [beta_beta_A(1.0, 1.5),
+          normal_normal_A(0.0, 1.5),
           DP(2.0, Uniform(0.0, 1.0)),
-          DP(1.0, Beta(1.0,2.0)),
-          DP(2.0, Normal(0.0, 1.0)),
-          DP(1.0, Normal(1.0, 1.0)),
-          discr_law([0.5, 0.5], [DiscreteNonParametric([-1.0],[1.0]),DiscreteNonParametric([1.0],[1.0])])]
+          DP(1.0, Beta(1.0,1.4))
+          ]
 
 function parse_commandline()
     s = ArgParseSettings(description = "Run TP Simulations and Plot")
@@ -26,27 +22,27 @@ function parse_commandline()
         "--label_q_1"
             help = "label for first law of RPM"
             arg_type = Int
-            default = 5
+            default = 2
         "--label_q_2"
             help = "label for second law of RPM"
             arg_type = Int
-            default = 9
+            default = 2
         "--n"
             help = "number of rows n"
             arg_type = Int
-            default = 3
+            default = 100
         "--m"
             help = "number of columns m"
             arg_type = Int
-            default = 1
+            default = 100
         "--S"
             help = "number of mcmc iterations"
             arg_type = Int
-            default = 1
+            default = 16
         "--n_perm"
             help = "number of samples via permutation approach"
             arg_type = Int
-            default = 1
+            default = 70
     end
     return parse_args(s)
 end
@@ -77,15 +73,15 @@ function main()
     config = SimulationConfig(Q_1, Q_2, n, m, S, n_perm)
     θs, tp_hipm, tp_wow = run_simulation(config)
 
-    title_str = "tp_" * string(label_q_1) * "_" * string(label_q_2)
+    title_str = "Power"
 
     p = plot(
         θs, tp_hipm,
-        label = "hipm",
+        label = "HIPM",
         linewidth = 2,
         marker = :circle,
         xlabel = "θ",
-        ylabel = "True Positive Rate",
+        ylabel = "Power",
         title = title_str,
         legend = :best,
         aspect_ratio = :equal,
@@ -93,7 +89,7 @@ function main()
         ylims = (0, 1)
     )
     plot!(p, θs, tp_wow,
-        label = "wow",
+        label = "WoW",
         linewidth = 2,
         marker = :square
     )

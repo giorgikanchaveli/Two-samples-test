@@ -11,24 +11,18 @@ include(joinpath(pwd(),"methods.jl"))
 
 
 # In the following we write list of RPMs. 
-rpms_1 = [beta_beta_A(1.0, 1.0), 
-        normal_normal_A(0.0, 1.0), 
+rpms_1 = [beta_beta_A(1.0, 1.0),
+        normal_normal_A(0.0, 1.0),
         DP(1.0, Uniform(0,1)),
-        DP(1.0, Normal(0.0, 1.0)),
-        discr_law([1.0], [DiscreteNonParametric([-1.0, 1.0], [0.5, 0.5])])]
+        DP(1.0, Normal(0.0, 1.0))
+       ]
 
-
-rpms_2 = [beta_beta_B(1.0, 1.0),
-          beta_beta_A(2.0, 1.0),
-          normal_normal_B(0.0, 1.0, sqrt(2)),
-          normal_normal_A(1.0, 1.0),
+rpms_2 = [beta_beta_A(1.0, 1.5),
+          normal_normal_A(0.0, 1.5),
           DP(2.0, Uniform(0.0, 1.0)),
-          DP(1.0, Beta(1.0,2.0)),
-          DP(2.0, Normal(0.0, 1.0)),
-          DP(1.0, Normal(1.0, 1.0)),
-          discr_law([0.5, 0.5], [DiscreteNonParametric([-1.0],[1.0]),DiscreteNonParametric([1.0],[1.0])])]
+          DP(1.0, Beta(1.0,1.4))
+          ]
 
-    
 
 # Julia always provides the global variable ARGS.
 # When this file is run from the terminal, ARGS contains things writen next to the run command,
@@ -43,11 +37,11 @@ function parse_commandline()
         "--label_q_1"
             help = "label for first law of RPM"
             arg_type = Int
-            default = 5
+            default = 1
         "--label_q_2"
             help = "label for second law of RPM"
             arg_type = Int
-            default = 9
+            default = 1
         "--n"
             help = "number of rows n"
             arg_type = Int

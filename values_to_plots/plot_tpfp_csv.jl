@@ -72,12 +72,14 @@ function make_plots(;
             linewidth = 2,
             marker = :square
         )
-        plot!(p, [0, 1], [0, 1],
-            label = "",
-            linewidth = 1,
-            linestyle = :dash,
-            color = :black
-        )
+        if prefix == "fp"
+            plot!(p, [0, 1], [0, 1],
+                label = "",
+                linewidth = 1,
+                linestyle = :dash,
+                color = :black
+            )
+        end
 
         # Save
         # splitext(file)[1]: splits file name with two elements one before "." and one after (including ".").
