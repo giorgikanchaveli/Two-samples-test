@@ -2,26 +2,6 @@ using CSV
 using DataFrames
 using Plots
 
-function make_title(filename::String)
-    name = splitext(filename)[1]
-    parts = split(name, "_") # Breaks the string into pieces
-
-    prefix = parts[1]
-
-    skip_keys = Set(["n", "m", "S", "n_perm", "perm"]) # keys to ignore
-
-    values = String[]
-    for p in parts
-        if occursin("=", p)
-            key, val = split(p, "=")
-            if !(key in skip_keys)
-                push!(values, val)
-            end
-        end
-    end
-
-    return isempty(values) ? prefix : prefix * "_" * join(values, "_")
-end
 
 function make_plots(; 
     input_dir = joinpath(pwd(), "values", "fp_tp"),
@@ -50,7 +30,8 @@ function make_plots(;
             continue
         end
 
-        ylabel = prefix == "tp" ? "True Positive Rate" : "False Positive Rate"
+        ylabel = prefix == "tp" ? "Power" : "False Positive Rate"
+        title_str = prefix == "tp" ? "Power" : "False Positive Rates"
 
         df = CSV.read(filepath, DataFrame)
 
@@ -71,12 +52,12 @@ function make_plots(;
         p = plot(
         df[!, theta_col],
         df[!, hipm_col],
-        label = "hipm",
+        label = "HIPM",
         linewidth = 2,
         marker = :circle,
         xlabel = "θ",
         ylabel = ylabel,
-        title = make_title(file),
+        title = title_str,
         legend = :best,
         aspect_ratio = :equal,
         xlims = (0, 1),
@@ -87,9 +68,15 @@ function make_plots(;
             p,
             df[!, theta_col],
             df[!, wow_col],
-            label = "wow",
+            label = "WoW",
             linewidth = 2,
             marker = :square
+        )
+        plot!(p, [0, 1], [0, 1],
+            label = "",
+            linewidth = 1,
+            linestyle = :dash,
+            color = :black
         )
 
         # Save
