@@ -27,7 +27,7 @@ function pvalues_hipm(gender_data::Dict{String, DataFrame}, group_1::Vector{Stri
     pvalues = Vector{Float64}(undef, n_years)
 
     for (i, time) in enumerate(time_periods)
-        @info "Progress $i / $(n_years)"
+        @info "HIPM Progress $i / $(n_years)"
         atoms_1, weights_1 = group_pmf(gender_data, group_1, time, min_age, age_truncation)
         atoms_2, weights_2 = group_pmf(gender_data, group_2, time, min_age, age_truncation)
         pvalues[i] = pvalue_hipm(atoms_1, weights_1, atoms_2, weights_2, n_permutations, max_time)
@@ -57,7 +57,7 @@ function pvalues_wow(gender_data::Dict{String, DataFrame}, group_1::Vector{Strin
     pvalues = Vector{Float64}(undef, n_years)
 
     for (i, time) in enumerate(time_periods)
-        @info "Progress $i / $(n_years)"
+        @info "WoW Progress $i / $(n_years)"
         deaths_count_1 = group_deaths_count(gender_data, group_1, time, min_age, age_truncation)
         deaths_count_2 = group_deaths_count(gender_data, group_2, time, min_age, age_truncation)
         atoms_1 = hier_sample_from_counts(deaths_count_1)
@@ -90,7 +90,7 @@ function pvalues_averaging(gender_data::Dict{String, DataFrame}, group_1::Vector
     pvalues = Vector{Float64}(undef, n_years)
 
     for (i, time) in enumerate(time_periods)
-        @info "Progress $i / $(n_years)"
+        @info "Averaging Progress $i / $(n_years)"
         atoms_1, weights_1 = group_pmf(gender_data, group_1, time, min_age, age_truncation)
         atoms_2, weights_2 = group_pmf(gender_data, group_2, time, min_age, age_truncation)
         pvalues[i] = pvalue_averaging(atoms_1, weights_1, atoms_2, weights_2, n_permutations)
@@ -150,7 +150,7 @@ function pvalues_pooling(gender_data::Dict{String, DataFrame}, group_1::Vector{S
     pvalues = Vector{Float64}(undef, n_years)
 
     for (i, time) in enumerate(time_periods)
-        @info "Progress $i / $(n_years)"
+        @info "Pooling Progress $i / $(n_years)"
         observations_1 = pool_group_deaths_count(group_deaths_count(gender_data, group_1, time, min_age, age_truncation))
         observations_2 = pool_group_deaths_count(group_deaths_count(gender_data, group_2, time, min_age, age_truncation))
         pvalues[i] = pvalue_pooling(observations_1, observations_2, n_permutations)
@@ -184,7 +184,7 @@ end
 """
     load_pvalues
 
-Loads previously saved p-values and time periods from disk.
+Loads previously saved p-values and time periods.
 
 # Arguments:
     file_name::String
@@ -234,5 +234,7 @@ function main()
         save_pvalues(pv_pooling,  time_periods, "pvalues_$(gender)_pooling")
     end
 end
-
+t = time()
 main()
+dur = time() - t
+@info "Done in $(dur) seconds."

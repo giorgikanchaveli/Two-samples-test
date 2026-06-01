@@ -18,7 +18,8 @@ function plot_pvalues(gender::String;
     mkpath(output_dir)
 
     methods = ["hipm", "wow", "averaging", "pooling"]
-    colors  = [:blue, :red, :green, :orange]
+    labels  = ["HIPM", "WoW", "Averaging", "Pooling"]
+    colors  = [:green, :brown, :blue, :orange]
 
     sc = scatter(
         title    = "P-values, $(gender)",
@@ -30,9 +31,9 @@ function plot_pvalues(gender::String;
         size     = (800, 500)
     )
 
-    for (method, color) in zip(methods, colors)
+    for (method, label, color) in zip(methods, labels, colors)
         pvalues, time_periods = load_pvalues("pvalues_$(gender)_$(method)"; input_dir)
-        scatter!(sc, time_periods, pvalues; label = method, color = color)
+        scatter!(sc, time_periods, pvalues; label = label, color = color)
     end
 
     hline!(sc, [0.05]; linestyle = :dash, color = :black, label = "θ = 0.05")

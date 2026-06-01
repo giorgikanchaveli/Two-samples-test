@@ -59,6 +59,7 @@ function make_plots(;
         ylabel = ylabel,
         title = title_str,
         legend = :best,
+        color = :green,
         aspect_ratio = :equal,
         xlims = (0, 1),
         ylims = (0, 1)
@@ -69,6 +70,7 @@ function make_plots(;
             df[!, theta_col],
             df[!, wow_col],
             label = "WoW",
+            color = :brown,
             linewidth = 2,
             marker = :square
         )
