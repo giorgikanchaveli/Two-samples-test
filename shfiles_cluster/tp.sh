@@ -37,7 +37,7 @@ n_perm=${params[5]}
 export JULIA_NUM_THREADS=$SLURM_CPUS_PER_TASK # set number of threads for julia
 
 # Warning: write this in login node before running sh file.
-# julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile(); println("Threads.nthreads() = ", Threads.nthreads())'
+# julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
 # IMPORTANT: Use the flags defined in your Julia parse_commandline() function
 julia --project=. simulations/tp.jl --label_q_1 ${label_q_1} --label_q_2 ${label_q_2} --n ${n} --m ${m} --S ${S} --n_perm ${n_perm}
 
