@@ -20,8 +20,6 @@ echo "Running from: $(pwd)"                    # print the current working direc
 # --- Simulation parameter configuration ---
 # Format: "label_q_1 label_q_2 n m S n_perm"
 configs=(
-    "1 1 100 100 1000 100"
-    "2 2 100 100 1000 100"
     "3 3 100 100 1000 100"
     "4 4 100 100 1000 100"
 )
