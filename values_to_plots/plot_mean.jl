@@ -28,7 +28,7 @@ function plot_mean(;
 
     fig = plot(
         title = "Rejection rates for 3 schemes",
-        xlabel = "δs",
+        xlabel = "δ",
         ylabel = "Rejection rate",
         xlims = (minimum(df.δs) - 0.05, maximum(df.δs) + 0.05),
         ylims = (-0.05, 1.05),
