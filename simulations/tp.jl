@@ -19,8 +19,8 @@ rpms_1 = [beta_beta_A(1.0, 1.0),
 
 rpms_2 = [beta_beta_A(1.0, 1.5),
           normal_normal_A(0.0, 1.5),
-          DP(2.0, Uniform(0.0, 1.0)),
-          DP(1.0, Beta(1.0,1.4))
+          DP(1.0, Beta(1.0,1.4)),
+          DP(2.0, Normal(0.0, 1.0))
           ]
 
 
