@@ -54,7 +54,7 @@ function make_plots(;
         df[!, hipm_col],
         label = "HIPM",
         linewidth = 2,
-        marker = :circle,
+        marker = :square,
         xlabel = "θ",
         ylabel = ylabel,
         title = title_str,
@@ -72,7 +72,7 @@ function make_plots(;
             label = "WoW",
             color = :brown,
             linewidth = 2,
-            marker = :square
+            marker = :diamond
         )
         if prefix == "fp"
             plot!(p, [0, 1], [0, 1],
