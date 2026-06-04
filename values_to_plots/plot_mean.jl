@@ -3,8 +3,8 @@ using DataFrames
 using Plots
 
 function plot_mean(;
-    input_dir = joinpath(pwd(), "values", "comparison_with_dm"),
-    output_dir = joinpath(pwd(), "plots", "comparison_with_dm")
+    input_dir = joinpath(pwd(), "values", "comparison_all"),
+    output_dir = joinpath(pwd(), "plots", "comparison_all")
 )
     mkpath(output_dir)
 
@@ -20,14 +20,14 @@ function plot_mean(;
 
     df = CSV.read(filepath, DataFrame)
 
-    required_cols = ["δs", "dm", "hipm", "wow"]
+    required_cols = ["δs", "dm", "hipm", "wow", "energy"]
     missing_cols = setdiff(required_cols, names(df))
     if !isempty(missing_cols)
         error("Missing required columns in $filename: $missing_cols")
     end
 
     fig = plot(
-        title = "Rejection rates for 3 schemes",
+        title = "Rejection rates for 4 schemes",
         xlabel = "δ",
         ylabel = "Rejection rate",
         xlims = (minimum(df.δs) - 0.05, maximum(df.δs) + 0.05),
@@ -61,6 +61,13 @@ function plot_mean(;
         label = "WoW",
         color = :brown,
         marker = :diamond
+    )
+
+    plot!(
+        fig, df.δs, df.energy;
+        label = "Energy",
+        color = :blue,
+        marker = :utriangle
     )
 
     outname = splitext(filename)[1] * ".png"
