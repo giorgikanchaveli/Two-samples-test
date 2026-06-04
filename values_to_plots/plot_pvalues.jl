@@ -17,12 +17,13 @@ function plot_pvalues(gender::String;
 )
     mkpath(output_dir)
 
-    methods = ["hipm", "wow", "averaging", "pooling"]
-    labels  = ["HIPM", "WoW", "Averaging", "Pooling"]
-    colors  = [:green, :brown, :blue, :orange]
+    methods  = ["hipm", "wow", "averaging", "pooling"]
+    labels   = ["HIPM", "WoW", "Averaging", "Pooling"]
+    colors   = [:green, :brown, :orange, :blue]
+    markers  = [:square, :diamond, :dtriangle, :utriangle]
 
     sc = scatter(
-        title    = "P-values, $(gender)",
+        title    = "P-values",
         xlabel   = "Year",
         ylabel   = "p-value",
         ylims    = (-0.015, 0.25),
@@ -31,9 +32,9 @@ function plot_pvalues(gender::String;
         size     = (800, 500)
     )
 
-    for (method, label, color) in zip(methods, labels, colors)
+    for (method, label, color, marker) in zip(methods, labels, colors, markers)
         pvalues, time_periods = load_pvalues("pvalues_$(gender)_$(method)"; input_dir)
-        scatter!(sc, time_periods, pvalues; label = label, color = color)
+        scatter!(sc, time_periods, pvalues; label = label, color = color, marker = marker)
     end
 
     hline!(sc, [0.05]; linestyle = :dash, color = :black, label = "θ = 0.05")
