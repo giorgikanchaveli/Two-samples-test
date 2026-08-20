@@ -456,6 +456,20 @@ function sample_exch_seq(law_rpm::discr_law, m::Int)
 end
 
 
+"""
+    sample_exch_seq
+
+Notifier for laws of RPM that don't have a specific sample_exch_seq method. Raises an informative error.
+
+# Arguments:
+    law_rpm::LawRPM
+    m::Int  :  number of samples to generate.
+"""
+function sample_exch_seq(law_rpm::LawRPM, m::Int)
+    throw(ArgumentError("sample_exch_seq is not defined for $(typeof(law_rpm))."))
+end
+
+
 
 
 
@@ -510,6 +524,19 @@ function generate_prob_measures(law_rpm::mixture, n::Int)
         end
     end
     return δs
+end
+
+"""
+    generate_prob_measures
+
+Notifier for laws of RPM that don't have a specific generate_prob_measures method. Raises an informative error.
+
+# Arguments:
+    law_rpm::LawRPM
+    n::Int  :  number of probability measures to generate.
+"""
+function generate_prob_measures(law_rpm::LawRPM, n::Int)
+    throw(ArgumentError("generate_prob_measures is not defined for $(typeof(law_rpm))."))
 end
 
 
