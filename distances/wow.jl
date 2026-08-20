@@ -201,7 +201,6 @@ function ww(atoms_1::Vector{Vector{Float64}}, atoms_2::Vector{Vector{Float64}})
     
     C = zeros(n_rows_1, n_rows_2)
     for i=1:n_rows_1
-        a = view(atoms_1, i, :)
         for j = 1:n_rows_2
             C[i,j] = wasserstein_1d(atoms_1[i], atoms_2[j])
         end
@@ -220,84 +219,4 @@ end
 
 
 
-
-
-# n_rows_1 = 50
-# n_rows_2 = 50
-# rows_1 = [sort(rand(n_rows_1)) for i in 1:n_rows_1]
-# rows_2 = [sort(rand(n_rows_2)) for i in 1:n_rows_2]
-
-
-# ww_vector_vector = ww(rows_1, rows_2)
-# atoms_1 = zeros(n_rows_1, n_rows_1)
-# atoms_2 = zeros(n_rows_2, n_rows_2)
-
-# for i in 1:n_rows_1
-#     atoms_1[i,:] .= rows_1[i]
-# end
-
-
-# for i in 1:n_rows_2
-#     atoms_2[i,:] .= rows_2[i]
-# end
-
-# ww_hier_sample = ww(atoms_1, atoms_2)
-# ww_vector_vector = ww(rows_1, rows_2)
-# println("diff = $(abs(ww_hier_sample - ww_vector_vector))")
-
-
-
-# function ww(q_1::HierSample, q_2::HierSample, p = 1)
-#     # Assuming that the number of atoms at the lower level is the same in each measure 
-    
-#     measure1, measure2 = q_1.atoms[:,:], q_2.atoms[:,:]
-    
-#     s1 = size(measure1)
-#     s2 = size(measure2)
-
-#     if s1[2] != s2[2]
-
-#         println("PROBLEM OF DIMENSION: each lower measure should have the same dimension")
-#         return -1. 
-    
-#     else
-        
-#         # timer = TimerOutput()
-
-#         # Extract dimensions
-#         m1 = s1[1]
-#         m2 = s2[1]
-#         n = s1[2]
-
-#         # Compute matrix of pairwise distances which will be a cost function 
-
-#         # @timeit timer "Compute pairwise transports" begin
-        
-#         C = zeros(m1,m2)
-#         for i=1:m1
-#             for j =1:m2 
-#                 C[i,j] = wasserstein1DUniform(measure1[i,:],measure2[j,:],p)^p 
-#             end
-#         end 
-
-#         # End timer 
-#         # end
-
-#         # Build the weights: uniform 
-#         weight1 = fill(1 / m1, m1)
-#         weight2 = fill(1 / m2, m2)
-
-#         # Solving the optimal transport problem 
-#         # @timeit timer "Solve outer OT problem" 
-#         gamma = ExactOptimalTransport.emd(weight1, weight2, C, Tulip.Optimizer() )
-#         # @timeit timer "compute transport cost" 
-#         output = sum( gamma .* C )
-        
-#         # display(timer)
-
-#         return output^(1/p) 
-
-#     end
-
-# end 
 
