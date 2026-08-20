@@ -103,9 +103,10 @@ according to the method from Dubey and Muller (2019).
     n_bootstrap::Int          :  number of bootstrap samples.
 """
 function decision_dm(means_1::Vector{Float64}, means_2::Vector{Float64}, θ::Float64, n_bootstrap::Int)
-  
+
+    length(means_1) == length(means_2) || throw(ArgumentError("means_1 and means_2 must have the same length. Got $(length(means_1)) and $(length(means_2))."))
     n = length(means_1)
-    
+
     @rput means_1 means_2 n n_bootstrap
     R"""
 
