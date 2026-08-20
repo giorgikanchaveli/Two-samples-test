@@ -1,4 +1,8 @@
-# This file contains functions for simulations: test statistics, decision of rejection, thresholds and rejection rates.
+# This file contains functions for simulations, in particular functoins for 
+# 1) test statistics
+# 2) decision of rejection
+# 3) thresholds
+# 4) rejection rates.
 
 
 using RCall # to call R functions
@@ -163,6 +167,36 @@ function decision_dm(h_1::HierSample, h_2::HierSample, θ::Float64, n_bootstrap:
 end
 
 
+"""
+    rejection_rate_dm
+
+Given laws of RPMS , estimates the rejection rate of the testing scheme
+according to Dubey and Muller (2019) using hierarchical samples.  
+
+# Arguments:
+    q_1::LawRPM                                            : law of RPM
+    q_2::LawRPM                                            : law of RPM
+    n::Int                                                 :  number of probability measures
+    m::Int                                                 :  length of exchangeable sequence
+    S::Int                                                 :  number of MCMC iterations to estimate rejection rate
+    θ::Float64                                             :  significance level
+    n_bootstrap::Int                                       :  number of bootstrap samples.
+"""
+
+function rejection_rate_dm(q_1::LawRPM,
+                             q_2::LawRPM, 
+                             n::Int, m::Int, S::Int, θ::Float64, n_bootstrap::Int)
+    rej_rate = 0.0
+    
+    for _ in 1:S
+        # generate hierarchical samples
+        h_1, h_2 = generate_hiersample(q_1, n, m), generate_hiersample(q_2, n, m)
+        
+        rej_rate += decision_dm(h_1, h_2, θ, n_bootstrap) 
+    end
+    return rej_rate/S
+end
+
 
 """
     rejection_rate_dm
@@ -174,6 +208,7 @@ according to Dubey and Muller (2019). It works directly on probability measures 
     q_1::Union{tnormal_normal, discr_normal, mixture}  :  law of RPM
     q_2::Union{tnormal_normal, discr_normal, mixture}  :  law of RPM
     n::Int                                                 :  number of probability measures
+    m::Int                                                 :  length of exchangeable sequence
     S::Int                                                 :  number of MCMC iterations to estimate rejection rate
     θ::Float64                                             :  significance level
     n_bootstrap::Int                                       :  number of bootstrap samples.
@@ -181,7 +216,7 @@ according to Dubey and Muller (2019). It works directly on probability measures 
 
 function rejection_rate_dm(q_1::Union{tnormal_normal, discr_normal, mixture},
                              q_2::Union{tnormal_normal, discr_normal, mixture}, 
-                             n::Int,S::Int, θ::Float64, n_bootstrap::Int)
+                             n::Int, m::Int, S::Int, θ::Float64, n_bootstrap::Int)
     rej_rate = 0.0
     
     for i in 1:S
@@ -468,7 +503,7 @@ end
     rejection_rate_all
 
 Given two laws of RPMs, returns rejection rates for all 4 testing schemes: HIPM, WoW, DM, Energy. Note that for HIPM, 
-WoW and Energy test, we record decisions on same hierarchical samples; On the other hand, we record seperately decisions for DM. 
+WoW and Energy test, we record decisions on same hierarchical samples; On the other hand, estimate rejection rate seperately because we don't want to use parallelization and some simulations are faster to use DM test on probability measures directly instead of hierarchical samples. 
 
 # Arguments: 
     q_1::LawRPM
@@ -497,7 +532,7 @@ function rejection_rate_all(q_1::LawRPM, q_2::LawRPM, n::Int, m::Int, S::Int, θ
     rates_energy /= S
     rates_wow /= S
     rates_hipm /= S
-    rates_dm = rejection_rate_dm(q_1, q_2, n, S, θ, n_samples)
+    rates_dm = rejection_rate_dm(q_1, q_2, n, m, S, θ, n_samples)
     
     return rates_hipm,rates_wow,rates_dm,rates_energy
 end
