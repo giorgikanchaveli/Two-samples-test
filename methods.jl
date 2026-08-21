@@ -504,7 +504,7 @@ end
     rejection_rate_all
 
 Given two laws of RPMs, returns rejection rates for all 4 testing schemes: HIPM, WoW, DM, Energy. Note that for HIPM, 
-WoW and Energy test, we record decisions on same hierarchical samples; On the other hand, estimate rejection rate seperately because we don't want to use parallelization and some simulations are faster to use DM test on probability measures directly instead of hierarchical samples. 
+WoW and Energy test, we record decisions on same hierarchical samples; On the other hand, for DM, we estimate rejection rate seperately because we don't want to use parallelization there and some simulations are performed faster when DM test is used on probability measures directly instead on hierarchical samples. 
 
 # Arguments: 
     q_1::LawRPM
