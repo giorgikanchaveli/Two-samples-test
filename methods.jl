@@ -1,4 +1,4 @@
-# This file contains functions for simulations, in particular functoins for 
+# This file contains functions for simulations using DM, Energy, HIPM and WoW tests. In particular, functions for 
 # 1) test statistics
 # 2) decision of rejection
 # 3) thresholds
