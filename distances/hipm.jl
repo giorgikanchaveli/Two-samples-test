@@ -1,4 +1,18 @@
-# This file conrtains the code for computing HIPM.
+# This file contains code for computing HIPM.
+#
+# Overview of `dlip` methods (choose based on what inputs you have):
+#   - dlip(atoms_1::AbstractArray{Float64,2}, atoms_2::AbstractArray{Float64,2}, a, b; ...)
+#       Raw atoms only (uniform weights assumed).
+
+#   - dlip(h_1::HierSample, h_2::HierSample, a, b; ...)
+#       Hierarchical sample objects (wraps their `.atoms` field and calls the atoms-only method above).
+
+#   - dlip(atoms_1, atoms_2, weights_1, weights_2, a, b; ...)
+#       Atoms with explicit weights.
+#
+# All three project their inputs onto a grid on [a,b] and then call `dlip_projected_measures`,
+# which computes HIPM directly from already-grid-projected atoms (use this one if atoms
+# are already projected on the grid).
 
 
 
@@ -110,9 +124,6 @@ function project_weights(atoms::AbstractArray{Float64,2},
                 a::Float64, b::Float64, n_grid::Int)
     return project_weights(atoms, fill(1.0 / size(atoms)[2], size(atoms)), a, b, n_grid)
 end
-
-
-
 
 
 
