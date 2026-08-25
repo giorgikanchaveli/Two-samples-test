@@ -1,9 +1,26 @@
+# =============================================================================
+# plot_tpfp_csv.jl — plots false/true positive rate simulation results
+# =============================================================================
+#
+# Reads the CSV dataframes saved by fp.jl and tp.jl (columns θs, fp_hipm/fp_wow
+# or tp_hipm/tp_wow) from input_dir, and for each file plots HIPM and WoW
+# rejection rate against θ on the same plot.
+# One PNG per CSV is saved to output_dir.
+#
+# Note: input_dir defaults to <project_root>/values/fp_tp, not
+# cluster_outputs/values where fp.jl/tp.jl save their output — move/copy the
+# CSVs there first (see fp.jl/tp.jl for details).
+
+
+# To use it, just run the file. It will automatically save the plots in <project_root>/plots/fp_tp.
+
+
 using CSV
 using DataFrames
 using Plots
 
 
-function make_plots(; 
+function make_plots(;
     input_dir = joinpath(pwd(), "values", "fp_tp"),
     output_dir = joinpath(pwd(), "plots", "fp_tp")
 )
