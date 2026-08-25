@@ -1,1 +1,6 @@
 .DS_Store
+
+# Generated simulation outputs — not tracked, just produced on disk when scripts run.
+/plots/
+/values/
+/cluster_outputs/
