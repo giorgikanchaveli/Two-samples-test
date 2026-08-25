@@ -1,3 +1,18 @@
+# =============================================================================
+# plot_mean.jl — plots mean simulation results
+# =============================================================================
+#
+# Reads the CSV dataframe saved by mean.jl (columns δs, hipm, wow, dm, energy)
+# from input_dir — the file whose name starts with "mean" — and plots
+# HIPM, WoW, DM and Energy rejection rate against δ on the same plot.
+# One PNG is saved to output_dir.
+#
+# Note: input_dir defaults to <project_root>/values/comparison_all, not
+# cluster_outputs/values where mean.jl saves its output — move/copy the
+# CSV there first (see mean.jl for details).
+
+# To use it, just run the file. It will automatically save the plot in <project_root>/plots/comparison_all.
+
 using CSV
 using DataFrames
 using Plots

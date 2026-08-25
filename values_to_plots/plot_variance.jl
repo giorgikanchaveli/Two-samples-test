@@ -1,3 +1,18 @@
+# =============================================================================
+# plot_variance.jl — plots variance simulation results
+# =============================================================================
+#
+# Reads the CSV dataframe saved by variance.jl (columns τs, hipm, wow, dm, energy)
+# from input_dir — the file whose name starts with "variance" — and plots
+# HIPM, WoW, DM and Energy rejection rate against τ on the same plot.
+# One PNG is saved to output_dir.
+#
+# Note: input_dir defaults to <project_root>/values/comparison_all, not
+# cluster_outputs/values where variance.jl saves its output — move/copy the
+# CSV there first (see variance.jl for details).
+
+# To use it, just run the file. It will automatically save the plot in <project_root>/plots/comparison_all.
+
 using CSV
 using DataFrames
 using Plots

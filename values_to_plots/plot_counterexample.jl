@@ -1,3 +1,18 @@
+# =============================================================================
+# plot_counterexample.jl — plots counterexample simulation results
+# =============================================================================
+#
+# Reads the CSV dataframe saved by counterexample.jl (columns λs, hipm, wow, dm, energy)
+# from input_dir — the file whose name starts with "counterexample" — and plots
+# HIPM, WoW, DM and Energy rejection rate against λ on the same plot.
+# One PNG is saved to output_dir.
+#
+# Note: input_dir defaults to <project_root>/values/comparison_all, not
+# cluster_outputs/values where counterexample.jl saves its output — move/copy the
+# CSV there first (see counterexample.jl for details).
+
+# To use it, just run the file. It will automatically save the plot in <project_root>/plots/comparison_all.
+
 using CSV
 using DataFrames
 using Plots

@@ -41,6 +41,47 @@ Results are saved as CSV files in `cluster_outputs/values/`, with columns `θs`,
 
 `values_to_plots/plot_tpfp_csv.jl` reads CSV files from `values/fp_tp/` and plots HIPM vs. WoW rejection rate against θ, saving one PNG per CSV into `plots/fp_tp/`. Just run the file — see the comment block at the top of `plot_tpfp_csv.jl` for details.
 
+## Running mean/variance/counterexample simulations
+
+We have three scripts that all share the same simulation logic: estimate how often the HIPM, WoW, DM and Energy two-sample tests reject the null hypothesis as the two samples' underlying laws of RPM, Q_1 and Q_2, are made to differ. They only differ in what Q_1/Q_2 are and what single parameter is swept over a grid:
+
+- **`simulations/mean.jl`** — Q_1 = tnormal_normal(0.0, 0.5, -10.0, 10.0) is fixed, and Q_2 = tnormal_normal(δ, 0.5, -10.0, 10.0) for δ ranging over a grid in [-1.0, 1.0]. At δ = 0 the null hypothesis is true (Q_1 = Q_2), otherwise it's false.
+- **`simulations/variance.jl`** — Q_1 = tnormal_normal(0.0, 0.2, -10.0, 10.0) is fixed, and Q_2 = tnormal_normal(0.0, 0.2*τ, -10.0, 10.0) for τ ranging over a grid in [0.1, 2.5]. At τ = 1 the null hypothesis is true (Q_1 = Q_2), otherwise it's false.
+- **`simulations/counterexample.jl`** — Q_1 = discr_normal([-1.0, 1.0], [0.5, 0.5]) is fixed, and Q_2 = mixture(Q_1, Q_aux, λ) = λ*Q_1 + (1-λ)*Q_aux, where Q_aux = discr_normal([-2.0, 0.0, 2.0], [1/8, 3/4, 1/8]) and λ ranges over a grid in [0.0, 1.0]. At λ = 1 the null hypothesis is true (Q_2 = Q_1); at λ = 0, Q_2 = Q_aux and the two laws differ the most.
+
+Each script has a detailed comment block at the top of the file (including all its command-line arguments) — this README just gives the quick-start version.
+
+### How to run locally
+
+**From a terminal**, pass arguments after the file name:
+
+```bash
+julia simulations/mean.jl --n 20 --m 30 --S 500 --n_samples 200
+julia simulations/variance.jl --n 20 --m 30 --S 500 --n_samples 200
+julia simulations/counterexample.jl --n 20 --m 30 --S 500 --n_samples 200
+```
+
+Any argument you leave out falls back to its default value. Run with `--help` to see all options (e.g. `julia simulations/mean.jl --help`).
+
+**From VS Code / the Julia REPL** (e.g. `include("simulations/mean.jl")`), no arguments are passed, so every argument uses its default value. To change what runs, edit the `default = ...` values inside `parse_commandline()` in the corresponding file, then run it.
+
+Results are saved as CSV files in `cluster_outputs/values/`, with columns `<δs|τs|λs>`, `hipm`, `wow`, `dm`, `energy`. The filename encodes the parameters used, e.g. `mean_n=20_m=30_S=500_bootstrap=false_n_samples=200.csv`.
+
+### Running on the cluster
+
+`shfiles_cluster/mean.sh`, `shfiles_cluster/variance.sh` and `shfiles_cluster/counterexample.sh` are SLURM batch scripts that run the corresponding simulation file on the cluster:
+
+1. Edit the `configs` array at the top of the `.sh` file — each entry is one parameter combination (`"n m S n_samples"`), and each entry runs as a separate SLURM array task (`#SBATCH --array=1-N`, N = number of configs).
+2. From the login node, make sure the project environment is instantiated/precompiled once (see the commented-out line near the top of the `.sh` file).
+3. Submit the job with `sbatch shfiles_cluster/mean.sh` (or `variance.sh`/`counterexample.sh`). `JULIA_NUM_THREADS` is set automatically from `--cpus-per-task`, so the simulation runs multithreaded.
+4. Each task writes its own CSV into `cluster_outputs/values/` on the cluster, exactly as it would locally.
+
+### Plotting the results
+
+**Important:** after simulation finishes, you need to manually move/copy the resulting CSV file from `cluster_outputs/values/` into `values/comparison_all/`. If the simulation was run on the cluster, this means transferring the file to your local computer first — e.g. using the FileZilla application.
+
+`values_to_plots/plot_mean.jl`, `plot_variance.jl` and `plot_counterexample.jl` each read the matching CSV from `values/comparison_all/` and plot HIPM, WoW, DM and Energy rejection rate against δ/τ/λ, saving one PNG into `plots/comparison_all/`. Just run the file — see the comment block at the top of each for details.
+
 ## Cluster run times
 
 Cluster times for current parameters:
