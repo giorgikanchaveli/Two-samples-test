@@ -1,5 +1,24 @@
 # Two-samples-test
 
+## Code structure
+
+In the simulations, what we want to estimate is the **rejection rate**: run a two-sample test many times and see how often it rejects the null hypothesis. The main flow is the following:
+
+- Generate hierarchical samples.
+- Decide rejection.
+
+**Generating hierarchical samples**
+
+To define methods for generating hierarchical samples, we first need a struct for the laws of Random Probability Measures (RPMs). This is what `structures.jl` provides: `LawRPM`, the abstract type every law of RPM subtypes, so that generator functions can accept "any law of RPM" generically. Since other methods — like computing distance, p-values, etc. — also need to work on a hierarchical sample, `structures.jl` provides a struct for that too: `HierSample`, which holds a generated hierarchical sample (an n×m matrix of atoms, plus the interval [a,b] they live in).
+
+With those types in place, `distributions.jl` defines the concrete laws of RPM (`tnormal_normal`, `discr_normal`, `mixture`, `DP`, etc.) as subtypes of `LawRPM`, and, for each one, a `sample_exch_seq` method that draws one exchangeable sequence from it — stacking n of these produces the `HierSample` the tests need.
+
+**Deciding rejection**
+
+Deciding whether to reject also requires computing a distance (test statistic) between two samples, so the `distances/` folder provides that: `distances/hipm.jl` computes HIPM (via `dlip`), and `distances/wow.jl` computes the Wasserstein / Wasserstein-over-Wasserstein distance used by the WoW test.
+
+`methods.jl` then combines sample generation (`distributions.jl`) and distance computation (`distances/`) to implement the tests themselves — p-values, thresholds, and reject/don't-reject decisions for HIPM, WoW, DM (Fréchet) and Energy — and exposes the `rejection_rate_*` functions that repeat the whole simulate-then-test procedure S times and report how often each test rejects. This is exactly what the `simulations/` scripts call.
+
 ## Running FP/TP simulations
 
 We have two scripts for estimating how often the HIPM and WoW two-sample tests reject the null hypothesis:
