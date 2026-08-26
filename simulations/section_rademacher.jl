@@ -1,4 +1,31 @@
-using Plots
+# Compares the empirical (1-θ)-quantile of dlip
+# under two fixed laws of RPM against the theoretical Rademacher-complexity threshold.
+
+# Two laws are Q_1 = DP(1.0, Uniform(0.0, 1.0)) and Q_2 = DP(1.0,
+# Beta(2.0, 2.0)). θ = 0.05 is fixed, and n = m ranges over a grid.
+
+
+# HOW TO RUN: 
+#    -From a terminal, pass arguments after the file name, e.g.
+#      julia simulations/section_rademacher.jl --S 100 --n_rerun 5
+# Any argument left out falls back to its default. Run with --help to see all
+# options. 
+
+#    -From VS Code / the Julia REPL (e.g. `include(...)`), no arguments are
+# passed, so every argument uses its default value. Edit the `default = ...`
+# values inside `parse_commandline()` to change what runs.
+#
+# Output: two CSV files in `values/rademacher_section/`:
+#   - `rademacher_emp_vs_theor_S=<S>.csv` — columns `ns`, `empirical`, `theoretical`,
+#     for the empirical-vs-theoretical comparison over a moderate n = m grid.
+#   - `rademacher_thresholds.csv` — columns `ns`, `theoretical`, for the theoretical
+#     bound alone over a much larger n = m grid (to show its long-run decay).
+#
+# Plotting: `values_to_plots/plot_rademacher.jl` reads both CSVs directly from
+# `values/rademacher_section/` (no cluster run for this script, so no move/copy step)
+# and saves the comparison plot, the solo decay plot, and both combined side by side
+# to `plots/rademacher_section/`.
+
 using DataFrames
 using ArgParse
 using ExtractMacro
@@ -34,10 +61,15 @@ end
 
 
 
+"""
+    rademacher_threshold(n, m, θ)
+
+The theoretical (1-θ) upper bound on dlip(Q^1_{n,m}, Q^2_{n,m}) from the Rademacher complexity argument.
+"""
 function rademacher_threshold(n::Int, m::Int, θ::Float64)::Float64
-    
+
     a = 640 * sqrt(log(2)) / sqrt(m)
-    b = 1280 * sqrt(log(2)) / sqrt(n) 
+    b = 1280 * sqrt(log(2)) / sqrt(n)
     c = 2 * (sqrt(log(2/θ) / 2) + sqrt(2 * log(4 / θ))) / sqrt(n)
     return a + b + c
 end
@@ -64,7 +96,7 @@ function run_simulation(config::SimConfig)
     q_1 = DP(1.0, Uniform(0.0, 1.0))
     q_2 = DP(1.0, Beta(2.0, 2.0))
 
-    @extract config : S n_rerun θ
+    @extract config : S n_rerun θ # unpacks the struct's fields into local variables S, n_rerun, θ
 
     @info "Starting Rademacher simulation with S = $S, n_rerun = $n_rerun, θ = $θ"
 
@@ -99,9 +131,7 @@ function save_results(df_comparison::DataFrame, df_theoretical::DataFrame, confi
     @extract config : S n_rerun θ
 
     values_path = joinpath(pwd(), "values", "rademacher_section")
-    plots_path  = joinpath(pwd(), "plots", "rademacher_section")
     mkpath(values_path)
-    mkpath(plots_path)
 
     file_name = "rademacher_emp_vs_theor_S=$(S)"
 
@@ -110,48 +140,6 @@ function save_results(df_comparison::DataFrame, df_theoretical::DataFrame, confi
 
     CSV.write(joinpath(values_path, "rademacher_thresholds.csv"), df_theoretical)
     @info "Theoretical dataframe saved" path=joinpath(values_path, "rademacher_thresholds.csv")
-
-    # Shared y range across both plots (both on log scale)
-    log_emp   = log.(df_comparison.empirical)
-    log_theor_sim   = log.(df_comparison.theoretical)
-    log_theor = log.(df_theoretical.theoretical)
-    y_all = vcat(log_emp, log_theor_sim, log_theor)
-    y_top = maximum(y_all)
-    y_bot = minimum(y_all)
-    shared_ylims = (min(y_bot, 0.0) - 0.05 * y_top, y_top * 1.05)
-
-    # Plot 1: empirical and theoretical thresholds per n (= m)
-    fig1 = plot(
-        title  = "Empirical vs Theoretical Rademacher Thresholds",
-        xlabel = "n = m",
-        ylabel = "log(Threshold)",
-        xlims  = (minimum(df_comparison.ns) - 50, maximum(df_comparison.ns) + 50),
-        ylims  = shared_ylims
-    )
-    plot!(fig1, df_comparison.ns, log_emp,         label = "Empirical",   color = "green", marker = (:circle, 4))
-    plot!(fig1, df_comparison.ns, log_theor_sim,   label = "Theoretical", color = "red",   marker = (:circle, 4))
-    fig1_path = joinpath(plots_path, file_name * "_comparison.png")
-    savefig(fig1, fig1_path)
-    @info "Comparison plot saved" path=fig1_path
-
-    # Plot 2: solo theoretical threshold decay over large n grid, y-axis in logarithms
-    fig2 = plot(
-        title  = "Rademacher Thresholds",
-        xlabel = "n = m",
-        ylabel = "log(Threshold)",
-        xlims  = (-0.03 * maximum(df_theoretical.ns), maximum(df_theoretical.ns) + 5e5),
-        ylims  = shared_ylims
-    )
-    plot!(fig2, df_theoretical.ns, log_theor, label = "hipm", color = "blue", marker = (:circle, 4))
-    fig2_path = joinpath(plots_path, "theoretical_thresholds.png")
-    savefig(fig2, fig2_path)
-    @info "Log-scale plot saved" path=fig2_path
-
-    # Combined: both plots side by side
-    fig_combined = plot(fig1, fig2, layout = (1, 2), size = (1400, 500))
-    combined_path = joinpath(plots_path,  "Rademacher_combined.png")
-    savefig(fig_combined, combined_path)
-    @info "Combined plot saved" path=combined_path
 end
 
 

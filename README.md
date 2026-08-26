@@ -103,7 +103,7 @@ Results are saved as CSV files in `cluster_outputs/values/`, with columns `<δs|
 
 ## Rademacher threshold simulation
 
-`simulations/section_rademacher.jl` checks how tight the theoretical Rademacher-complexity bound on the HIPM test statistic is: for fixed Q_1 = DP(1.0, Uniform(0.0, 1.0)) and Q_2 = DP(1.0, Beta(2.0, 2.0)) and θ = 0.05, it compares the empirical (1-θ)-quantile of dlip(Q_1, Q_2) (estimated by simulation) against the theoretical bound, across a grid of n = m, and also plots the theoretical bound alone over a much larger grid to show its long-run decay.
+`simulations/section_rademacher.jl` checks how tight the theoretical Rademacher-complexity threshold for HIPM is. For fixed Q_1 = DP(1.0, Uniform(0.0, 1.0)) and Q_2 = DP(1.0, Beta(2.0, 2.0)) and θ = 0.05, it compares the empirical (1-θ)-quantile of dlip(Q_1, Q_2) (estimated by simulation) against the Rademacher threshold, across a grid of n = m, and also plots the theoretical threshold alone over a much larger grid to show its long-run decay.
 
 ### How to run locally
 
@@ -111,7 +111,9 @@ Results are saved as CSV files in `cluster_outputs/values/`, with columns `<δs|
 julia simulations/section_rademacher.jl --S 100 --n_rerun 5
 ```
 
-Any argument you leave out falls back to its default value. Run with `--help` to see all options. From VS Code / the Julia REPL (e.g. `include("simulations/section_rademacher.jl")`), no arguments are passed, so every argument uses its default value — edit the `default = ...` values inside `parse_commandline()` to change what runs.
+Any argument you leave out falls back to its default value. Run with `--help` to see all options.
+
+From VS Code / the Julia REPL (e.g. `include("simulations/section_rademacher.jl")`), no arguments are passed, so every argument uses its default value — edit the `default = ...` values inside `parse_commandline()` to change what runs.
 
 Results are saved as two CSV files in `values/rademacher_section/`: `rademacher_emp_vs_theor_S=<S>.csv` (columns `ns`, `empirical`, `theoretical`) and `rademacher_thresholds.csv` (columns `ns`, `theoretical`). This script doesn't run on the cluster.
 
