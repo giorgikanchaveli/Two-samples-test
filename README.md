@@ -101,6 +101,36 @@ Results are saved as CSV files in `cluster_outputs/values/`, with columns `<δs|
 
 `values_to_plots/plot_mean.jl`, `plot_variance.jl` and `plot_counterexample.jl` each read the matching CSV from `values/comparison_all/` and plot HIPM, WoW, DM and Energy rejection rate against δ/τ/λ, saving one PNG into `plots/comparison_all/`. Just run the file — see the comment block at the top of each for details.
 
+## Rademacher threshold simulation
+
+`simulations/section_rademacher.jl` checks how tight the theoretical Rademacher-complexity bound on the HIPM test statistic is: for fixed Q_1 = DP(1.0, Uniform(0.0, 1.0)) and Q_2 = DP(1.0, Beta(2.0, 2.0)) and θ = 0.05, it compares the empirical (1-θ)-quantile of dlip(Q_1, Q_2) (estimated by simulation) against the theoretical bound, across a grid of n = m, and also plots the theoretical bound alone over a much larger grid to show its long-run decay.
+
+### How to run locally
+
+```bash
+julia simulations/section_rademacher.jl --S 100 --n_rerun 5
+```
+
+Any argument you leave out falls back to its default value. Run with `--help` to see all options. From VS Code / the Julia REPL (e.g. `include("simulations/section_rademacher.jl")`), no arguments are passed, so every argument uses its default value — edit the `default = ...` values inside `parse_commandline()` to change what runs.
+
+Results are saved as two CSV files in `values/rademacher_section/`: `rademacher_emp_vs_theor_S=<S>.csv` (columns `ns`, `empirical`, `theoretical`) and `rademacher_thresholds.csv` (columns `ns`, `theoretical`). This script doesn't run on the cluster.
+
+### Plotting the results
+
+`values_to_plots/plot_rademacher.jl` reads both CSVs directly from `values/rademacher_section/` (no move/copy step needed) and saves the comparison plot, the solo decay plot, and both combined side by side to `plots/rademacher_section/`. Just run the file.
+
+## Mortality dataset analysis
+
+Besides the simulations, `mortality/` applies the tests to real data from the Human Mortality Database: for each year 1960–2010 and each gender, it tests whether Soviet Union influence countries and the rest have the same distribution of age-at-death.
+
+- **`mortality/data_extractors.jl`** — loads the per-country life tables from `mortality/dataset/<gender>/` and turns them into the hierarchical samples / PMFs the other two scripts need. It's a library, not something you run directly.
+- **`mortality/eda.jl`** — exploratory sanity-check plots (data lost under age truncation, individual country PMFs, PMF/quantile/pooled-PMF comparisons between the two groups).
+- **`mortality/pvalues.jl`** — the actual test: computes p-values via HIPM, WoW, and two baselines (averaging, pooling) for each year/gender.
+
+
+
+`pvalues.jl` saves one file per gender/method to `values/mortality_dataset/pvalues_<gender>_<method>.txt`. `values_to_plots/plot_pvalues.jl` reads directly from that folder (everything here runs locally, so there's no cluster move/copy step) and saves one PNG per gender to `plots/mortality_dataset/`.
+
 ## Cluster run times
 
 Cluster times for current parameters:

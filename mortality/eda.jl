@@ -1,3 +1,19 @@
+# Exploratory analysis of the Human Mortality Database dataset (see `data_extractors.jl`
+# for the data format), comparing Soviet Union influence countries (group_1) against the rest
+# (group_2). It contains methods for plots and in the end produces quantile plots (Figure 2.6) of the age-at-death probability mass functions for the two
+# country groups
+
+# The methods below show:
+#   - how much death data is lost when truncating at a given max age,
+#   - what a single country's PMF of age-at-death looks like over time,
+#   - PMF / quantile / Fréchet-mean-quantile / pooled-PMF comparisons between the
+#     two groups, across a few chosen years.
+#
+
+# Output: PNGs under `mortality/eda_plots/<subfolder>/`, one subfolder per kind of
+# plot (e.g. `single_pmfs/`, `quantile_plots/`) — see each `save_*` function's
+# docstring for its exact subfolder and filename pattern.
+
 using Plots
 using Distributions
 include("data_extractors.jl")

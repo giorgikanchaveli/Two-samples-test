@@ -1,3 +1,21 @@
+# Tests whether Soviet Union influence countries (group_1) and the rest (group_2) have the same
+# distribution of age-at-death, at each year from 1960 to 2010, for males and females
+# separately. 
+
+# Four methods are computed per year: HIPM, WoW  and two methods that collapse each group
+# to a single distribution. First one - averaging (mean PMF per group, compared via Wasserstein-1) and 
+# Second one - pooling (all deaths in a group treated as one pooled sample, compared via Wasserstein-1).
+
+
+
+# Output: one space-delimited `.txt` file per gender/method in
+# `values/mortality_dataset/`, named `pvalues_<gender>_<method>.txt`, with columns
+# `p_value` and `time_period`.
+#
+# Plotting: The file `values_to_plots/plot_pvalues.jl` reads directly from
+# `values/mortality_dataset/` (no need to move/copy files — everything here runs
+# locally) and saves one PNG per gender to `plots/mortality_dataset/`.
+
 using Plots
 using DelimitedFiles
 
@@ -9,6 +27,11 @@ include("data_extractors.jl")
     pvalues_hipm
 
 Given mortality data for specific gender, calculates p values per each time for given groups using HIPM.
+
+`group_pmf` gives each country's atoms/weights as plain matrices, not the `HierSample` struct used elsewhere.
+This calls the `pvalue_hipm(atoms_1, weights_1, atoms_2, weights_2, ...)` function in
+`methods.jl` that works on exactly that matrix form — see the "Codes below are for the Mortality dataset"
+section in methods.jl.
 
 # Arguments:
     gender_data::Dict{String, DataFrame}
@@ -40,6 +63,12 @@ end
     pvalues_wow
 
 Given mortality data for specific gender, calculates p values per each time for given groups using WoW.
+
+Unlike `pvalues_hipm`, this builds a general version of  hierarchical sample, meaning that rows might have different 
+lenghts. Given data for each country's death counts, `hier_sample_from_counts` turns each
+country's death counts into a `Vector{Float64}` of individual ages at death, one such vector per country. 
+Then we call the `pvalue_wow(atoms_1, atoms_2, ...)` in `methods.jl` that works on that
+`Vector{Vector{Float64}}` form — see the "Codes below are for the Mortality dataset" section in methods.jl.
 
 # Arguments:
     gender_data::Dict{String, DataFrame}

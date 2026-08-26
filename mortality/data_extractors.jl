@@ -1,6 +1,20 @@
 using CSV, DataFrames
 
 
+# This file provides the functions for loading the Human Mortality Database life
+# tables and turning them into the hierarchical samples / PMFs the tests need.
+# It's not meant to be run directly — `eda.jl` and `pvalues.jl` both `include`
+# it and call these functions.
+#
+# Expected data layout: `mortality/dataset/<gender>/<country>_<gender>.txt`,
+# one period life table per country/gender (`gender` is "males" or "females").
+
+# Each file has one metadata line, then a header row and columns Year, Age, mx,
+# qx, ax, lx, dx, Lx, Tx, ex (standard HMD period life table format). We only
+# use `dx` (number of deaths at that age, out of an initial cohort of 100000)
+# and `Year`.
+
+
 """
     load_mortality_data
 
@@ -51,6 +65,8 @@ function country_deaths_count(df::DataFrame, t::Int, min_age::Int, max_age::Int)
     row_idx = findfirst(==(t), df[!, :Year])
     @assert row_idx !== nothing "Year $t not found."
 
+    # `row_idx` points at age 0 for year `t`; each following row is the next age,
+    # so age `a` sits `a` rows below it.
     dx_band = df[row_idx + min_age:row_idx + max_age, :dx]
 
     if eltype(dx_band) <: AbstractString
@@ -91,6 +107,10 @@ end
 Given matrix of deaths counts per each country, create observations of ages at deaths for each country. This way we obtain
 hierarchical sample where rows might have different length.
 
+Note this is a plain `Vector{Vector{Float64}}`, not the `HierSample` struct from `structures.jl` — that struct
+requires all rows to have the same length (n×m matrix of atoms), which doesn't hold here since countries have
+different numbers of deaths.
+
 # Arguments:
     deaths_count::Matrix{Float64}
 """
@@ -103,6 +123,8 @@ function hier_sample_from_counts(deaths_count::Matrix{Float64})
         index = 1
         for j in 1:n_columns
             n_obs_at_age = Int(deaths_count[i, j])
+            # column j is age j-1, so this assumes deaths_count's first column is age 0
+            # (i.e. it was built with min_age = 0).
             observations[index:index+n_obs_at_age-1] .= Float64(j-1)
             index = index + n_obs_at_age
         end
@@ -128,6 +150,7 @@ function pool_group_deaths_count(deaths_count::Matrix{Float64})
     for i in 1:n
         for j in 1:m
             count = Int(deaths_count[i, j])
+            # column j is age j-1; assumes deaths_count's first column is age 0.
             pooled_observations[index:index + count - 1] .= Float64(j-1)
             index = index + count
         end
