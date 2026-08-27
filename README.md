@@ -2,16 +2,18 @@
 
 ## Code structure
 
-In the simulations, what we want to estimate is the **rejection rate**: run a two-sample test many times and see how often it rejects the null hypothesis. The main flow is the following:
+In the simulations, what we want to estimate is the **rejection rate**. That is, run a two-sample test many times and see how often it rejects the null hypothesis. The main flow of the idea is the following:
 
 - Generate hierarchical samples.
 - Decide rejection.
+
+So, we need methods for those two.
 
 **Generating hierarchical samples**
 
 To define methods for generating hierarchical samples, we first need a struct for the laws of Random Probability Measures (RPMs). This is what `structures.jl` provides: `LawRPM`, the abstract type every law of RPM subtypes, so that generator functions can accept "any law of RPM" generically. Since other methods — like computing distance, p-values, etc. — also need to work on a hierarchical sample, `structures.jl` provides a struct for that too: `HierSample`, which holds a generated hierarchical sample (an n×m matrix of atoms, plus the interval [a,b] they live in).
 
-With those types in place, `distributions.jl` defines the concrete laws of RPM (`tnormal_normal`, `discr_normal`, `mixture`, `DP`, etc.) as subtypes of `LawRPM`, and, for each one, a `sample_exch_seq` method that draws one exchangeable sequence from it — stacking n of these produces the `HierSample` the tests need.
+With those types in place, `distributions.jl` defines the concrete laws of RPM (`tnormal_normal`, `discr_normal`, `mixture`, `DP`, etc.) as subtypes of `LawRPM`, and, for each one, a `sample_exch_seq` method that draws one exchangeable sequence from it.
 
 **Deciding rejection**
 
