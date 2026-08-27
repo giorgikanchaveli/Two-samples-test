@@ -1,3 +1,7 @@
+# Original code from HIPM paper,
+
+
+
 # Code to compute the new HIPM dlip in dimension 1
 # 
 # The main functions of this file are 

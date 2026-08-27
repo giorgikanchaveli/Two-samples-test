@@ -1,3 +1,6 @@
+# Original code from HIPM paper,
+
+
 # Compute the Wasserstein distance and the wasserstein over wasserstein distance 
 # The main function of this code is 
 # wassersteinOverWasserstein

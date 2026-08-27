@@ -1,6 +1,18 @@
-# This file contains methods to compute the Wasserstein distance for discrete probability measures on R and the 
+# This file contains methods to compute the Wasserstein distance for discrete probability measures on R and the
 # wasserstein over wasserstein distance for laws of RPMs.
+#
+# Overview of `ww` methods (choose based on what inputs you have):
+#   - ww(atoms_1::AbstractArray{Float64,2}, atoms_2::AbstractArray{Float64,2})
+#       Raw atoms only (uniform weights assumed), both hierarchical samples with the same row length.
 
+#   - ww(q_1::HierSample, q_2::HierSample)
+#       Hierarchical sample objects (wraps their `.atoms` field and calls the atoms-only method above).
+
+#   - ww(atoms_1::Vector{Vector{Float64}}, atoms_2::Vector{Vector{Float64}})
+#       Raw atoms only, but rows (the exchangeable sequences) are allowed to have different lengths
+#       (needed for the mortality dataset).
+#
+# All three assume the atoms within each row are already sorted,
 
 
 include("../structures.jl")

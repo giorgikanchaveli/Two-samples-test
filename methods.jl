@@ -1,9 +1,10 @@
-# This file contains functions for simulations using DM, Energy, HIPM and WoW tests, and for mortality dataset. In particular, functions for 
-# 1) test statistics
-# 2) decision of rejection
-# 3) thresholds
-# 4) rejection rates.
-# 5) p-value calculations.
+# This file contains functions for simulations using DM, Energy, HIPM and WoW tests, and for mortality dataset.
+# In particular, functions for 
+    # 1) test statistics
+    # 2) decision of rejection
+    # 3) thresholds
+    # 4) rejection rates.
+    # 5) p-value calculations.
 
 
 using RCall # to call R functions

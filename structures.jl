@@ -1,7 +1,8 @@
 # This file contains the structures for Laws of Random probability measures (RPM) and Hierarchical samples. 
 
 
-# Every law of a random probability measure (RPM) should be of type LawRPM. This is because we want some methods be defined generally for the type LawRPM. 
+# Every law of a random probability measure (RPM) should be of type LawRPM. 
+# This is because we want some methods be defined generally for the type LawRPM. 
 
 
 

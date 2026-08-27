@@ -1,3 +1,18 @@
+# =============================================================================
+# plot_pvalues.jl — plots mortality dataset p-values
+# =============================================================================
+#
+# Reads the p-value files saved by mortality/pvalues.jl from input_dir, and plots p-value
+# against year for all four methods on the same plot, together with a dashed line at
+# θ = 0.05. One PNG is saved per gender to output_dir.
+#
+# Note: input_dir defaults to <project_root>/values/mortality_dataset, which is exactly
+# where mortality/pvalues.jl saves its output — everything here runs locally, so there's
+# no cluster move/copy step needed (unlike the fp/tp/mean/variance/counterexample plots).
+
+# To use it, just run the file. It will automatically save one plot per gender
+# (females, males) in <project_root>/plots/mortality_dataset.
+
 using DelimitedFiles
 using Plots
 

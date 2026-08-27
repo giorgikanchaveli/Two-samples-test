@@ -24,7 +24,7 @@ Deciding whether to reject also requires computing a distance between two sample
 To conclude, structures.jl, distributions.jl, hipm.jl, wow.jl, and methods.jl are foundational files for the main simulations. Now we describe the simulations.
 
 
-## Running FPR/TPR simulations, Fig 2.2, 2.3
+## Running FPR/TPR simulations, Figures 2.2, 2.3
 
 We have two scripts for estimating how often the HIPM and WoW two-sample tests reject the null hypothesis:
 
@@ -67,7 +67,7 @@ Results are saved as CSV files in `cluster_outputs/values/`, with columns `θs`,
 
 `values_to_plots/plot_tpfp_csv.jl` reads CSV files from `values/fp_tp/` and plots HIPM vs. WoW rejection rate against θ, saving one PNG per CSV into `plots/fp_tp/`. For plotting, just run the file.
 
-## Running mean/variance/counterexample simulations, Fig 2.4, 2.5
+## Running mean/variance/counterexample simulations, Figures 2.4, 2.5
 
 We have three scripts that all share the same simulation logic: estimate how often the HIPM, WoW, DM and Energy two-sample tests reject the null hypothesis as the underlying laws of RPM, Q_1 and Q_2, are made to differ. Their difference is identified by a single parameter that is swept over a grid.
 
@@ -107,7 +107,8 @@ Results are saved as CSV files in `cluster_outputs/values/`, with columns `<δs|
 **Important:** after simulation finishes, you need to manually move/copy the resulting CSV file from `cluster_outputs/values/` into `values/comparison_all/`. If the simulation was run on the cluster, this means transferring the file to your local computer first — e.g. using the FileZilla application.
 
 `values_to_plots/plot_mean.jl`, `plot_variance.jl` and `plot_counterexample.jl` each read the matching CSV from `values/comparison_all/` and plot HIPM, WoW, DM and Energy rejection rate against δ/τ/λ, saving one PNG into `plots/comparison_all/`. For plotting, just run the file.
-## Rademacher threshold simulation
+
+## Rademacher threshold simulation, Figure 2.1
 
 `simulations/section_rademacher.jl` checks how tight the theoretical Rademacher-complexity threshold for HIPM is. For fixed Q_1 = DP(1.0, Uniform(0.0, 1.0)) and Q_2 = DP(1.0, Beta(2.0, 2.0)) and θ = 0.05, it compares the empirical (1-θ)-quantile of dlip(Q_1, Q_2) (estimated by simulation) against the Rademacher threshold, across a grid of n = m, and also plots the theoretical threshold alone over a much larger grid to show its long-run decay.
 
@@ -129,7 +130,7 @@ Results are saved as two CSV files in `values/rademacher_section/`: `rademacher_
 
 ## Mortality dataset analysis
 
-Besides the simulations, `mortality/` applies the tests to real data from the Human Mortality Database: for each year 1960–2010 and each gender, it tests whether Soviet Union influence countries and the rest have the same distribution of age-at-death.
+Besides the simulations, `mortality/` applies the tests to real data from the Human Mortality Database: for each year 1960–2010 and each gender, it tests whether Soviet-Union-influenced countries and the rest have the same distribution of age-at-death.
 
 - **`mortality/data_extractors.jl`** — loads the per-country life tables from `mortality/dataset/<gender>/` and turns them into the hierarchical samples / PMFs the other two scripts need. It's a library, not something you run directly.
 - **`mortality/eda.jl`** — exploratory data analysis plots (data lost under age truncation, individual country PMFs, PMF/quantile/pooled-PMF comparisons between the two groups). Figure 2.6.

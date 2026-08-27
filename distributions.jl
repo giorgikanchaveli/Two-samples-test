@@ -1,10 +1,14 @@
 #  This file contains code to generate Hierarchical samples from several types of laws of random probability measures.
 
-#  In addition, we define functions to generate probability measures directly from given laws of RPMs. This is achieved by generating parameters that charaterize those measures. Such methods are useful for Frechet test as we use at the level of probability measures (by computing quantiles, see functions decision_dm in methods.jl). This way their methods is much faster.
+#  In addition, we define functions to generate probability measures directly from given laws of RPMs. 
+# This is achieved by generating parameters that charaterize those measures. 
+# Such methods are useful for Frechet test as we use at the level of probability
+# measures (by computing quantiles, see functions decision_dm in methods.jl). This way their methods is much faster.
 
 
 # Important Notes:
-#        1) In the generation of hierarchical samples, we sort rows containing the atoms to speed up permutation test using WoW. 
+#        1) In the generation of hierarchical samples, we sort rows containing the atoms to
+#  speed up permutation test using WoW. 
 
 
 include("structures.jl")
