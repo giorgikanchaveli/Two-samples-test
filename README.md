@@ -132,20 +132,23 @@ Results are saved as two CSV files in `values/rademacher_section/`: `rademacher_
 Besides the simulations, `mortality/` applies the tests to real data from the Human Mortality Database: for each year 1960–2010 and each gender, it tests whether Soviet Union influence countries and the rest have the same distribution of age-at-death.
 
 - **`mortality/data_extractors.jl`** — loads the per-country life tables from `mortality/dataset/<gender>/` and turns them into the hierarchical samples / PMFs the other two scripts need. It's a library, not something you run directly.
-- **`mortality/eda.jl`** — exploratory sanity-check plots (data lost under age truncation, individual country PMFs, PMF/quantile/pooled-PMF comparisons between the two groups).
-- **`mortality/pvalues.jl`** — the actual test: computes p-values via HIPM, WoW, and two baselines (averaging, pooling) for each year/gender.
+- **`mortality/eda.jl`** — exploratory data analysis plots (data lost under age truncation, individual country PMFs, PMF/quantile/pooled-PMF comparisons between the two groups). Figure 2.6.
+- **`mortality/pvalues.jl`** — the actual test: computes p-values via HIPM, WoW, and two baselines (averaging, pooling) for each year/gender. 
 
 
 
-`pvalues.jl` saves one file per gender/method to `values/mortality_dataset/pvalues_<gender>_<method>.txt`. `values_to_plots/plot_pvalues.jl` reads directly from that folder (everything here runs locally, so there's no cluster move/copy step) and saves one PNG per gender to `plots/mortality_dataset/`.
+`pvalues.jl` saves one file per gender/method to `values/mortality_dataset/pvalues_<gender>_<method>.txt`. `values_to_plots/plot_pvalues.jl` reads directly from that folder (everything here runs locally, so there's no cluster move/copy step) and saves one PNG per gender to `plots/mortality_dataset/`. This corresponds to Figure 2.7.
 
 ## Cluster run times
 
 Cluster times for current parameters:
 
-counterexample: 171064 seconds
-variance: 251215 seconds
-mean: 292392 seconds
-tp_4_4: 13888 seconds
-fp_4: 14446 seconds
-power_diff n = 100 m = 100: 226210 seconds
+counterexample: 47h 31m
+
+variance: 69h 47m
+
+mean: 81h 13m
+
+tp_4_4: 3h 51m
+
+fp_4: 4h 1m
