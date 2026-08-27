@@ -106,8 +106,7 @@ Results are saved as CSV files in `cluster_outputs/values/`, with columns `<δs|
 
 **Important:** after simulation finishes, you need to manually move/copy the resulting CSV file from `cluster_outputs/values/` into `values/comparison_all/`. If the simulation was run on the cluster, this means transferring the file to your local computer first — e.g. using the FileZilla application.
 
-`values_to_plots/plot_mean.jl`, `plot_variance.jl` and `plot_counterexample.jl` each read the matching CSV from `values/comparison_all/` and plot HIPM, WoW, DM and Energy rejection rate against δ/τ/λ, saving one PNG into `plots/comparison_all/`. Just run the file — see the comment block at the top of each for details.
-
+`values_to_plots/plot_mean.jl`, `plot_variance.jl` and `plot_counterexample.jl` each read the matching CSV from `values/comparison_all/` and plot HIPM, WoW, DM and Energy rejection rate against δ/τ/λ, saving one PNG into `plots/comparison_all/`. For plotting, just run the file.
 ## Rademacher threshold simulation
 
 `simulations/section_rademacher.jl` checks how tight the theoretical Rademacher-complexity threshold for HIPM is. For fixed Q_1 = DP(1.0, Uniform(0.0, 1.0)) and Q_2 = DP(1.0, Beta(2.0, 2.0)) and θ = 0.05, it compares the empirical (1-θ)-quantile of dlip(Q_1, Q_2) (estimated by simulation) against the Rademacher threshold, across a grid of n = m, and also plots the theoretical threshold alone over a much larger grid to show its long-run decay.
@@ -126,7 +125,7 @@ Results are saved as two CSV files in `values/rademacher_section/`: `rademacher_
 
 ### Plotting the results
 
-`values_to_plots/plot_rademacher.jl` reads both CSVs directly from `values/rademacher_section/` (no move/copy step needed) and saves the comparison plot, the solo decay plot, and both combined side by side to `plots/rademacher_section/`. Just run the file.
+`values_to_plots/plot_rademacher.jl` reads both CSVs directly from `values/rademacher_section/` (no move/copy step needed) and saves the comparison plot, the solo decay plot, and both combined side by side to `plots/rademacher_section/`. For plotting, just run the file.
 
 ## Mortality dataset analysis
 
