@@ -143,12 +143,10 @@ Besides the simulations, `mortality/` applies the tests to real data from the Hu
 
 Cluster times for current parameters:
 
-counterexample: 47h 31m
-
-variance: 69h 47m
-
-mean: 81h 13m
-
-tp_4_4: 3h 51m
-
-fp_4: 4h 1m
+| Simulation | Runtime |
+| --- | --- |
+| `counterexample` | 47h 31m |
+| `variance` | 69h 47m |
+| `mean` | 81h 13m |
+| `tp_4_4` | 3h 51m |
+| `fp_4` | 4h 1m |
