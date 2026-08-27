@@ -24,7 +24,7 @@ Deciding whether to reject also requires computing a distance between two sample
 To conclude, structures.jl, distributions.jl, hipm.jl, wow.jl, and methods.jl are foundational files for the main simulations. Now we describe the simulations.
 
 
-## Running FP/TP simulations
+## Running FPR/TPR simulations
 
 We have two scripts for estimating how often the HIPM and WoW two-sample tests reject the null hypothesis:
 
@@ -32,6 +32,8 @@ We have two scripts for estimating how often the HIPM and WoW two-sample tests r
 - **`simulations/tp.jl`** — True Positive Rate (power). The two samples are drawn from *different* laws of RPM, so the null hypothesis is false, and a rejection is a true positive.
 
 Both scripts share the same logic: simulate hierarchical samples many times, run the tests at a grid of significance levels θ = 0, 0.01, ..., 1, and save the estimated rejection rates to a CSV file. Each script has a detailed comment block at the top of the file (including all its command-line arguments) — this README just gives the quick-start version.
+
+Before running either script, its simulation configuration — the law(s) of RPM Q, n, m, S, n_perm, etc — must be specified. In particular, `--label_q` (fp.jl) / `--label_q_1` and `--label_q_2` (tp.jl) don't take a law of RPM directly: they pick one by its 1-based position from a list defined near the top of the file (`rpms` in fp.jl, `rpms_1`/`rpms_2` in tp.jl). To see which laws are available and what label maps to which, look at that list in the corresponding file.
 
 ### How to run locally
 
