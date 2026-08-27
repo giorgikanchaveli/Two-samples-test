@@ -17,9 +17,12 @@ With those types in place, `distributions.jl` defines the concrete laws of RPM (
 
 **Deciding rejection**
 
-Deciding whether to reject also requires computing a distance (test statistic) between two samples, so the `distances/` folder provides that: `distances/hipm.jl` computes HIPM (via `dlip`), and `distances/wow.jl` computes the Wasserstein / Wasserstein-over-Wasserstein distance used by the WoW test.
+Deciding whether to reject also requires computing a distance between two samples, so the `distances/` folder provides that: `distances/hipm.jl` computes HIPM (via `dlip`), and `distances/wow.jl` computes the Wasserstein / Wasserstein-over-Wasserstein distance used by the WoW test.
 
 `methods.jl` then combines sample generation (`distributions.jl`) and distance computation (`distances/`) to implement the tests themselves — p-values, thresholds, and reject/don't-reject decisions for HIPM, WoW, DM (Fréchet) and Energy — and exposes the `rejection_rate_*` functions that repeat the whole simulate-then-test procedure S times and report how often each test rejects. This is exactly what the `simulations/` scripts call.
+
+To conclude, structures.jl, distributions.jl, hipm.jl, wow.jl, and methods.jl are foundational files for the main simulations. Now we describe the simulations.
+
 
 ## Running FP/TP simulations
 
