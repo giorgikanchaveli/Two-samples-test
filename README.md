@@ -24,7 +24,7 @@ Deciding whether to reject also requires computing a distance between two sample
 To conclude, structures.jl, distributions.jl, hipm.jl, wow.jl, and methods.jl are foundational files for the main simulations. Now we describe the simulations.
 
 
-## Running FPR/TPR simulations
+## Running FPR/TPR simulations, Fig 2.2, 2.3
 
 We have two scripts for estimating how often the HIPM and WoW two-sample tests reject the null hypothesis:
 
@@ -33,7 +33,7 @@ We have two scripts for estimating how often the HIPM and WoW two-sample tests r
 
 Both scripts share the same logic: simulate hierarchical samples many times, run the tests at a grid of significance levels θ = 0, 0.01, ..., 1, and save the estimated rejection rates to a CSV file. Each script has a detailed comment block at the top of the file (including all its command-line arguments) — this README just gives the quick-start version.
 
-Before running either script, its simulation configuration — the law(s) of RPM Q, n, m, S, n_perm, etc — must be specified. In particular, `--label_q` (fp.jl) / `--label_q_1` and `--label_q_2` (tp.jl) don't take a law of RPM directly: they pick one by its 1-based position from a list defined near the top of the file (`rpms` in fp.jl, `rpms_1`/`rpms_2` in tp.jl). To see which laws are available and what label maps to which, look at that list in the corresponding file.
+Before running either script, its simulation configuration — the law(s) of RPM Q, n, m, S, n_perm, etc — must be specified. In particular, `--label_q` in fp.jl, or `--label_q_1` and `--label_q_2` in tp.jl specify laws of RPMs. They pick one by its 1-based position from a list defined near the top of the file (`rpms` in fp.jl, `rpms_1`/`rpms_2` in tp.jl). To see which laws are available and what label maps to which, look at that list in the corresponding file.
 
 ### How to run locally
 
@@ -65,11 +65,11 @@ Results are saved as CSV files in `cluster_outputs/values/`, with columns `θs`,
 
 **Important:** after simulation finishes, you need to manually move/copy the resulting CSV files from `cluster_outputs/values/` into `values/fp_tp/`. If the simulation was run on the cluster, this means transferring the files to your local computer first — e.g. using the FileZilla application.
 
-`values_to_plots/plot_tpfp_csv.jl` reads CSV files from `values/fp_tp/` and plots HIPM vs. WoW rejection rate against θ, saving one PNG per CSV into `plots/fp_tp/`. Just run the file — see the comment block at the top of `plot_tpfp_csv.jl` for details.
+`values_to_plots/plot_tpfp_csv.jl` reads CSV files from `values/fp_tp/` and plots HIPM vs. WoW rejection rate against θ, saving one PNG per CSV into `plots/fp_tp/`. For plotting, just run the file.
 
-## Running mean/variance/counterexample simulations
+## Running mean/variance/counterexample simulations, Fig 2.4, 2.5
 
-We have three scripts that all share the same simulation logic: estimate how often the HIPM, WoW, DM and Energy two-sample tests reject the null hypothesis as the two samples' underlying laws of RPM, Q_1 and Q_2, are made to differ. They only differ in what Q_1/Q_2 are and what single parameter is swept over a grid:
+We have three scripts that all share the same simulation logic: estimate how often the HIPM, WoW, DM and Energy two-sample tests reject the null hypothesis as the underlying laws of RPM, Q_1 and Q_2, are made to differ. Their difference is identified by a single parameter that is swept over a grid.
 
 - **`simulations/mean.jl`** — Q_1 = tnormal_normal(0.0, 0.5, -10.0, 10.0) is fixed, and Q_2 = tnormal_normal(δ, 0.5, -10.0, 10.0) for δ ranging over a grid in [-1.0, 1.0]. At δ = 0 the null hypothesis is true (Q_1 = Q_2), otherwise it's false.
 - **`simulations/variance.jl`** — Q_1 = tnormal_normal(0.0, 0.2, -10.0, 10.0) is fixed, and Q_2 = tnormal_normal(0.0, 0.2*τ, -10.0, 10.0) for τ ranging over a grid in [0.1, 2.5]. At τ = 1 the null hypothesis is true (Q_1 = Q_2), otherwise it's false.
