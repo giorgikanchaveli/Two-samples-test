@@ -21,6 +21,8 @@ Deciding whether to reject also requires computing a distance between two sample
 
 `methods.jl` then combines sample generation (`distributions.jl`) and distance computation (`distances/`) to implement the tests themselves — p-values, thresholds, and reject/don't-reject decisions for HIPM, WoW, DM (Fréchet) and Energy — and exposes the `rejection_rate_*` functions that repeat the whole simulate-then-test procedure S times and report how often each test rejects. This is exactly what the `simulations/` scripts call.
 
+For a fair comparison, all four tests run on the same hierarchical samples. That's why DM is our own Julia version of the Fréchet test of Dubey and Müller (2019), which works directly on hierarchical samples (the old R version, via `frechet::DenANOVA`, is kept commented out in `methods.jl`). For the same reason, all tests decide rejection the same way: with a permutation p-value, (1 + #{T_b ≥ T}) / (B + 1), where B is the number of permutations. The "+1" counts the observed statistic itself, which makes the test valid for any sample size.
+
 To conclude, structures.jl, distributions.jl, hipm.jl, wow.jl, and methods.jl are foundational files for the main simulations. Now we describe the simulations.
 
 
@@ -56,14 +58,15 @@ Results are saved as CSV files in `cluster_outputs/values/`, with columns `θs`,
 
 1. Edit the `configs` array at the top of the `.sh` file — each entry is one parameter combination (e.g. for `fp.sh`: `"label_q n m S n_perm"`), and each entry runs as a separate SLURM array task (`#SBATCH --array=1-N`, N = number of configs).
 2. From the login node, make sure the project environment is instantiated/precompiled once (see the commented-out line near the top of the `.sh` file).
-3. Submit the job with `sbatch shfiles_cluster/fp.sh` (or `tp.sh`). `JULIA_NUM_THREADS` is set automatically from `--cpus-per-task`, so the simulation runs multithreaded.
-4. Each task writes its own CSV into `cluster_outputs/values/` on the cluster, exactly as it would locally.
+3. Make sure the log folder `/home/3049277/logs/` exists (`mkdir -p /home/3049277/logs`) — SLURM doesn't create it.
+4. Submit the job with `sbatch shfiles_cluster/fp.sh` (or `tp.sh`). `JULIA_NUM_THREADS` is set automatically from `--cpus-per-task`, so the simulation runs multithreaded.
+5. Each task writes its own CSV into `cluster_outputs/values/` on the cluster, exactly as it would locally. Its runtime is printed at the end of its `.err` log file (`Total duration: ... seconds`).
 
 
 ### Plotting the results
 
 
-**Important:** after simulation finishes, you need to manually move/copy the resulting CSV files from `cluster_outputs/values/` into `values/fp_tp/`. If the simulation was run on the cluster, this means transferring the files to your local computer first — e.g. using the FileZilla application.
+**Important:** after simulation finishes, you need to manually move/copy the resulting CSV files from `cluster_outputs/values/` into `values/fp_tp/`. If the simulation was run on the cluster, this means transferring the files to your local computer first — e.g. using the FileZilla application. A new CSV run with the same parameters has the same name as the old one, so it overwrites it — back up the old files first if you want to keep them.
 
 `values_to_plots/plot_tpfp_csv.jl` reads CSV files from `values/fp_tp/` and plots HIPM vs. WoW rejection rate against θ, saving one PNG per CSV into `plots/fp_tp/`. For plotting, just run the file.
 
@@ -99,12 +102,13 @@ Results are saved as CSV files in `cluster_outputs/values/`, with columns `<δs|
 
 1. Edit the `configs` array at the top of the `.sh` file — each entry is one parameter combination (`"n m S n_samples"`), and each entry runs as a separate SLURM array task (`#SBATCH --array=1-N`, N = number of configs).
 2. From the login node, make sure the project environment is instantiated/precompiled once (see the commented-out line near the top of the `.sh` file).
-3. Submit the job with `sbatch shfiles_cluster/mean.sh` (or `variance.sh`/`counterexample.sh`). `JULIA_NUM_THREADS` is set automatically from `--cpus-per-task`, so the simulation runs multithreaded.
-4. Each task writes its own CSV into `cluster_outputs/values/` on the cluster, exactly as it would locally.
+3. Make sure the log folder `/home/3049277/logs/` exists (`mkdir -p /home/3049277/logs`) — SLURM doesn't create it.
+4. Submit the job with `sbatch shfiles_cluster/mean.sh` (or `variance.sh`/`counterexample.sh`). `JULIA_NUM_THREADS` is set automatically from `--cpus-per-task`, so the simulation runs multithreaded.
+5. Each task writes its own CSV into `cluster_outputs/values/` on the cluster, exactly as it would locally. Its runtime is printed at the end of its `.err` log file (`Total duration: ... seconds`).
 
 ### Plotting the results
 
-**Important:** after simulation finishes, you need to manually move/copy the resulting CSV file from `cluster_outputs/values/` into `values/comparison_all/`. If the simulation was run on the cluster, this means transferring the file to your local computer first — e.g. using the FileZilla application.
+**Important:** after simulation finishes, you need to manually move/copy the resulting CSV file from `cluster_outputs/values/` into `values/comparison_all/`. If the simulation was run on the cluster, this means transferring the file to your local computer first — e.g. using the FileZilla application. A new CSV run with the same parameters has the same name as the old one, so it overwrites it — back up the old file first if you want to keep it. Keep only one CSV per simulation in this folder, since each plotting script plots the first file whose name matches (e.g. starts with `mean`).
 
 `values_to_plots/plot_mean.jl`, `plot_variance.jl` and `plot_counterexample.jl` each read the matching CSV from `values/comparison_all/` and plot HIPM, WoW, DM and Energy rejection rate against δ/τ/λ, saving one PNG into `plots/comparison_all/`. For plotting, just run the file.
 
@@ -139,6 +143,19 @@ Besides the simulations, `mortality/` applies the tests to real data from the Hu
 
 
 `pvalues.jl` saves one file per gender/method to `values/mortality_dataset/pvalues_<gender>_<method>.txt`. `values_to_plots/plot_pvalues.jl` reads directly from that folder (everything here runs locally, so there's no cluster move/copy step) and saves one PNG per gender to `plots/mortality_dataset/`. This corresponds to Figure 2.7.
+
+## Checking correctness
+
+Before trusting the simulations, we want to know that the tests are computed correctly. `check_correctness_time_hipm_wow/` has one script per test:
+
+- **`testhipm.jl`**, **`testwow.jl`** — compare our HIPM and WoW distances against Hugo & Marta's original code, and time both versions.
+- **`testfrechet.jl`** — compares our Fréchet test statistic against the R package `frechet` (Dubey and Müller's own code) on simulated hierarchical samples, and checks errors on bad inputs, p-values and rejection rates. It needs R with the `frechet` package installed.
+
+Run them from the project root, e.g.:
+
+```bash
+julia --project=. check_correctness_time_hipm_wow/testfrechet.jl
+```
 
 ## Cluster run times
 
