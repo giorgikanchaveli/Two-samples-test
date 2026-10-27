@@ -153,7 +153,7 @@ function pvalue_pooling(observations_1::Vector{Float64}, observations_2::Vector{
         new_observations_2 = view(all_observations, random_indices[(n_1+1):n_total])
         samples[i] = wasserstein_1d_general(sort(new_observations_1), sort(new_observations_2))
     end
-    return mean(samples .>= observed_distance)
+    return (1 + count(t -> t >= observed_distance, samples)) / (n_permutations + 1) # pvalue, counting the identity permutation
 end
 
 
