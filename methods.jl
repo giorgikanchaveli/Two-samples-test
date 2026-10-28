@@ -945,11 +945,6 @@ This function is specifically for mortality dataset. Given atoms and weights of 
 groups (one measure per row, all on the same atoms), returns their quantile functions in a form that the Fréchet test
 for hierarchical samples can use exactly.
 
-Each quantile function is a step function that only jumps where its cdf takes a value. We pool the cumulative weights of all measures in both groups, add \(0\) and \(1\), and sort the distinct values. These boundaries partition \([0,1]\) into \(L\) intervals of lengths \(\Delta_1,\ldots,\Delta_L\). On each interval, every quantile
-function is constant, so each measure becomes a row of L quantiles, where column j has weight Δ_j. To make columns
-equally weighted, as frechet_statistic expects, column j is multiplied by sqrt(L * Δ_j): then the mean over columns of
-squared differences equals Σ_j Δ_j (difference)^2, which is the exact squared 2-Wasserstein distance, and column-wise
-averages still give the exact Fréchet mean. Rows are not sorted after this rescaling, which frechet_statistic doesn't need.
 
 # Arguments:
     atoms_1::Matrix{Float64}    :  each row contains sorted support points (the same in every row of both groups).
