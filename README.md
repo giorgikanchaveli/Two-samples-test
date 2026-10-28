@@ -138,7 +138,7 @@ Besides the simulations, `mortality/` applies the tests to real data from the Hu
 
 - **`mortality/data_extractors.jl`** — loads the per-country life tables from `mortality/dataset/<gender>/` and turns them into the hierarchical samples / PMFs the other two scripts need. It's a library, not something you run directly.
 - **`mortality/eda.jl`** — exploratory data analysis plots (data lost under age truncation, individual country PMFs, PMF/quantile/pooled-PMF comparisons between the two groups). Figure 2.6.
-- **`mortality/pvalues.jl`** — the actual test: computes p-values via HIPM, WoW, and two baselines (averaging, pooling) for each year/gender. 
+- **`mortality/pvalues.jl`** — the actual test: computes p-values via HIPM, WoW, Fréchet, and two baselines (averaging, pooling) for each year/gender. For Fréchet, each country's age-at-death distribution is first turned into its exact quantile function, so it can be used like a row of a hierarchical sample and the Wasserstein distances are computed exactly.
 
 
 
