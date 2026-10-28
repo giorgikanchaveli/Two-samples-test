@@ -2,7 +2,7 @@
 # distribution of age-at-death, at each year from 1960 to 2010, for males and females
 # separately. 
 
-# Four methods are computed per year: HIPM, WoW  and two methods that collapse each group
+# Five methods are computed per year: HIPM, WoW, Fréchet (Dubey and Muller (2019)) and two methods that collapse each group
 # to a single distribution. First one - averaging (mean PMF per group, compared via Wasserstein-1) and 
 # Second one - pooling (all deaths in a group treated as one pooled sample, compared via Wasserstein-1).
 
@@ -189,6 +189,41 @@ end
 
 
 """
+    pvalues_frechet
+
+Given mortality data for specific gender, calculates p values per each time for given groups using the Fréchet test
+from Dubey and Muller (2019).
+
+Like `pvalues_hipm`, this uses `group_pmf` to get each country's PMF of age-at-death. Then the
+`pvalue_frechet(atoms_1, weights_1, atoms_2, weights_2, ...)` function in `methods.jl` turns each PMF into its
+quantiles and runs the test — see the "Codes below are for the Mortality dataset" section in methods.jl.
+
+# Arguments:
+    gender_data::Dict{String, DataFrame}
+    group_1::Vector{String}
+    group_2::Vector{String}
+    time_periods::Vector{Int}
+    min_age::Int
+    age_truncation::Int
+    n_permutations::Int
+"""
+function pvalues_frechet(gender_data::Dict{String, DataFrame}, group_1::Vector{String}, group_2::Vector{String},
+                 time_periods::Vector{Int}, min_age::Int, age_truncation::Int,
+                 n_permutations::Int)
+    n_years = length(time_periods)
+    pvalues = Vector{Float64}(undef, n_years)
+
+    for (i, time) in enumerate(time_periods)
+        @info "Fréchet Progress $i / $(n_years)"
+        atoms_1, weights_1 = group_pmf(gender_data, group_1, time, min_age, age_truncation)
+        atoms_2, weights_2 = group_pmf(gender_data, group_2, time, min_age, age_truncation)
+        pvalues[i] = pvalue_frechet(atoms_1, weights_1, atoms_2, weights_2, n_permutations)
+    end
+    return pvalues
+end
+
+
+"""
     save_pvalues
 
 Saves p-values and corresponding time periods to a space-delimited text file.
@@ -230,7 +265,7 @@ end
 """
     main
 
-Computes p-values for all methods (HIPM, WoW, averaging, pooling) for both females and males
+Computes p-values for all methods (HIPM, WoW, averaging, pooling, Fréchet) for both females and males
 over the period 1960–2010 and saves each result.
 """
 function main()
@@ -256,11 +291,13 @@ function main()
         pv_wow        = pvalues_wow(gender_data, group_1, group_2, time_periods, min_age, max_age, n_permutations)
         pv_averaging  = pvalues_averaging(gender_data, group_1, group_2, time_periods, min_age, max_age, n_permutations)
         pv_pooling    = pvalues_pooling(gender_data, group_1, group_2, time_periods, min_age, max_age, n_permutations)
+        pv_frechet    = pvalues_frechet(gender_data, group_1, group_2, time_periods, min_age, max_age, n_permutations)
 
         save_pvalues(pv_hipm,     time_periods, "pvalues_$(gender)_hipm")
         save_pvalues(pv_wow,      time_periods, "pvalues_$(gender)_wow")
         save_pvalues(pv_averaging, time_periods, "pvalues_$(gender)_averaging")
         save_pvalues(pv_pooling,  time_periods, "pvalues_$(gender)_pooling")
+        save_pvalues(pv_frechet,  time_periods, "pvalues_$(gender)_frechet")
     end
 end
 t = time()

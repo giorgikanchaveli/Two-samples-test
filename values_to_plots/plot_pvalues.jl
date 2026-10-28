@@ -3,7 +3,7 @@
 # =============================================================================
 #
 # Reads the p-value files saved by mortality/pvalues.jl from input_dir, and plots p-value
-# against year for all four methods on the same plot, together with a dashed line at
+# against year for all five methods on the same plot, together with a dashed line at
 # θ = 0.05. One PNG is saved per gender to output_dir.
 #
 # Note: input_dir defaults to <project_root>/values/mortality_dataset, which is exactly
@@ -32,10 +32,10 @@ function plot_pvalues(gender::String;
 )
     mkpath(output_dir)
 
-    methods  = ["hipm", "wow", "averaging", "pooling"]
-    labels   = ["HIPM", "WoW", "Averaging", "Pooling"]
-    colors   = [:green, :brown, :orange, :blue]
-    markers  = [:square, :diamond, :dtriangle, :utriangle]
+    methods  = ["hipm", "wow", "averaging", "pooling", "frechet"]
+    labels   = ["HIPM", "WoW", "Averaging", "Pooling", "Fréchet"]
+    colors   = [:green, :brown, :orange, :blue, :purple]
+    markers  = [:square, :diamond, :dtriangle, :utriangle, :circle]
 
     sc = scatter(
         title    = "P-values",
