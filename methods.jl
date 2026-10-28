@@ -385,13 +385,15 @@ end
 """
     pvalue_frechet
 
-Given two hierarchical samples, computes p-value for the Fréchet test from Dubey and Muller (2019).
+Given two matrices whose rows are sorted atoms with equal weights, computes p-value for the Fréchet test from
+Dubey and Muller (2019). Sorted atoms are the quantiles of a row at equally spaced probability levels, so this works
+both for hierarchical samples and for quantiles computed from PMFs (see the mortality version below).
 For permutation, the p-value is (1 + #{T_b >= T}) / (n_samples + 1), valid in finite samples when the rows are
 exchangeable under the null. For bootstrap, it is #{T_b >= T} / n_samples, which is only asymptotically valid.
 
 # Arguments:
-    h_1::HierSample
-    h_2::HierSample
+    atoms_1::AbstractArray{Float64, 2}
+    atoms_2::AbstractArray{Float64, 2}
     n_samples::Int   :  number of bootstrap/permutation samples
     bootstrap::Bool  :  Boolean variable. If true use bootstrap, otherwise permutation.
 
@@ -399,10 +401,8 @@ exchangeable under the null. For bootstrap, it is #{T_b >= T} / n_samples, which
     This function assumes that atoms are sorted.
     Throws a DomainError if the observed samples or a bootstrap/permutation replicate are degenerate.
 """
-function pvalue_frechet(h_1::HierSample, h_2::HierSample, n_samples::Int, bootstrap::Bool)
+function pvalue_frechet(atoms_1::AbstractArray{Float64, 2}, atoms_2::AbstractArray{Float64, 2}, n_samples::Int, bootstrap::Bool)
 
-    atoms_1 = h_1.atoms
-    atoms_2 = h_2.atoms
     check_atoms_frechet(atoms_1, atoms_2)
     n_samples >= 1 || throw(ArgumentError("n_samples must be positive. Got $n_samples."))
 
@@ -438,6 +438,26 @@ function pvalue_frechet(h_1::HierSample, h_2::HierSample, n_samples::Int, bootst
         end
         return (1 + count(t -> t >= observed_test_stat, samples)) / (n_samples + 1) # pvalue, counting the identity permutation
     end
+end
+
+
+"""
+    pvalue_frechet
+
+Given two hierarchical samples, computes p-value for the Fréchet test from Dubey and Muller (2019).
+
+# Arguments:
+    h_1::HierSample
+    h_2::HierSample
+    n_samples::Int   :  number of bootstrap/permutation samples
+    bootstrap::Bool  :  Boolean variable. If true use bootstrap, otherwise permutation.
+
+# Warning:
+    This function assumes that atoms are sorted.
+    Throws a DomainError if the observed samples or a bootstrap/permutation replicate are degenerate.
+"""
+function pvalue_frechet(h_1::HierSample, h_2::HierSample, n_samples::Int, bootstrap::Bool)
+    return pvalue_frechet(h_1.atoms, h_2.atoms, n_samples, bootstrap)
 end
 
 
@@ -912,6 +932,81 @@ function pvalue_averaging(atoms_1::Matrix{Float64}, weights_1::Matrix{Float64}, 
         samples[i] = sum(abs.(cumsum(average_weights_1) .- cumsum(average_weights_2)))
     end
     return (1 + count(t -> t >= T_observed, samples)) / (n_permutations + 1) # pvalue, counting the identity permutation
+end
+
+
+
+
+
+"""
+    quantiles_from_pmf
+
+This function is specifically for mortality dataset. Given atoms and weights of the probability measures of both
+groups (one measure per row, all on the same atoms), returns their quantile functions in a form that the Fréchet test
+for hierarchical samples can use exactly.
+
+Each quantile function is a step function that only jumps where its cdf takes a value. We pool the cumulative weights of all measures in both groups, add \(0\) and \(1\), and sort the distinct values. These boundaries partition \([0,1]\) into \(L\) intervals of lengths \(\Delta_1,\ldots,\Delta_L\). On each interval, every quantile
+function is constant, so each measure becomes a row of L quantiles, where column j has weight Δ_j. To make columns
+equally weighted, as frechet_statistic expects, column j is multiplied by sqrt(L * Δ_j): then the mean over columns of
+squared differences equals Σ_j Δ_j (difference)^2, which is the exact squared 2-Wasserstein distance, and column-wise
+averages still give the exact Fréchet mean. Rows are not sorted after this rescaling, which frechet_statistic doesn't need.
+
+# Arguments:
+    atoms_1::Matrix{Float64}    :  each row contains sorted support points (the same in every row of both groups).
+    weights_1::Matrix{Float64}  :  each row contains the probabilities of the atoms in the same row.
+    atoms_2::Matrix{Float64}
+    weights_2::Matrix{Float64}
+"""
+function quantiles_from_pmf(atoms_1::Matrix{Float64}, weights_1::Matrix{Float64}, atoms_2::Matrix{Float64}, weights_2::Matrix{Float64})
+    atoms = vcat(atoms_1, atoms_2)
+    weights = vcat(weights_1, weights_2)
+    size(atoms) == size(weights) || throw(ArgumentError("atoms and weights must have the same size. Got $(size(atoms)) and $(size(weights))."))
+    all(row -> row == atoms[1, :], eachrow(atoms)) || throw(ArgumentError("all probability measures must have the same atoms."))
+    issorted(atoms[1, :]) || throw(ArgumentError("atoms must be sorted."))
+    all(>=(0), weights) || throw(ArgumentError("weights must be non-negative."))
+
+    ages = atoms[1, :]
+    cdfs = cumsum(weights, dims = 2)
+    cdfs ./= cdfs[:, end] # makes every cdf end exactly at 1, even if weights sum to 1 only up to rounding
+
+    breaks = sort(unique(vcat(0.0, vec(cdfs), 1.0))) # all points in [0, 1] where some quantile function jumps
+    lengths = diff(breaks)
+    midpoints = (breaks[1:end-1] .+ breaks[2:end]) ./ 2
+    n_intervals = length(lengths)
+
+    quantiles = Matrix{Float64}(undef, size(atoms)[1], n_intervals)
+    for i in 1:size(atoms)[1]
+        cdf = view(cdfs, i, :)
+        for j in 1:n_intervals
+            quantiles[i, j] = ages[searchsortedfirst(cdf, midpoints[j])] # smallest age whose cdf reaches the interval
+        end
+    end
+    quantiles .*= sqrt.(n_intervals .* lengths)' # columns become equally weighted
+
+    n_1 = size(atoms_1)[1]
+    return quantiles[1:n_1, :], quantiles[n_1+1:end, :]
+end
+
+
+"""
+    pvalue_frechet
+
+This function is specifically for mortality dataset. Given atoms and weights associated to two Hierarchical estimators,
+we estimate the p-value for the Fréchet test from Dubey and Muller (2019) via permutation approach. Each probability
+measure is first replaced by its exact quantile function (see quantiles_from_pmf), and then the test is computed as
+for hierarchical samples, with exact 2-Wasserstein distances.
+
+# Arguments:
+    atoms_1::Matrix{Float64}
+    weights_1::Matrix{Float64}
+    atoms_2::Matrix{Float64}
+    weights_2::Matrix{Float64}
+    n_permutations::Int
+"""
+function pvalue_frechet(atoms_1::Matrix{Float64}, weights_1::Matrix{Float64}, atoms_2::Matrix{Float64}, weights_2::Matrix{Float64},
+                        n_permutations::Int)
+    quantiles_1, quantiles_2 = quantiles_from_pmf(atoms_1, weights_1, atoms_2, weights_2)
+    return pvalue_frechet(quantiles_1, quantiles_2, n_permutations, false) # false: permutation approach
 end 
 
 
