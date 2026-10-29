@@ -66,7 +66,17 @@ Results are saved as CSV files in `cluster_outputs/values/`, with columns `θs`,
 ### Plotting the results
 
 
-**Important:** after simulation finishes, you need to manually move/copy the resulting CSV files from `cluster_outputs/values/` into `values/fp_tp/`. If the simulation was run on the cluster, this means transferring the files to your local computer first — e.g. using the FileZilla application. A new CSV run with the same parameters has the same name as the old one, so it overwrites it — back up the old files first if you want to keep them.
+**Important:** the plotting script reads from `values/fp_tp/`, not from `cluster_outputs/values/` where the simulation saves. If the simulation ran on the cluster, run `bash shfiles_cluster/fetch_results.sh` on your own computer: it downloads the CSVs and puts them into `values/fp_tp/`. Before replacing a file with the same name (same parameters), it moves the old one to `old_sim_values/fp_tp/<date_time>/`. It also downloads the SLURM logs (what the jobs printed, including the runtime in each `.err` file) from `~/logs/` on the cluster into `cluster_outputs/logs/`. Add `--dry-run` to only see what it would do. If the simulation ran locally, move/copy the CSVs from `cluster_outputs/values/` into `values/fp_tp/` yourself.
+
+`fetch_results.sh` connects to the cluster under the name `cluster` and expects the project at `~/Two-samples-test` there. Set this up once on your computer: put your SSH key on the cluster (`ssh-copy-id <user>@<cluster-address>`) and add to `~/.ssh/config`:
+
+```
+Host cluster
+    HostName <cluster-address>
+    User <user>
+```
+
+Then `ssh cluster echo ok` should print `ok` without asking for a password.
 
 `values_to_plots/plot_tpfp_csv.jl` reads CSV files from `values/fp_tp/` and plots HIPM vs. WoW rejection rate against θ, saving one PNG per CSV into `plots/fp_tp/`. For plotting, just run the file.
 
@@ -108,7 +118,7 @@ Results are saved as CSV files in `cluster_outputs/values/`, with columns `<δs|
 
 ### Plotting the results
 
-**Important:** after simulation finishes, you need to manually move/copy the resulting CSV file from `cluster_outputs/values/` into `values/comparison_all/`. If the simulation was run on the cluster, this means transferring the file to your local computer first — e.g. using the FileZilla application. A new CSV run with the same parameters has the same name as the old one, so it overwrites it — back up the old file first if you want to keep it. Keep only one CSV per simulation in this folder, since each plotting script plots the first file whose name matches (e.g. starts with `mean`).
+**Important:** the plotting scripts read from `values/comparison_all/`, not from `cluster_outputs/values/` where the simulation saves. Keep only one CSV per simulation in this folder, since each plotting script plots the first file whose name matches (e.g. starts with `mean`). If the simulation ran on the cluster, run `bash shfiles_cluster/fetch_results.sh` on your own computer: it downloads the CSVs and puts them into `values/comparison_all/`, first moving all old CSVs of that simulation to `old_sim_values/comparison_all/<date_time>/`. It stops without changing anything if the cluster has more than one CSV for the same simulation. Like for FP/TP, it also downloads the SLURM logs into `cluster_outputs/logs/`, and needs the one-time SSH setup described in the FP/TP section above. Add `--dry-run` to only see what it would do. If the simulation ran locally, move/copy the CSV from `cluster_outputs/values/` into `values/comparison_all/` yourself, and move the old one out.
 
 `values_to_plots/plot_mean.jl`, `plot_variance.jl` and `plot_counterexample.jl` each read the matching CSV from `values/comparison_all/` and plot HIPM, WoW, DM and Energy rejection rate against δ/τ/λ, saving one PNG into `plots/comparison_all/`. For plotting, just run the file.
 
@@ -142,7 +152,17 @@ Besides the simulations, `mortality/` applies the tests to real data from the Hu
 
 
 
-`pvalues.jl` saves one file per gender/method to `values/mortality_dataset/pvalues_<gender>_<method>.txt`. `values_to_plots/plot_pvalues.jl` reads directly from that folder (everything here runs locally, so there's no cluster move/copy step) and saves one PNG per gender to `plots/mortality_dataset/`. This corresponds to Figure 2.7.
+`pvalues.jl` saves one file per gender/method to `values/mortality_dataset/pvalues_<gender>_<method>.txt`. `values_to_plots/plot_pvalues.jl` reads directly from that folder (everything here runs locally, so there's no cluster move/copy step) and saves two PNGs per gender to `plots/mortality_dataset/`: `pvalues_<gender>_hipm_wow_av_pool.png` (HIPM, WoW, averaging, pooling) and `pvalues_<gender>_hipm_wow_frechet.png` (HIPM, WoW, Fréchet). This corresponds to Figure 2.7.
+
+## Making all plots at once
+
+Instead of running each plotting script by hand, run:
+
+```bash
+julia --project=. values_to_plots/plot_all.jl
+```
+
+(or `include("values_to_plots/plot_all.jl")` from VS Code / the Julia REPL). It runs every `plot_*.jl` file in `values_to_plots/`, so each plot is saved into its usual folder in `plots/`. If one script fails, for example because its CSV isn't in `values/` yet, the others still run and the failed ones are listed at the end. When a new plotting script is added, add its name to `PLOT_SCRIPTS` at the top of `plot_all.jl`.
 
 ## Checking correctness
 

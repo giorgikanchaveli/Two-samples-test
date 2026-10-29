@@ -14,7 +14,7 @@
 #
 # Plotting: The file `values_to_plots/plot_pvalues.jl` reads directly from
 # `values/mortality_dataset/` (no need to move/copy files — everything here runs
-# locally) and saves one PNG per gender to `plots/mortality_dataset/`.
+# locally) and saves two PNGs per gender to `plots/mortality_dataset/`.
 
 using Plots
 using DelimitedFiles
