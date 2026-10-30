@@ -3,15 +3,16 @@
 # =============================================================================
 #
 # Reads the p-value files saved by mortality/pvalues.jl from input_dir, and plots p-value
-# against year, together with a dashed line at θ = 0.05. Two plots are saved per gender to
-# output_dir: HIPM, WoW, averaging and pooling (pvalues_<gender>_hipm_wow_av_pool.png), and
-# HIPM, WoW and Fréchet (pvalues_<gender>_hipm_wow_frechet.png).
+# against year, together with a dashed line at θ = 0.05. Five plots are saved per gender to
+# output_dir: HIPM, WoW, averaging and pooling (pvalues_<gender>_hipm_wow_av_pool.png),
+# HIPM, WoW and Fréchet (pvalues_<gender>_hipm_wow_frechet.png), and Fréchet, HIPM and WoW
+# each alone (pvalues_<gender>_frechet.png, pvalues_<gender>_hipm.png, pvalues_<gender>_wow.png).
 #
 # Note: input_dir defaults to <project_root>/values/mortality_dataset, which is exactly
 # where mortality/pvalues.jl saves its output — everything here runs locally, so there's
 # no cluster move/copy step needed (unlike the fp/tp/mean/variance/counterexample plots).
 
-# To use it, just run the file. It will automatically save both plots per gender
+# To use it, just run the file. It will automatically save all five plots per gender
 # (females, males) in <project_root>/plots/mortality_dataset.
 
 using DelimitedFiles
@@ -38,6 +39,7 @@ const METHOD_STYLES = Dict(
 
 
 function plot_pvalues(gender::String, methods::Vector{String}, plot_name::String;
+    ymax       = 0.3, # upper y-axis limit
     input_dir  = joinpath(pwd(), "values", "mortality_dataset"),
     output_dir = joinpath(pwd(), "plots", "mortality_dataset")
 )
@@ -47,7 +49,7 @@ function plot_pvalues(gender::String, methods::Vector{String}, plot_name::String
         title    = "P-values",
         xlabel   = "Year",
         ylabel   = "p-value",
-        ylims    = (-0.015, 0.25),
+        ylims    = (-0.015, ymax),
         legend   = :topright,
         dpi      = 300,
         size     = (800, 500)
@@ -67,7 +69,11 @@ function plot_pvalues(gender::String, methods::Vector{String}, plot_name::String
 end
 
 
+# Fréchet p-values go up to about 0.35, so plots with Fréchet need a higher y-axis limit
 for gender in ["females", "males"]
     plot_pvalues(gender, ["hipm", "wow", "averaging", "pooling"], "hipm_wow_av_pool")
-    plot_pvalues(gender, ["hipm", "wow", "frechet"], "hipm_wow_frechet")
+    plot_pvalues(gender, ["hipm", "wow", "frechet"], "hipm_wow_frechet"; ymax = 0.4)
+    plot_pvalues(gender, ["frechet"], "frechet"; ymax = 0.4)
+    plot_pvalues(gender, ["hipm"], "hipm")
+    plot_pvalues(gender, ["wow"], "wow")
 end
