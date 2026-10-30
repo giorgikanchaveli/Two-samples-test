@@ -152,7 +152,7 @@ Besides the simulations, `mortality/` applies the tests to real data from the Hu
 
 
 
-`pvalues.jl` saves one file per gender/method to `values/mortality_dataset/pvalues_<gender>_<method>.txt`. `values_to_plots/plot_pvalues.jl` reads directly from that folder (everything here runs locally, so there's no cluster move/copy step) and saves five PNGs per gender to `plots/mortality_dataset/`: `pvalues_<gender>_hipm_wow_av_pool.png` (HIPM, WoW, averaging, pooling), `pvalues_<gender>_hipm_wow_frechet.png` (HIPM, WoW, Fréchet), and `pvalues_<gender>_frechet.png`, `pvalues_<gender>_hipm.png`, `pvalues_<gender>_wow.png` (one method alone). The two plots with Fréchet have a higher y-axis limit (0.4 instead of 0.3), since Fréchet p-values go up to about 0.35. This corresponds to Figure 2.7.
+`pvalues.jl` saves one file per gender/method to `values/mortality_dataset/pvalues_<gender>_<method>.txt`. `values_to_plots/plot_pvalues.jl` reads directly from that folder (everything here runs locally, so there's no cluster move/copy step) and saves six PNGs per gender to `plots/mortality_dataset/`: `pvalues_<gender>_hipm_wow_av_pool.png` (HIPM, WoW, averaging, pooling), `pvalues_<gender>_hipm_wow_frechet.png` (HIPM, WoW, Fréchet), `pvalues_<gender>_frechet_av.png` (Fréchet, averaging), and `pvalues_<gender>_frechet.png`, `pvalues_<gender>_hipm.png`, `pvalues_<gender>_wow.png` (one method alone). The plots with Fréchet have a higher y-axis limit (0.4 instead of 0.3), since Fréchet p-values go up to about 0.35. This corresponds to Figure 2.7.
 
 ## Making all plots at once
 

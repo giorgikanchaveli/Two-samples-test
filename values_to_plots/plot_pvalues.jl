@@ -3,16 +3,17 @@
 # =============================================================================
 #
 # Reads the p-value files saved by mortality/pvalues.jl from input_dir, and plots p-value
-# against year, together with a dashed line at θ = 0.05. Five plots are saved per gender to
+# against year, together with a dashed line at θ = 0.05. Six plots are saved per gender to
 # output_dir: HIPM, WoW, averaging and pooling (pvalues_<gender>_hipm_wow_av_pool.png),
-# HIPM, WoW and Fréchet (pvalues_<gender>_hipm_wow_frechet.png), and Fréchet, HIPM and WoW
-# each alone (pvalues_<gender>_frechet.png, pvalues_<gender>_hipm.png, pvalues_<gender>_wow.png).
+# HIPM, WoW and Fréchet (pvalues_<gender>_hipm_wow_frechet.png), Fréchet and averaging
+# (pvalues_<gender>_frechet_av.png), and Fréchet, HIPM and WoW each alone
+# (pvalues_<gender>_frechet.png, pvalues_<gender>_hipm.png, pvalues_<gender>_wow.png).
 #
 # Note: input_dir defaults to <project_root>/values/mortality_dataset, which is exactly
 # where mortality/pvalues.jl saves its output — everything here runs locally, so there's
 # no cluster move/copy step needed (unlike the fp/tp/mean/variance/counterexample plots).
 
-# To use it, just run the file. It will automatically save all five plots per gender
+# To use it, just run the file. It will automatically save all six plots per gender
 # (females, males) in <project_root>/plots/mortality_dataset.
 
 using DelimitedFiles
@@ -74,6 +75,7 @@ for gender in ["females", "males"]
     plot_pvalues(gender, ["hipm", "wow", "averaging", "pooling"], "hipm_wow_av_pool")
     plot_pvalues(gender, ["hipm", "wow", "frechet"], "hipm_wow_frechet"; ymax = 0.4)
     plot_pvalues(gender, ["frechet"], "frechet"; ymax = 0.4)
+    plot_pvalues(gender, ["frechet", "averaging"], "frechet_av"; ymax = 0.4) # averaging alone goes up to about 0.22
     plot_pvalues(gender, ["hipm"], "hipm")
     plot_pvalues(gender, ["wow"], "wow")
 end
